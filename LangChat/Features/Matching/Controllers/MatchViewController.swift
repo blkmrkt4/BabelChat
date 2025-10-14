@@ -245,7 +245,7 @@ class MatchViewController: UIViewController {
     }
 
     @objc private func aiSetupButtonTapped() {
-        let aiSetupVC = AISetupViewController()
+        let aiSetupVC = AISetupContainerViewController()
         let navController = UINavigationController(rootViewController: aiSetupVC)
         navController.modalPresentationStyle = .fullScreen
         present(navController, animated: true)

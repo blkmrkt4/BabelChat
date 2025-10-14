@@ -326,7 +326,7 @@ class SettingsViewController: UIViewController {
     }
 
     private func showAISetup() {
-        let aiSetupVC = AISetupViewController()
+        let aiSetupVC = AISetupContainerViewController()
         let navController = UINavigationController(rootViewController: aiSetupVC)
         navController.modalPresentationStyle = .fullScreen
         present(navController, animated: true)
