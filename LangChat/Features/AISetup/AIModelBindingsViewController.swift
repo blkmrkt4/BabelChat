@@ -135,39 +135,63 @@ class AIModelBindingsViewController: UIViewController {
         let config = AIConfigurationManager.shared
 
         // Translation binding
-        if let translationModel = config.getModelForPromptType(.translation) {
+        if let translationConfig = config.getConfiguration(for: .translation) {
             bindings.append(AIBinding(
-                type: .translation,
+                category: .translation,
                 level: nil,
-                modelName: translationModel.name,
-                prompt: config.getMasterPrompt(for: .translation, granularityLevel: nil) ?? "No prompt configured"
+                modelName: translationConfig.modelName,
+                prompt: translationConfig.promptTemplate
             ))
         } else {
             bindings.append(AIBinding(
-                type: .translation,
+                category: .translation,
                 level: nil,
                 modelName: "None Selected",
                 prompt: nil
             ))
         }
 
-        // Grammar bindings for each level
-        for level in GrammarSensitivityLevel.allCases {
-            if let grammarModel = config.getModelForPromptType(.grammar(level)) {
+        // Grammar binding with sensitivity levels
+        if let grammarConfig = config.getConfiguration(for: .grammar),
+           let grammarData = UserDefaults.standard.data(forKey: "GrammarConfiguration"),
+           let grammarLevels = try? JSONDecoder().decode(GrammarConfiguration.self, from: grammarData) {
+
+            // Add grammar bindings for each sensitivity level
+            for level in GrammarSensitivityLevel.allCases {
                 bindings.append(AIBinding(
-                    type: .grammar,
+                    category: .grammar,
                     level: level,
-                    modelName: grammarModel.name,
-                    prompt: config.getMasterPrompt(for: .grammar(level), granularityLevel: level) ?? "No prompt configured"
+                    modelName: grammarConfig.modelName,
+                    prompt: grammarLevels.getPrompt(for: level)
                 ))
-            } else {
+            }
+        } else {
+            // No grammar configuration saved
+            for level in GrammarSensitivityLevel.allCases {
                 bindings.append(AIBinding(
-                    type: .grammar,
+                    category: .grammar,
                     level: level,
                     modelName: "None Selected",
                     prompt: nil
                 ))
             }
+        }
+
+        // Scoring binding
+        if let scoringConfig = config.getConfiguration(for: .scoring) {
+            bindings.append(AIBinding(
+                category: .scoring,
+                level: nil,
+                modelName: scoringConfig.modelName,
+                prompt: scoringConfig.promptTemplate
+            ))
+        } else {
+            bindings.append(AIBinding(
+                category: .scoring,
+                level: nil,
+                modelName: "None Selected",
+                prompt: nil
+            ))
         }
 
         bindingsTableView.reloadData()
@@ -212,13 +236,13 @@ extension AIModelBindingsViewController: UITableViewDelegate, UITableViewDataSou
 // MARK: - Data Models
 
 struct AIBinding {
-    let type: PromptType
+    let category: AICategory
     let level: GrammarSensitivityLevel?
     let modelName: String
     let prompt: String?
 
     var displayTitle: String {
-        switch type {
+        switch category {
         case .translation:
             return "Translation"
         case .grammar:
@@ -226,12 +250,9 @@ struct AIBinding {
                 return "Grammar > \(level.displayName)"
             }
             return "Grammar"
+        case .scoring:
+            return "Scoring"
         }
-    }
-
-    enum PromptType {
-        case translation
-        case grammar
     }
 }
 
@@ -284,23 +305,6 @@ class BindingCell: UITableViewCell {
         } else {
             modelLabel.text = "Model: \(binding.modelName)"
             modelLabel.textColor = .secondaryLabel
-        }
-    }
-}
-
-// MARK: - GrammarSensitivityLevel Extension
-
-extension GrammarSensitivityLevel {
-    var displayName: String {
-        switch self {
-        case .minimal:
-            return "Minimal"
-        case .moderate:
-            return "Moderate"
-        case .detailed:
-            return "Detailed"
-        case .comprehensive:
-            return "Comprehensive"
         }
     }
 }
