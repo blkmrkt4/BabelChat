@@ -13,6 +13,9 @@ class ChatViewController: UIViewController {
     let user: User
     let match: Match
 
+    // Supabase conversation ID
+    private var conversationId: String?
+
     // Language context for translations and grammar checks
     private var conversationLearningLanguage: Language // The language being practiced
     private var currentUserNativeLanguage: Language // Current user's native language
@@ -47,6 +50,7 @@ class ChatViewController: UIViewController {
         setupKeyboardObservers()
         loadMessages()
         saveUserData() // Save user data for chat list
+        setupConversation() // Get or create Supabase conversation
     }
 
     private func saveUserData() {
@@ -334,9 +338,28 @@ class ChatViewController: UIViewController {
         scrollToBottom(animated: false)
     }
 
+    // MARK: - Supabase Integration
+
+    private func setupConversation() {
+        Task {
+            do {
+                let conversation = try await SupabaseService.shared.getOrCreateConversation(with: user.id)
+                self.conversationId = conversation.id
+                print("✅ Conversation ready: \(conversation.id)")
+            } catch {
+                print("❌ Failed to setup conversation: \(error)")
+            }
+        }
+    }
+
     @objc private func sendButtonTapped() {
         guard let text = inputTextField.text, !text.isEmpty else { return }
+        guard let conversationId = conversationId else {
+            print("❌ No conversation ID yet")
+            return
+        }
 
+        // Create and display user message immediately
         let newMessage = Message(
             id: UUID().uuidString,
             senderId: "currentUser",
@@ -344,7 +367,7 @@ class ChatViewController: UIViewController {
             text: text,
             timestamp: Date(),
             isRead: false,
-            originalLanguage: .english,
+            originalLanguage: conversationLearningLanguage,
             translatedText: nil,
             grammarSuggestions: nil,
             alternatives: nil,
@@ -352,7 +375,7 @@ class ChatViewController: UIViewController {
         )
 
         messages.append(newMessage)
-        saveMessages() // Save after adding message
+        saveMessages()
         inputTextField.text = ""
         sendButton.isEnabled = false
 
@@ -360,44 +383,61 @@ class ChatViewController: UIViewController {
         tableView.insertRows(at: [indexPath], with: .bottom)
         scrollToBottom(animated: true)
 
-        // Simulate a response after a delay
-        DispatchQueue.main.asyncAfter(deadline: .now() + 2) { [weak self] in
-            self?.receiveSimulatedResponse()
+        // Send to Supabase and generate AI response
+        Task {
+            do {
+                // 1. Send user message to Supabase
+                try await SupabaseService.shared.sendMessage(conversationId: conversationId, text: text)
+                print("✅ User message sent to Supabase")
+
+                // 2. Generate AI response using Scoring model
+                await generateAIResponse(to: text, conversationId: conversationId)
+            } catch {
+                print("❌ Failed to send message: \(error)")
+            }
         }
     }
 
-    private func receiveSimulatedResponse() {
-        let responses = [
-            "That's a great question! Let me explain...",
-            "Interesting point! In my language, we would say...",
-            "You're making great progress! 👏",
-            "Let me know if you need more examples.",
-            "Would you like to practice this more?",
-            "That's exactly right! Well done!",
-            "Here's a tip that might help..."
-        ]
+    private func generateAIResponse(to userMessage: String, conversationId: String) async {
+        do {
+            // Use the Scoring model/prompt to generate a response
+            // User is writing in learning language, AI responds in same language
+            let aiResponse = try await AIConfigurationManager.shared.scoreText(
+                text: userMessage,
+                learningLanguage: conversationLearningLanguage.name,
+                nativeLanguage: currentUserNativeLanguage.name
+            )
 
-        let response = responses.randomElement() ?? "Thanks for your message!"
+            // Send AI response to Supabase
+            try await SupabaseService.shared.sendMessage(conversationId: conversationId, text: aiResponse)
+            print("✅ AI response sent to Supabase")
 
-        let newMessage = Message(
-            id: UUID().uuidString,
-            senderId: user.id,
-            recipientId: "currentUser",
-            text: response,
-            timestamp: Date(),
-            isRead: false,
-            originalLanguage: user.nativeLanguage.language,
-            translatedText: "This is the translation of: \(response)",
-            grammarSuggestions: ["Great grammar!", "Natural expression"],
-            alternatives: ["Another way to say this...", "You could also express it as..."],
-            culturalNotes: "This is a common phrase in casual conversations"
-        )
+            // Display AI response in UI
+            await MainActor.run {
+                let aiMessage = Message(
+                    id: UUID().uuidString,
+                    senderId: user.id,
+                    recipientId: "currentUser",
+                    text: aiResponse,
+                    timestamp: Date(),
+                    isRead: false,
+                    originalLanguage: conversationLearningLanguage,
+                    translatedText: nil,
+                    grammarSuggestions: nil,
+                    alternatives: nil,
+                    culturalNotes: nil
+                )
 
-        messages.append(newMessage)
-        saveMessages() // Save after receiving message
-        let indexPath = IndexPath(row: messages.count - 1, section: 0)
-        tableView.insertRows(at: [indexPath], with: .bottom)
-        scrollToBottom(animated: true)
+                messages.append(aiMessage)
+                saveMessages()
+
+                let indexPath = IndexPath(row: messages.count - 1, section: 0)
+                tableView.insertRows(at: [indexPath], with: .bottom)
+                scrollToBottom(animated: true)
+            }
+        } catch {
+            print("❌ Failed to generate AI response: \(error)")
+        }
     }
 
     private func scrollToBottom(animated: Bool) {
