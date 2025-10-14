@@ -29,6 +29,7 @@ class AISetupViewController: UIViewController {
     // Master prompt
     private let masterPromptTextView = UITextView()
     private let masterPromptLabel = UILabel()
+    private let masterPromptCopyButton = UIButton(type: .system)
 
     // Grammar sensitivity (only shown for grammar category)
     private let sensitivityLabel = UILabel()
@@ -184,11 +185,19 @@ class AISetupViewController: UIViewController {
         masterPromptLabel.textColor = .secondaryLabel
         contentView.addSubview(masterPromptLabel)
 
+        masterPromptCopyButton.setImage(UIImage(systemName: "doc.on.doc"), for: .normal)
+        masterPromptCopyButton.tintColor = .systemBlue
+        masterPromptCopyButton.addTarget(self, action: #selector(copyMasterPrompt), for: .touchUpInside)
+        contentView.addSubview(masterPromptCopyButton)
+
         masterPromptTextView.font = .systemFont(ofSize: 14)
         masterPromptTextView.layer.cornerRadius = 8
         masterPromptTextView.layer.borderWidth = 1
         masterPromptTextView.layer.borderColor = UIColor.separator.cgColor
         masterPromptTextView.textContainerInset = UIEdgeInsets(top: 8, left: 8, bottom: 8, right: 8)
+        masterPromptTextView.isScrollEnabled = true
+        masterPromptTextView.alwaysBounceVertical = true
+        masterPromptTextView.showsVerticalScrollIndicator = true
         contentView.addSubview(masterPromptTextView)
 
         // Grammar sensitivity controls (only shown for grammar category)
@@ -336,6 +345,7 @@ class AISetupViewController: UIViewController {
         noSelectionLabel.translatesAutoresizingMaskIntoConstraints = false
         modelTableView.translatesAutoresizingMaskIntoConstraints = false
         masterPromptLabel.translatesAutoresizingMaskIntoConstraints = false
+        masterPromptCopyButton.translatesAutoresizingMaskIntoConstraints = false
         masterPromptTextView.translatesAutoresizingMaskIntoConstraints = false
         sensitivityLabel.translatesAutoresizingMaskIntoConstraints = false
         sensitivitySegmentedControl.translatesAutoresizingMaskIntoConstraints = false
@@ -422,16 +432,21 @@ class AISetupViewController: UIViewController {
             selectedModelScoreLabel.widthAnchor.constraint(greaterThanOrEqualToConstant: 50),
 
             // Master prompt (positioned below both card and no-selection label since they occupy same space)
-            masterPromptLabel.topAnchor.constraint(equalTo: selectedModelCard.bottomAnchor, constant: 20),
+            masterPromptLabel.topAnchor.constraint(equalTo: selectedModelCard.bottomAnchor, constant: 12),
             masterPromptLabel.leadingAnchor.constraint(equalTo: contentView.leadingAnchor, constant: 20),
+
+            masterPromptCopyButton.centerYAnchor.constraint(equalTo: masterPromptLabel.centerYAnchor),
+            masterPromptCopyButton.trailingAnchor.constraint(equalTo: contentView.trailingAnchor, constant: -20),
+            masterPromptCopyButton.widthAnchor.constraint(equalToConstant: 30),
+            masterPromptCopyButton.heightAnchor.constraint(equalToConstant: 30),
 
             masterPromptTextView.topAnchor.constraint(equalTo: masterPromptLabel.bottomAnchor, constant: 8),
             masterPromptTextView.leadingAnchor.constraint(equalTo: contentView.leadingAnchor, constant: 20),
             masterPromptTextView.trailingAnchor.constraint(equalTo: contentView.trailingAnchor, constant: -20),
-            masterPromptTextView.heightAnchor.constraint(equalToConstant: 100),
+            masterPromptTextView.heightAnchor.constraint(equalToConstant: 120),
 
             // Grammar sensitivity controls (conditionally shown)
-            sensitivityLabel.topAnchor.constraint(equalTo: masterPromptTextView.bottomAnchor, constant: 16),
+            sensitivityLabel.topAnchor.constraint(equalTo: masterPromptTextView.bottomAnchor, constant: 12),
             sensitivityLabel.leadingAnchor.constraint(equalTo: contentView.leadingAnchor, constant: 20),
 
             sensitivitySegmentedControl.topAnchor.constraint(equalTo: sensitivityLabel.bottomAnchor, constant: 8),
@@ -443,7 +458,7 @@ class AISetupViewController: UIViewController {
             sensitivityDescriptionLabel.trailingAnchor.constraint(equalTo: contentView.trailingAnchor, constant: -20),
 
             // Message section (positioned below sensitivity controls, which are hidden for non-grammar categories)
-            messageLabel.topAnchor.constraint(equalTo: sensitivityDescriptionLabel.bottomAnchor, constant: 20),
+            messageLabel.topAnchor.constraint(equalTo: sensitivityDescriptionLabel.bottomAnchor, constant: 12),
             messageLabel.leadingAnchor.constraint(equalTo: contentView.leadingAnchor, constant: 20),
 
             messageCopyButton.centerYAnchor.constraint(equalTo: messageLabel.centerYAnchor),
@@ -759,6 +774,19 @@ class AISetupViewController: UIViewController {
                 showAlert(title: "No Model Selected", message: "Please select a model first")
                 return
             }
+        }
+    }
+
+    @objc private func copyMasterPrompt() {
+        guard !masterPromptTextView.text.isEmpty else {
+            showAlert(title: "Nothing to Copy", message: "No prompt to copy")
+            return
+        }
+        UIPasteboard.general.string = masterPromptTextView.text
+        // Show visual feedback
+        masterPromptCopyButton.setImage(UIImage(systemName: "checkmark"), for: .normal)
+        DispatchQueue.main.asyncAfter(deadline: .now() + 1.5) { [weak self] in
+            self?.masterPromptCopyButton.setImage(UIImage(systemName: "doc.on.doc"), for: .normal)
         }
     }
 
