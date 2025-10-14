@@ -31,6 +31,14 @@ class SupabaseService {
 
     // MARK: - Test Authentication (REMOVE IN PRODUCTION)
     private func autoLoginForTesting() async {
+        // Only auto-login if user has completed onboarding/sign-in flow
+        let isUserSignedIn = UserDefaults.standard.bool(forKey: "isUserSignedIn")
+
+        guard isUserSignedIn else {
+            print("ℹ️ User hasn't signed in yet - skipping auto-login")
+            return
+        }
+
         // Check if already authenticated
         if isAuthenticated {
             print("✅ Already authenticated: \(currentUser?.email ?? "unknown")")
