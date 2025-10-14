@@ -60,51 +60,50 @@ struct GrammarConfiguration: Codable {
     static var defaultConfiguration: GrammarConfiguration {
         return GrammarConfiguration(
             minimalPrompt: """
-            You are a grammar assistant. Check this text written in {learning_language} for CRITICAL errors only. \
-            The user's native language is {native_language}.
+            You are a grammar assistant. Check this {learning_language} text for MAJOR errors or incomprehensibility only. Ignore minor mistakes. User's native language: {native_language}.
 
-            Return JSON format:
-            {
-              "corrections": [
-                {"original": "...", "corrected": "...", "explanation": "brief explanation in {native_language}"}
-              ]
-            }
+            CRITICAL: Start your response IMMEDIATELY with either "✗" or "✓" - NO preamble, NO "Sure I can help", NO "Here's my analysis", NO "Is there anything else". Just the assessment.
 
-            Only flag serious mistakes that impede understanding.
+            If the text has critical errors OR is incomprehensible, provide:
+            ✗ Original: [text]
+            ✓ Fixed: [correction]
+            - [One sentence why]
+
+            If minor errors only or perfectly clear: "✓ Clear enough"
             """,
             moderatePrompt: """
-            You are a grammar assistant. Check this text written in {learning_language} for important errors. \
-            The user is learning {learning_language} and their native language is {native_language}.
+            You are a grammar assistant. Check this {learning_language} text for important errors and provide helpful corrections. User's native language: {native_language}.
 
-            Return JSON format:
-            {
-              "corrections": [
-                {"original": "...", "corrected": "...", "explanation": "clear explanation in {native_language}", "severity": "high|medium"}
-              ]
-            }
+            CRITICAL: Start your response IMMEDIATELY with either "✗" or "✓" - NO preamble, NO "Sure I can help", NO "Here's my analysis".
 
-            Focus on errors that affect meaning and common mistakes learners make.
+            If the text has errors worth correcting, provide:
+            ✗ Original: [text]
+            ✓ Fixed: [correction]
+            - [Brief explanation in {native_language}]
+            💡 [One helpful tip for improvement]
+
+            If only minor issues or good: "✓ Good! [One brief compliment or minor suggestion]"
             """,
             verbosePrompt: """
-            You are a detailed grammar tutor. Analyze this text written in {learning_language}. \
-            The user is learning {learning_language} and their native language is {native_language}.
+            You are a detailed grammar tutor. Analyze this {learning_language} text and provide comprehensive feedback. User's native language: {native_language}.
 
-            Return JSON format:
-            {
-              "corrections": [
-                {
-                  "original": "...",
-                  "corrected": "...",
-                  "explanation": "detailed explanation in {native_language}",
-                  "rule": "grammar rule being violated",
-                  "severity": "high|medium|low",
-                  "examples": ["example usage"]
-                }
-              ],
-              "overall_feedback": "general comments on their {learning_language} proficiency"
-            }
+            CRITICAL: Start your response IMMEDIATELY with either "✗" or "✓" - NO preamble.
 
-            Provide comprehensive feedback including minor improvements, style suggestions, and learning tips.
+            If the text has errors, provide:
+            ✗ Original: [text]
+            ✓ Fixed: [correction]
+
+            📝 Grammar Notes:
+            - [Specific error and rule in {native_language}]
+            - [Another error if applicable]
+
+            💡 Tips:
+            - [Helpful suggestion]
+            - [Cultural or usage note if relevant]
+
+            ⭐ Overall: [Brief assessment of their {learning_language} level]
+
+            If excellent: "✓ Excellent! [Detailed compliment and advanced suggestions]"
             """
         )
     }

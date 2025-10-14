@@ -765,42 +765,51 @@ class SwipeableMessageCell: UITableViewCell {
         }
     }
 
-    private func displayGrammarResult(_ grammarJSON: String, granularity: Int) {
+    private func displayGrammarResult(_ grammarText: String, granularity: Int) {
         clearGrammarPane()
 
-        // Try to parse JSON
-        guard let data = grammarJSON.data(using: .utf8),
-              let json = try? JSONSerialization.jsonObject(with: data) as? [String: Any],
-              let corrections = json["corrections"] as? [[String: Any]] else {
-            // If parsing fails, show raw result
-            let label = createGrammarLabel(text: grammarJSON)
-            grammarStackView.addArrangedSubview(label)
-            return
-        }
+        // Try to parse JSON first (for backward compatibility)
+        if let data = grammarText.data(using: .utf8),
+           let json = try? JSONSerialization.jsonObject(with: data) as? [String: Any],
+           let corrections = json["corrections"] as? [[String: Any]] {
 
-        // Display corrections based on granularity
-        let maxCorrections = granularity == 1 ? 2 : (granularity == 2 ? 5 : corrections.count)
-        for correction in corrections.prefix(maxCorrections) {
-            if let original = correction["original"] as? String,
-               let corrected = correction["corrected"] as? String,
-               let explanation = correction["explanation"] as? String {
-                let text = "• \(original) → \(corrected)\n  \(explanation)"
-                let label = createGrammarLabel(text: text)
+            // Legacy JSON format - display corrections
+            let maxCorrections = granularity == 1 ? 2 : (granularity == 2 ? 5 : corrections.count)
+            for correction in corrections.prefix(maxCorrections) {
+                if let original = correction["original"] as? String,
+                   let corrected = correction["corrected"] as? String,
+                   let explanation = correction["explanation"] as? String {
+                    let text = "• \(original) → \(corrected)\n  \(explanation)"
+                    let label = createGrammarLabel(text: text)
+                    grammarStackView.addArrangedSubview(label)
+                }
+            }
+
+            // Show overall feedback for verbose mode
+            if granularity == 3, let feedback = json["overall_feedback"] as? String {
+                let feedbackLabel = createGrammarLabel(text: "💡 \(feedback)")
+                feedbackLabel.textColor = .systemOrange
+                grammarStackView.addArrangedSubview(feedbackLabel)
+            }
+
+            // If no corrections, show positive message
+            if corrections.isEmpty {
+                let label = createGrammarLabel(text: "✓ Great grammar! No corrections needed.")
+                label.textColor = .systemGreen
                 grammarStackView.addArrangedSubview(label)
             }
-        }
+        } else {
+            // New plain text format - just display the text directly
+            // The AI response is pre-formatted with ✓/✗ and proper structure
+            let label = createGrammarLabel(text: grammarText)
 
-        // Show overall feedback for verbose mode
-        if granularity == 3, let feedback = json["overall_feedback"] as? String {
-            let feedbackLabel = createGrammarLabel(text: "💡 \(feedback)")
-            feedbackLabel.textColor = .systemOrange
-            grammarStackView.addArrangedSubview(feedbackLabel)
-        }
+            // Color code based on first character
+            if grammarText.hasPrefix("✓") {
+                label.textColor = .systemGreen
+            } else if grammarText.hasPrefix("✗") {
+                label.textColor = .label
+            }
 
-        // If no corrections, show positive message
-        if corrections.isEmpty {
-            let label = createGrammarLabel(text: "✓ Great grammar! No corrections needed.")
-            label.textColor = .systemGreen
             grammarStackView.addArrangedSubview(label)
         }
     }
