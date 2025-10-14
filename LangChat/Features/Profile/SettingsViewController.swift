@@ -1,0 +1,623 @@
+import UIKit
+import CoreLocation
+import Photos
+
+class SettingsViewController: UIViewController {
+
+    private let tableView = UITableView(frame: .zero, style: .insetGrouped)
+
+    private enum SettingSection: Int, CaseIterable {
+        case account
+        case preferences
+        case privacy
+        case support
+        case about
+
+        var title: String {
+            switch self {
+            case .account: return "Account"
+            case .preferences: return "Preferences"
+            case .privacy: return "Privacy & Safety"
+            case .support: return "Support"
+            case .about: return "About"
+            }
+        }
+
+        var items: [(title: String, icon: String)] {
+            switch self {
+            case .account:
+                return [
+                    ("Email", "envelope"),
+                    ("Phone Number", "phone"),
+                    ("Subscription", "crown")
+                ]
+            case .preferences:
+                return [
+                    ("Grammar Feedback Level", "text.badge.checkmark"),
+                    ("AI Setup", "cpu"),
+                    ("Notifications", "bell"),
+                    ("Appearance", "moon")
+                ]
+            case .privacy:
+                return [
+                    ("Blocked Users", "person.crop.circle.badge.xmark"),
+                    ("Data & Privacy", "lock.shield"),
+                    ("Location", "location"),
+                    ("Photos", "photo")
+                ]
+            case .support:
+                return [
+                    ("Help Center", "questionmark.circle"),
+                    ("Contact Us", "envelope"),
+                    ("Report a Problem", "exclamationmark.bubble")
+                ]
+            case .about:
+                return [
+                    ("Terms of Service", "doc.text"),
+                    ("Privacy Policy", "hand.raised"),
+                    ("Open Source Libraries", "chevron.left.forwardslash.chevron.right"),
+                    ("Version", "info.circle")
+                ]
+            }
+        }
+    }
+
+    override func viewDidLoad() {
+        super.viewDidLoad()
+        setupViews()
+    }
+
+    private func setupViews() {
+        title = "Settings"
+        navigationItem.largeTitleDisplayMode = .never
+        view.backgroundColor = .systemGroupedBackground
+
+        tableView.delegate = self
+        tableView.dataSource = self
+        tableView.register(UITableViewCell.self, forCellReuseIdentifier: "SettingCell")
+        tableView.register(SwitchTableViewCell.self, forCellReuseIdentifier: "SwitchCell")
+
+        view.addSubview(tableView)
+        tableView.translatesAutoresizingMaskIntoConstraints = false
+
+        NSLayoutConstraint.activate([
+            tableView.topAnchor.constraint(equalTo: view.safeAreaLayoutGuide.topAnchor),
+            tableView.leadingAnchor.constraint(equalTo: view.leadingAnchor),
+            tableView.trailingAnchor.constraint(equalTo: view.trailingAnchor),
+            tableView.bottomAnchor.constraint(equalTo: view.bottomAnchor)
+        ])
+
+        // Add sign out button in footer
+        let footerView = UIView(frame: CGRect(x: 0, y: 0, width: view.frame.width, height: 100))
+        let signOutButton = UIButton(type: .system)
+        signOutButton.setTitle("Sign Out", for: .normal)
+        signOutButton.setTitleColor(.systemRed, for: .normal)
+        signOutButton.titleLabel?.font = .systemFont(ofSize: 17, weight: .regular)
+        signOutButton.addTarget(self, action: #selector(signOutTapped), for: .touchUpInside)
+
+        footerView.addSubview(signOutButton)
+        signOutButton.translatesAutoresizingMaskIntoConstraints = false
+
+        NSLayoutConstraint.activate([
+            signOutButton.centerXAnchor.constraint(equalTo: footerView.centerXAnchor),
+            signOutButton.centerYAnchor.constraint(equalTo: footerView.centerYAnchor)
+        ])
+
+        tableView.tableFooterView = footerView
+    }
+
+    @objc private func signOutTapped() {
+        let alert = UIAlertController(
+            title: "Sign Out",
+            message: "Are you sure you want to sign out?",
+            preferredStyle: .alert
+        )
+
+        alert.addAction(UIAlertAction(title: "Cancel", style: .cancel))
+        alert.addAction(UIAlertAction(title: "Sign Out", style: .destructive) { [weak self] _ in
+            // Clear user data
+            UserDefaults.standard.removeObject(forKey: "isUserSignedIn")
+            UserDefaults.standard.removeObject(forKey: "userLanguages")
+            UserDefaults.standard.removeObject(forKey: "firstName")
+            UserDefaults.standard.removeObject(forKey: "lastName")
+            UserDefaults.standard.removeObject(forKey: "bio")
+            UserDefaults.standard.removeObject(forKey: "phoneNumber")
+            UserDefaults.standard.removeObject(forKey: "email")
+            UserDefaults.standard.removeObject(forKey: "birthYear")
+            UserDefaults.standard.removeObject(forKey: "location")
+            UserDefaults.standard.removeObject(forKey: "userId")
+            UserDefaults.standard.removeObject(forKey: "showCityInProfile")
+            UserDefaults.standard.removeObject(forKey: "notificationsEnabled")
+
+            // Navigate to landing screen
+            if let windowScene = UIApplication.shared.connectedScenes.first as? UIWindowScene,
+               let window = windowScene.windows.first {
+                let landingVC = LandingViewController()
+                let navController = UINavigationController(rootViewController: landingVC)
+                navController.setNavigationBarHidden(true, animated: false)
+                window.rootViewController = navController
+
+                UIView.transition(with: window,
+                                duration: 0.5,
+                                options: .transitionCrossDissolve,
+                                animations: nil,
+                                completion: nil)
+            }
+        })
+
+        present(alert, animated: true)
+    }
+
+    private func handleSettingSelection(section: Int, row: Int) {
+        guard let settingSection = SettingSection(rawValue: section) else { return }
+
+        switch settingSection {
+        case .account:
+            switch row {
+            case 0: showEmailSettings()
+            case 1: showPhoneSettings()
+            case 2: showSubscription()
+            default: break
+            }
+
+        case .preferences:
+            switch row {
+            case 0: showGrammarFeedbackLevel()
+            case 1: showAISetup()
+            case 2: showNotificationSettings()
+            case 3: showAppearanceSettings()
+            default: break
+            }
+
+        case .privacy:
+            switch row {
+            case 0: showBlockedUsers()
+            case 1: showDataPrivacy()
+            case 2: showLocationSettings()
+            case 3: showPhotoSettings()
+            default: break
+            }
+
+        case .support:
+            switch row {
+            case 0: showHelpCenter()
+            case 1: contactSupport()
+            case 2: reportProblem()
+            default: break
+            }
+
+        case .about:
+            switch row {
+            case 0: showTermsOfService()
+            case 1: showPrivacyPolicy()
+            case 2: showOpenSourceLibraries()
+            case 3: showVersion()
+            default: break
+            }
+        }
+    }
+
+    // MARK: - Setting Actions
+    private func showEmailSettings() {
+        let currentEmail = UserDefaults.standard.string(forKey: "email") ?? "Not set"
+
+        let alert = UIAlertController(
+            title: "Email Address",
+            message: "Current email: \(currentEmail)",
+            preferredStyle: .alert
+        )
+
+        alert.addTextField { textField in
+            textField.placeholder = "Enter new email"
+            textField.keyboardType = .emailAddress
+            textField.autocapitalizationType = .none
+            textField.text = currentEmail == "Not set" ? "" : currentEmail
+        }
+
+        alert.addAction(UIAlertAction(title: "Cancel", style: .cancel))
+        alert.addAction(UIAlertAction(title: "Save", style: .default) { [weak self, weak alert] _ in
+            guard let newEmail = alert?.textFields?.first?.text, !newEmail.isEmpty else {
+                return
+            }
+
+            // Basic email validation
+            if newEmail.contains("@") && newEmail.contains(".") {
+                UserDefaults.standard.set(newEmail, forKey: "email")
+                self?.tableView.reloadData()
+
+                let successAlert = UIAlertController(
+                    title: "Email Updated",
+                    message: "Your email has been updated successfully.",
+                    preferredStyle: .alert
+                )
+                successAlert.addAction(UIAlertAction(title: "OK", style: .default))
+                self?.present(successAlert, animated: true)
+            } else {
+                let errorAlert = UIAlertController(
+                    title: "Invalid Email",
+                    message: "Please enter a valid email address.",
+                    preferredStyle: .alert
+                )
+                errorAlert.addAction(UIAlertAction(title: "OK", style: .default))
+                self?.present(errorAlert, animated: true)
+            }
+        })
+
+        present(alert, animated: true)
+    }
+
+    private func showPhoneSettings() {
+        let currentPhone = UserDefaults.standard.string(forKey: "phoneNumber") ?? "Not set"
+
+        let alert = UIAlertController(
+            title: "Phone Number",
+            message: "Current phone: \(currentPhone)",
+            preferredStyle: .alert
+        )
+
+        alert.addTextField { textField in
+            textField.placeholder = "Enter phone number"
+            textField.keyboardType = .phonePad
+            textField.text = currentPhone == "Not set" ? "" : currentPhone
+        }
+
+        alert.addAction(UIAlertAction(title: "Cancel", style: .cancel))
+        alert.addAction(UIAlertAction(title: "Save", style: .default) { [weak self, weak alert] _ in
+            guard let newPhone = alert?.textFields?.first?.text, !newPhone.isEmpty else {
+                return
+            }
+
+            UserDefaults.standard.set(newPhone, forKey: "phoneNumber")
+            self?.tableView.reloadData()
+
+            let successAlert = UIAlertController(
+                title: "Phone Updated",
+                message: "Your phone number has been updated successfully.",
+                preferredStyle: .alert
+            )
+            successAlert.addAction(UIAlertAction(title: "OK", style: .default))
+            self?.present(successAlert, animated: true)
+        })
+
+        present(alert, animated: true)
+    }
+
+    private func showSubscription() {
+        let subscriptionVC = SubscriptionViewController()
+        let navController = UINavigationController(rootViewController: subscriptionVC)
+        navController.modalPresentationStyle = .pageSheet
+        present(navController, animated: true)
+    }
+
+    private func showGrammarFeedbackLevel() {
+        let savedGranularity = UserDefaults.standard.integer(forKey: "granularityLevel")
+        let currentLevel = savedGranularity == 0 ? 2 : savedGranularity // Default to Moderate
+
+        let alert = UIAlertController(
+            title: "Grammar Feedback Level",
+            message: "Choose how much grammar feedback you want when chatting",
+            preferredStyle: .actionSheet
+        )
+
+        let levels: [(String, String, Int)] = [
+            ("Minimal", "Only critical errors", 1),
+            ("Moderate", "Important corrections and alternatives", 2),
+            ("Verbose", "Detailed feedback with cultural notes", 3)
+        ]
+
+        for (title, description, value) in levels {
+            let isSelected = value == currentLevel
+            let actionTitle = isSelected ? "✓ \(title)" : title
+            let action = UIAlertAction(title: actionTitle, style: .default) { _ in
+                UserDefaults.standard.set(value, forKey: "granularityLevel")
+                print("Grammar feedback level set to: \(title)")
+            }
+            alert.addAction(action)
+        }
+
+        alert.addAction(UIAlertAction(title: "Cancel", style: .cancel))
+
+        if let popover = alert.popoverPresentationController {
+            popover.sourceView = tableView
+            popover.sourceRect = tableView.rectForRow(at: IndexPath(row: 0, section: SettingSection.preferences.rawValue))
+        }
+
+        present(alert, animated: true)
+    }
+
+    private func showAISetup() {
+        let aiSetupVC = AISetupViewController()
+        let navController = UINavigationController(rootViewController: aiSetupVC)
+        navController.modalPresentationStyle = .fullScreen
+        present(navController, animated: true)
+    }
+
+    private func showNotificationSettings() {
+        print("Show notification settings")
+    }
+
+    private func showAppearanceSettings() {
+        let currentMode = UserDefaults.standard.integer(forKey: "appearanceMode")
+
+        let alert = UIAlertController(
+            title: "Appearance",
+            message: "Choose your preferred appearance mode",
+            preferredStyle: .actionSheet
+        )
+
+        let modes: [(String, Int, UIUserInterfaceStyle)] = [
+            ("Light", 0, .light),
+            ("Dark", 1, .dark),
+            ("System Default", 2, .unspecified)
+        ]
+
+        for (title, value, style) in modes {
+            let isSelected = value == currentMode
+            let actionTitle = isSelected ? "✓ \(title)" : title
+            let action = UIAlertAction(title: actionTitle, style: .default) { [weak self] _ in
+                UserDefaults.standard.set(value, forKey: "appearanceMode")
+
+                // Apply the appearance change immediately
+                if let windowScene = UIApplication.shared.connectedScenes.first as? UIWindowScene {
+                    windowScene.windows.forEach { window in
+                        window.overrideUserInterfaceStyle = style
+                    }
+                }
+            }
+            alert.addAction(action)
+        }
+
+        alert.addAction(UIAlertAction(title: "Cancel", style: .cancel))
+
+        if let popover = alert.popoverPresentationController {
+            popover.sourceView = tableView
+            popover.sourceRect = tableView.rectForRow(at: IndexPath(row: 3, section: SettingSection.preferences.rawValue))
+        }
+
+        present(alert, animated: true)
+    }
+
+    private func showBlockedUsers() {
+        let blockedUsersVC = BlockedUsersViewController()
+        navigationController?.pushViewController(blockedUsersVC, animated: true)
+    }
+
+    private func showDataPrivacy() {
+        let dataPrivacyVC = DataPrivacyViewController()
+        navigationController?.pushViewController(dataPrivacyVC, animated: true)
+    }
+
+    private func showLocationSettings() {
+        let status = CLLocationManager.authorizationStatus()
+
+        var statusText: String
+        var canOpenSettings = true
+
+        switch status {
+        case .notDetermined:
+            statusText = "Not yet requested"
+            canOpenSettings = false
+        case .restricted:
+            statusText = "Restricted by device settings"
+        case .denied:
+            statusText = "Denied - Location services are disabled"
+        case .authorizedAlways, .authorizedWhenInUse:
+            statusText = "Authorized - Location services are enabled"
+        @unknown default:
+            statusText = "Unknown"
+        }
+
+        let alert = UIAlertController(
+            title: "Location Permission",
+            message: "Status: \(statusText)\n\nLocation is used to match you with language partners nearby.",
+            preferredStyle: .alert
+        )
+
+        if canOpenSettings {
+            alert.addAction(UIAlertAction(title: "Open Settings", style: .default) { _ in
+                if let url = URL(string: UIApplication.openSettingsURLString) {
+                    UIApplication.shared.open(url)
+                }
+            })
+        }
+
+        alert.addAction(UIAlertAction(title: "OK", style: .cancel))
+
+        present(alert, animated: true)
+    }
+
+    private func showPhotoSettings() {
+        let status = PHPhotoLibrary.authorizationStatus()
+
+        var statusText: String
+        var canOpenSettings = true
+
+        switch status {
+        case .notDetermined:
+            statusText = "Not yet requested"
+            canOpenSettings = false
+        case .restricted:
+            statusText = "Restricted by device settings"
+        case .denied:
+            statusText = "Denied - Photo library access is disabled"
+        case .authorized, .limited:
+            statusText = "Authorized - Photo library access is enabled"
+        @unknown default:
+            statusText = "Unknown"
+        }
+
+        let alert = UIAlertController(
+            title: "Photo Library Permission",
+            message: "Status: \(statusText)\n\nPhoto library access is used to upload profile pictures.",
+            preferredStyle: .alert
+        )
+
+        if canOpenSettings {
+            alert.addAction(UIAlertAction(title: "Open Settings", style: .default) { _ in
+                if let url = URL(string: UIApplication.openSettingsURLString) {
+                    UIApplication.shared.open(url)
+                }
+            })
+        }
+
+        alert.addAction(UIAlertAction(title: "OK", style: .cancel))
+
+        present(alert, animated: true)
+    }
+
+    private func showHelpCenter() {
+        print("Show help center")
+    }
+
+    private func contactSupport() {
+        print("Contact support")
+    }
+
+    private func reportProblem() {
+        print("Report problem")
+    }
+
+    private func showTermsOfService() {
+        print("Show terms of service")
+    }
+
+    private func showPrivacyPolicy() {
+        print("Show privacy policy")
+    }
+
+    private func showOpenSourceLibraries() {
+        print("Show open source libraries")
+    }
+
+    private func showVersion() {
+        let version = Bundle.main.infoDictionary?["CFBundleShortVersionString"] as? String ?? "1.0"
+        let build = Bundle.main.infoDictionary?["CFBundleVersion"] as? String ?? "1"
+
+        let alert = UIAlertController(
+            title: "LangChat",
+            message: "Version \(version) (\(build))",
+            preferredStyle: .alert
+        )
+        alert.addAction(UIAlertAction(title: "OK", style: .default))
+        present(alert, animated: true)
+    }
+}
+
+// MARK: - UITableViewDataSource
+extension SettingsViewController: UITableViewDataSource {
+    func numberOfSections(in tableView: UITableView) -> Int {
+        return SettingSection.allCases.count
+    }
+
+    func tableView(_ tableView: UITableView, numberOfRowsInSection section: Int) -> Int {
+        guard let settingSection = SettingSection(rawValue: section) else { return 0 }
+        return settingSection.items.count
+    }
+
+    func tableView(_ tableView: UITableView, titleForHeaderInSection section: Int) -> String? {
+        guard let settingSection = SettingSection(rawValue: section) else { return nil }
+        return settingSection.title
+    }
+
+    func tableView(_ tableView: UITableView, cellForRowAt indexPath: IndexPath) -> UITableViewCell {
+        guard let settingSection = SettingSection(rawValue: indexPath.section) else {
+            return UITableViewCell()
+        }
+
+        let item = settingSection.items[indexPath.row]
+
+        // Use switch cell for specific settings
+        if settingSection == .preferences && indexPath.row == 2 { // Notifications (now at row 2)
+            let cell = tableView.dequeueReusableCell(withIdentifier: "SwitchCell", for: indexPath) as! SwitchTableViewCell
+            cell.configure(title: item.title, icon: item.icon, isOn: true)
+            cell.switchValueChanged = { isOn in
+                UserDefaults.standard.set(isOn, forKey: "notificationsEnabled")
+            }
+            return cell
+        }
+
+        let cell = tableView.dequeueReusableCell(withIdentifier: "SettingCell", for: indexPath)
+        var config = cell.defaultContentConfiguration()
+        config.text = item.title
+        config.image = UIImage(systemName: item.icon)
+
+        // Add detail text for specific items
+        if settingSection == .about && indexPath.row == 3 { // Version
+            let version = Bundle.main.infoDictionary?["CFBundleShortVersionString"] as? String ?? "1.0"
+            config.secondaryText = version
+        }
+
+        cell.contentConfiguration = config
+        cell.accessoryType = .disclosureIndicator
+
+        return cell
+    }
+}
+
+// MARK: - UITableViewDelegate
+extension SettingsViewController: UITableViewDelegate {
+    func tableView(_ tableView: UITableView, didSelectRowAt indexPath: IndexPath) {
+        tableView.deselectRow(at: indexPath, animated: true)
+        handleSettingSelection(section: indexPath.section, row: indexPath.row)
+    }
+}
+
+// MARK: - Custom Cell for Switch Settings
+class SwitchTableViewCell: UITableViewCell {
+    private let iconImageView = UIImageView()
+    private let titleLabel = UILabel()
+    private let switchControl = UISwitch()
+
+    var switchValueChanged: ((Bool) -> Void)?
+
+    override init(style: UITableViewCell.CellStyle, reuseIdentifier: String?) {
+        super.init(style: style, reuseIdentifier: reuseIdentifier)
+        setupViews()
+    }
+
+    required init?(coder: NSCoder) {
+        super.init(coder: coder)
+        setupViews()
+    }
+
+    private func setupViews() {
+        selectionStyle = .none
+
+        iconImageView.tintColor = .systemBlue
+        iconImageView.contentMode = .scaleAspectFit
+        contentView.addSubview(iconImageView)
+
+        titleLabel.font = .systemFont(ofSize: 17)
+        contentView.addSubview(titleLabel)
+
+        switchControl.addTarget(self, action: #selector(switchToggled), for: .valueChanged)
+        contentView.addSubview(switchControl)
+
+        iconImageView.translatesAutoresizingMaskIntoConstraints = false
+        titleLabel.translatesAutoresizingMaskIntoConstraints = false
+        switchControl.translatesAutoresizingMaskIntoConstraints = false
+
+        NSLayoutConstraint.activate([
+            iconImageView.leadingAnchor.constraint(equalTo: contentView.leadingAnchor, constant: 16),
+            iconImageView.centerYAnchor.constraint(equalTo: contentView.centerYAnchor),
+            iconImageView.widthAnchor.constraint(equalToConstant: 24),
+            iconImageView.heightAnchor.constraint(equalToConstant: 24),
+
+            titleLabel.leadingAnchor.constraint(equalTo: iconImageView.trailingAnchor, constant: 12),
+            titleLabel.centerYAnchor.constraint(equalTo: contentView.centerYAnchor),
+
+            switchControl.trailingAnchor.constraint(equalTo: contentView.trailingAnchor, constant: -16),
+            switchControl.centerYAnchor.constraint(equalTo: contentView.centerYAnchor)
+        ])
+    }
+
+    func configure(title: String, icon: String, isOn: Bool) {
+        titleLabel.text = title
+        iconImageView.image = UIImage(systemName: icon)
+        switchControl.isOn = isOn
+    }
+
+    @objc private func switchToggled() {
+        switchValueChanged?(switchControl.isOn)
+    }
+}

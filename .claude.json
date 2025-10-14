@@ -1,0 +1,23 @@
+{
+  "mcpServers": {
+    "firecrawl-mcp": {
+      "command": "firecrawl-mcp",
+      "env": {
+        "FIRECRAWL_API_KEY": "fc-624e4487c21c4890914a942eff9d541f"
+      }
+    },
+    "supabase": {
+      "command": "npx",
+      "args": [
+        "-y",
+        "@supabase/mcp-server-postgrest",
+        "--apiUrl",
+        "https://ckhukylfoeofvoxvwwin.supabase.co/rest/v1",
+        "--apiKey",
+        "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImNraHVreWxmb2VvZnZveHZ3d2luIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTk4NTkxNjAsImV4cCI6MjA3NTQzNTE2MH0.2gIFD3ZmAEagV9vmpsGvnhmSvZcWkrm10OcvmnHEiAA",
+        "--schema",
+        "public"
+      ]
+    }
+  }
+}
