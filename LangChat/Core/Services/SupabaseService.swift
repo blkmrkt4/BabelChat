@@ -22,6 +22,38 @@ class SupabaseService {
         )
 
         print("✅ Supabase initialized: \(SupabaseConfig.supabaseURL)")
+
+        // Auto-login for testing (REMOVE IN PRODUCTION)
+        Task {
+            await autoLoginForTesting()
+        }
+    }
+
+    // MARK: - Test Authentication (REMOVE IN PRODUCTION)
+    private func autoLoginForTesting() async {
+        // Check if already authenticated
+        if isAuthenticated {
+            print("✅ Already authenticated: \(currentUser?.email ?? "unknown")")
+            return
+        }
+
+        // Try to sign in with test account
+        let testEmail = "test@langchat.com"
+        let testPassword = "testpassword123"
+
+        do {
+            // First try to sign in
+            try await signIn(email: testEmail, password: testPassword)
+            print("✅ Test user signed in successfully")
+        } catch {
+            // If sign in fails, try to sign up
+            do {
+                try await signUp(email: testEmail, password: testPassword)
+                print("✅ Test user created and signed in")
+            } catch {
+                print("❌ Failed to authenticate test user: \(error)")
+            }
+        }
     }
 
     // MARK: - Current User
