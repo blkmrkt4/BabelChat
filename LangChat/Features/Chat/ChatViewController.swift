@@ -15,6 +15,7 @@ class ChatViewController: UIViewController {
 
     // Supabase conversation ID
     private var conversationId: String?
+    private var isConversationReady = false
 
     // Language context for translations and grammar checks
     private var conversationLearningLanguage: Language // The language being practiced
@@ -343,19 +344,56 @@ class ChatViewController: UIViewController {
     private func setupConversation() {
         Task {
             do {
+                // Disable send button while setting up
+                await MainActor.run {
+                    sendButton.isEnabled = false
+                    inputTextField.placeholder = "Setting up conversation..."
+                }
+
                 let conversation = try await SupabaseService.shared.getOrCreateConversation(with: user.id)
-                self.conversationId = conversation.id
-                print("✅ Conversation ready: \(conversation.id)")
+
+                await MainActor.run {
+                    self.conversationId = conversation.id
+                    self.isConversationReady = true
+                    self.inputTextField.placeholder = "Type a message..."
+                    // Re-enable if there's text
+                    self.sendButton.isEnabled = !(self.inputTextField.text?.isEmpty ?? true)
+                    print("✅ Conversation ready: \(conversation.id)")
+                }
             } catch {
-                print("❌ Failed to setup conversation: \(error)")
+                await MainActor.run {
+                    self.inputTextField.placeholder = "Failed to connect"
+                    print("❌ Failed to setup conversation: \(error)")
+
+                    // Show error alert
+                    let alert = UIAlertController(
+                        title: "Connection Error",
+                        message: "Failed to setup conversation. Please check your connection and try again.",
+                        preferredStyle: .alert
+                    )
+                    alert.addAction(UIAlertAction(title: "Retry", style: .default) { _ in
+                        self.setupConversation()
+                    })
+                    alert.addAction(UIAlertAction(title: "Cancel", style: .cancel))
+                    self.present(alert, animated: true)
+                }
             }
         }
     }
 
     @objc private func sendButtonTapped() {
         guard let text = inputTextField.text, !text.isEmpty else { return }
-        guard let conversationId = conversationId else {
-            print("❌ No conversation ID yet")
+
+        // Wait for conversation to be ready
+        guard isConversationReady, let conversationId = conversationId else {
+            print("❌ Conversation not ready yet")
+            let alert = UIAlertController(
+                title: "Please Wait",
+                message: "Setting up conversation...",
+                preferredStyle: .alert
+            )
+            alert.addAction(UIAlertAction(title: "OK", style: .default))
+            present(alert, animated: true)
             return
         }
 
@@ -475,7 +513,9 @@ class ChatViewController: UIViewController {
     }
 
     @objc private func textFieldDidChange() {
-        sendButton.isEnabled = !(inputTextField.text?.isEmpty ?? true)
+        // Only enable send button if conversation is ready AND text is not empty
+        let hasText = !(inputTextField.text?.isEmpty ?? true)
+        sendButton.isEnabled = hasText && isConversationReady
     }
 
     @objc private func dismissKeyboard() {
