@@ -1,4 +1,5 @@
 import UIKit
+import Supabase
 
 class MatchesListViewController: UIViewController {
 
@@ -52,104 +53,116 @@ class MatchesListViewController: UIViewController {
     }
 
     private func loadMatches() {
-        let sampleUser1 = User(
-            id: "1",
-            username: "jihyun_kim",
-            firstName: "Ji-hyun",
-            lastName: "Kim",
-            bio: "Seoul native learning English and Spanish. Love K-dramas and coffee culture!",
-            profileImageURL: "https://picsum.photos/seed/jihyun_profile/400/400",
-            photoURLs: [
-                "https://picsum.photos/seed/jihyun1/400/600",
-                "https://picsum.photos/seed/jihyun2/400/600",
-                "https://picsum.photos/seed/jihyun3/400/600",
-                "https://picsum.photos/seed/jihyun4/400/600",
-                "https://picsum.photos/seed/jihyun5/400/600",
-                "https://picsum.photos/seed/jihyun6/400/600"
-            ],
-            nativeLanguage: UserLanguage(language: .korean, proficiency: .native, isNative: true),
-            learningLanguages: [
-                UserLanguage(language: .english, proficiency: .intermediate, isNative: false),
-                UserLanguage(language: .spanish, proficiency: .beginner, isNative: false)
-            ],
-            openToLanguages: [.english, .japanese],
+        // Load real matches from Supabase
+        Task {
+            do {
+                print("📥 Loading matches from Supabase...")
+                let matchResponses = try await SupabaseService.shared.getMatches()
+                print("✅ Loaded \(matchResponses.count) matches from Supabase")
+
+                // Log all match IDs
+                for mr in matchResponses {
+                    print("  📋 Match ID from DB: \(mr.id)")
+                }
+
+                guard let currentUserId = SupabaseService.shared.currentUserId?.uuidString else {
+                    print("❌ No current user ID")
+                    return
+                }
+
+                // Convert MatchResponse to Match with User objects
+                var loadedMatches: [Match] = []
+
+                for matchResponse in matchResponses {
+                    print("🔍 Processing match: \(matchResponse.id)")
+                    print("   user1_id: \(matchResponse.user1Id)")
+                    print("   user2_id: \(matchResponse.user2Id)")
+                    print("   current user: \(currentUserId)")
+
+                    // Determine which user is the "other" user (not the current user)
+                    // Use case-insensitive comparison for UUIDs
+                    let otherUserId = matchResponse.user1Id.lowercased() == currentUserId.lowercased() ? matchResponse.user2Id : matchResponse.user1Id
+                    print("   👉 Other user ID: \(otherUserId)")
+
+                    // Fetch the other user's profile from Supabase
+                    do {
+                        let profile = try await SupabaseService.shared.client.database
+                            .from("profiles")
+                            .select()
+                            .eq("id", value: otherUserId)
+                            .single()
+                            .execute()
+                            .value as ProfileResponse
+
+                        print("📥 Loaded profile: \(profile.firstName) (\(profile.email)) - ID: \(profile.id)")
+
+                        // Convert ProfileResponse to User
+                        let user = convertProfileToUser(profile)
+                        print("👤 Converted to User: \(user.firstName) - ID: \(user.id)")
+
+                        // Create Match
+                        let match = Match(
+                            id: matchResponse.id,
+                            user: user,
+                            matchedAt: ISO8601DateFormatter().date(from: matchResponse.matchedAt) ?? Date(),
+                            hasNewMessage: false, // TODO: Check for unread messages
+                            lastMessage: "Start chatting!",
+                            lastMessageTime: ISO8601DateFormatter().date(from: matchResponse.matchedAt) ?? Date()
+                        )
+
+                        print("✅ Created Match object with ID: \(match.id)")
+                        loadedMatches.append(match)
+                        print("✅ Loaded match with \(user.firstName)")
+                    } catch {
+                        print("❌ Failed to load profile for user \(otherUserId): \(error)")
+                    }
+                }
+
+                await MainActor.run {
+                    self.matches = loadedMatches
+                    self.collectionView.reloadData()
+                    print("✅ Displayed \(loadedMatches.count) matches")
+                }
+
+            } catch {
+                print("❌ Failed to load matches: \(error)")
+                // Fallback to empty state or show error
+                await MainActor.run {
+                    self.matches = []
+                    self.collectionView.reloadData()
+                }
+            }
+        }
+    }
+
+    // Helper function to convert ProfileResponse to User
+    private func convertProfileToUser(_ profile: ProfileResponse) -> User {
+        // Parse learning languages
+        let learningLanguages: [UserLanguage] = (profile.learningLanguages ?? []).compactMap { langName in
+            guard let language = Language.from(name: langName) else { return nil }
+            return UserLanguage(language: language, proficiency: .intermediate, isNative: false)
+        }
+
+        // Parse native language
+        let nativeLanguage: Language = Language.from(name: profile.nativeLanguage) ?? .english
+
+        return User(
+            id: profile.id,
+            username: profile.email.split(separator: "@").first.map(String.init) ?? "user",
+            firstName: profile.firstName,
+            lastName: profile.lastName,
+            bio: profile.bio,
+            profileImageURL: profile.profilePhotos?.first,
+            photoURLs: profile.profilePhotos ?? [],
+            nativeLanguage: UserLanguage(language: nativeLanguage, proficiency: .native, isNative: true),
+            learningLanguages: learningLanguages,
+            openToLanguages: learningLanguages.map { $0.language },
             practiceLanguages: nil,
-            location: "Seoul, South Korea",
-            showCityInProfile: true,  // Shows "Seoul, South Korea"
-            matchedDate: Date(timeIntervalSince1970: 1726358400),
-            isOnline: true
+            location: profile.location,
+            showCityInProfile: true,
+            matchedDate: Date(),
+            isOnline: false // TODO: Implement online status
         )
-
-        let sampleUser2 = User(
-            id: "2",
-            username: "alex_smith",
-            firstName: "Alex",
-            lastName: "Smith",
-            bio: "Language enthusiast from London. Fluent in 3 languages!",
-            profileImageURL: "https://picsum.photos/seed/alex_profile/400/400",
-            photoURLs: ImageService.shared.generatePhotoURLs(for: "alex", count: 6),
-            nativeLanguage: UserLanguage(language: .english, proficiency: .native, isNative: true),
-            learningLanguages: [
-                UserLanguage(language: .spanish, proficiency: .advanced, isNative: false),
-                UserLanguage(language: .french, proficiency: .intermediate, isNative: false)
-            ],
-            openToLanguages: [.spanish, .french],
-            practiceLanguages: nil,
-            location: "London, UK",
-            showCityInProfile: false,  // Shows only "UK"
-            matchedDate: Date(timeIntervalSince1970: 1726272000),
-            isOnline: false
-        )
-
-        let sampleUser3 = User(
-            id: "3",
-            username: "sofia_martinez",
-            firstName: "Sofia",
-            lastName: "Martinez",
-            bio: "Mexican teacher passionate about cultural exchange!",
-            profileImageURL: "https://picsum.photos/seed/sofia_profile/400/400",
-            photoURLs: ImageService.shared.generatePhotoURLs(for: "sofia", count: 6),
-            nativeLanguage: UserLanguage(language: .spanish, proficiency: .native, isNative: true),
-            learningLanguages: [
-                UserLanguage(language: .english, proficiency: .advanced, isNative: false),
-                UserLanguage(language: .german, proficiency: .beginner, isNative: false)
-            ],
-            openToLanguages: [.english, .german],
-            practiceLanguages: nil,
-            location: "Mexico City, Mexico",
-            showCityInProfile: true,  // Shows "Mexico City, Mexico"
-            matchedDate: Date(timeIntervalSince1970: 1726185600),
-            isOnline: true
-        )
-
-        let sampleUser4 = User(
-            id: "4",
-            username: "pooja_sharma",
-            firstName: "Pooja",
-            lastName: "Sharma",
-            bio: "Mumbai native, love Bollywood and chai! Practicing English for my job in tech.",
-            profileImageURL: "https://picsum.photos/seed/pooja_profile/400/400",
-            photoURLs: ImageService.shared.generatePhotoURLs(for: "pooja", count: 6),
-            nativeLanguage: UserLanguage(language: .hindi, proficiency: .native, isNative: true),
-            learningLanguages: [
-                UserLanguage(language: .english, proficiency: .intermediate, isNative: false)
-            ],
-            openToLanguages: [.english],
-            practiceLanguages: nil,
-            location: "Mumbai, India",
-            showCityInProfile: true,  // Shows "Mumbai, India"
-            matchedDate: Date(timeIntervalSince1970: 1726099200),
-            isOnline: true
-        )
-
-        matches = [
-            Match(id: "1", user: sampleUser1, matchedAt: Date(), hasNewMessage: true, lastMessage: "안녕하세요! How are you?", lastMessageTime: Date()),
-            Match(id: "2", user: sampleUser2, matchedAt: Date(), hasNewMessage: false, lastMessage: "That sounds great!", lastMessageTime: Date(timeIntervalSinceNow: -3600)),
-            Match(id: "3", user: sampleUser3, matchedAt: Date(), hasNewMessage: true, lastMessage: "¡Hola! Nice to meet you", lastMessageTime: Date(timeIntervalSinceNow: -7200)),
-            Match(id: "4", user: sampleUser4, matchedAt: Date(), hasNewMessage: true, lastMessage: "नमस्ते! Let's practice together!", lastMessageTime: Date(timeIntervalSinceNow: -1800))
-        ]
-
-        collectionView.reloadData()
     }
 
     @objc private func notificationsTapped() {
@@ -174,6 +187,7 @@ extension MatchesListViewController: UICollectionViewDelegate {
         let match = matches[indexPath.row]
         let detailVC = UserDetailViewController()
         detailVC.user = match.user
+        detailVC.match = match // Pass the actual match object with real database ID
         detailVC.isMatched = true // Already matched
 
         // Pass the full list of matched users and current index for navigation

@@ -22,46 +22,6 @@ class SupabaseService {
         )
 
         print("✅ Supabase initialized: \(SupabaseConfig.supabaseURL)")
-
-        // Auto-login for testing (REMOVE IN PRODUCTION)
-        Task {
-            await autoLoginForTesting()
-        }
-    }
-
-    // MARK: - Test Authentication (REMOVE IN PRODUCTION)
-    private func autoLoginForTesting() async {
-        // Only auto-login if user has completed onboarding/sign-in flow
-        let isUserSignedIn = UserDefaults.standard.bool(forKey: "isUserSignedIn")
-
-        guard isUserSignedIn else {
-            print("ℹ️ User hasn't signed in yet - skipping auto-login")
-            return
-        }
-
-        // Check if already authenticated
-        if isAuthenticated {
-            print("✅ Already authenticated: \(currentUser?.email ?? "unknown")")
-            return
-        }
-
-        // Try to sign in with test account
-        let testEmail = "test@langchat.com"
-        let testPassword = "testpassword123"
-
-        do {
-            // First try to sign in
-            try await signIn(email: testEmail, password: testPassword)
-            print("✅ Test user signed in successfully")
-        } catch {
-            // If sign in fails, try to sign up
-            do {
-                try await signUp(email: testEmail, password: testPassword)
-                print("✅ Test user created and signed in")
-            } catch {
-                print("❌ Failed to authenticate test user: \(error)")
-            }
-        }
     }
 
     // MARK: - Current User
@@ -289,31 +249,43 @@ extension SupabaseService {
 // MARK: - Messaging Methods
 extension SupabaseService {
 
-    /// Get or create conversation between two users
-    func getOrCreateConversation(with otherUserId: String) async throws -> ConversationResponse {
-        guard let userId = currentUserId else {
-            throw NSError(domain: "SupabaseService", code: -1, userInfo: [NSLocalizedDescriptionKey: "Not authenticated"])
+    /// Get or create conversation for a match (using match ID directly)
+    func getOrCreateConversation(forMatchId matchId: String) async throws -> ConversationResponse {
+        // Check if this match already has a conversation
+        struct MatchWithConversation: Codable {
+            let id: String
+            let conversationId: String?
+
+            enum CodingKeys: String, CodingKey {
+                case id
+                case conversationId = "conversation_id"
+            }
         }
 
-        // Try to find existing conversation
-        let existing: [ConversationResponse] = try await client.database
-            .from("conversations")
-            .select()
-            .or("user1_id.eq.\(userId.uuidString),user2_id.eq.\(userId.uuidString)")
-            .or("user1_id.eq.\(otherUserId),user2_id.eq.\(otherUserId)")
-            .limit(1)
+        print("🔍 Fetching match: \(matchId)")
+        let match: MatchWithConversation = try await client.database
+            .from("matches")
+            .select("id,conversation_id")  // Remove space in select
+            .eq("id", value: matchId)
+            .single()
             .execute()
             .value
+        print("✅ Found match, conversation_id: \(match.conversationId ?? "nil")")
 
-        if let conversation = existing.first {
+        // If match has a conversation, fetch and return it
+        if let conversationId = match.conversationId, !conversationId.isEmpty {
+            let conversation: ConversationResponse = try await client.database
+                .from("conversations")
+                .select()
+                .eq("id", value: conversationId)
+                .single()
+                .execute()
+                .value
             return conversation
         }
 
-        // Create new conversation
-        let newConversation = ConversationCreate(
-            user1Id: userId.uuidString,
-            user2Id: otherUserId
-        )
+        // Create new conversation for this match
+        let newConversation = ConversationCreate(matchId: matchId)
 
         let response: ConversationResponse = try await client.database
             .from("conversations")
@@ -323,11 +295,96 @@ extension SupabaseService {
             .execute()
             .value
 
+        // Update the match with the conversation ID
+        try await client.database
+            .from("matches")
+            .update(["conversation_id": response.id])
+            .eq("id", value: matchId)
+            .execute()
+
+        print("✅ Created new conversation: \(response.id) for match: \(matchId)")
+        return response
+    }
+
+    /// Get or create conversation between two users
+    func getOrCreateConversation(with otherUserId: String) async throws -> ConversationResponse {
+        guard let userId = currentUserId else {
+            throw NSError(domain: "SupabaseService", code: -1, userInfo: [NSLocalizedDescriptionKey: "Not authenticated"])
+        }
+
+        // First, find the match between these two users
+        let matchQuery = """
+            id,
+            conversation_id,
+            user1_id,
+            user2_id
+        """
+
+        struct MatchWithConversation: Codable {
+            let id: String
+            let conversationId: String?
+            let user1Id: String
+            let user2Id: String
+
+            enum CodingKeys: String, CodingKey {
+                case id
+                case conversationId = "conversation_id"
+                case user1Id = "user1_id"
+                case user2Id = "user2_id"
+            }
+        }
+
+        // Find match where current user is either user1 or user2, and other user is the opposite
+        let matches: [MatchWithConversation] = try await client.database
+            .from("matches")
+            .select()
+            .or("and(user1_id.eq.\(userId.uuidString),user2_id.eq.\(otherUserId)),and(user1_id.eq.\(otherUserId),user2_id.eq.\(userId.uuidString))")
+            .limit(1)
+            .execute()
+            .value
+
+        guard let match = matches.first else {
+            throw NSError(domain: "SupabaseService", code: -1, userInfo: [NSLocalizedDescriptionKey: "No match found between users"])
+        }
+
+        let matchId = match.id
+
+        // Check if match already has a conversation
+        if let conversationId = match.conversationId, !conversationId.isEmpty {
+            // Fetch the conversation
+            let conversation: ConversationResponse = try await client.database
+                .from("conversations")
+                .select()
+                .eq("id", value: conversationId)
+                .single()
+                .execute()
+                .value
+            return conversation
+        }
+
+        // Create new conversation for this match
+        let newConversation = ConversationCreate(matchId: matchId)
+
+        let response: ConversationResponse = try await client.database
+            .from("conversations")
+            .insert(newConversation)
+            .select()
+            .single()
+            .execute()
+            .value
+
+        // Update the match with the conversation ID
+        try await client.database
+            .from("matches")
+            .update(["conversation_id": response.id])
+            .eq("id", value: matchId)
+            .execute()
+
         return response
     }
 
     /// Send a message
-    func sendMessage(conversationId: String, text: String) async throws {
+    func sendMessage(conversationId: String, receiverId: String, text: String, language: String = "English") async throws {
         guard let userId = currentUserId else {
             throw NSError(domain: "SupabaseService", code: -1, userInfo: [NSLocalizedDescriptionKey: "Not authenticated"])
         }
@@ -335,7 +392,9 @@ extension SupabaseService {
         let message = MessageCreate(
             conversationId: conversationId,
             senderId: userId.uuidString,
-            text: text
+            receiverId: receiverId,
+            originalText: text,
+            originalLanguage: language
         )
 
         try await client.database
@@ -344,6 +403,24 @@ extension SupabaseService {
             .execute()
 
         print("✅ Message sent")
+    }
+
+    /// Send a message as a specific sender (for AI responses)
+    func sendMessageAs(senderId: String, conversationId: String, receiverId: String, text: String, language: String = "English") async throws {
+        let message = MessageCreate(
+            conversationId: conversationId,
+            senderId: senderId,
+            receiverId: receiverId,
+            originalText: text,
+            originalLanguage: language
+        )
+
+        try await client.database
+            .from("messages")
+            .insert(message)
+            .execute()
+
+        print("✅ Message sent as \(senderId)")
     }
 
     /// Get messages for a conversation
@@ -503,25 +580,21 @@ struct MatchResponse: Codable {
 }
 
 struct ConversationCreate: Codable {
-    let user1Id: String
-    let user2Id: String
+    let matchId: String
 
     enum CodingKeys: String, CodingKey {
-        case user1Id = "user1_id"
-        case user2Id = "user2_id"
+        case matchId = "match_id"
     }
 }
 
 struct ConversationResponse: Codable {
     let id: String
-    let user1Id: String
-    let user2Id: String
+    let matchId: String
     let createdAt: String
 
     enum CodingKeys: String, CodingKey {
         case id
-        case user1Id = "user1_id"
-        case user2Id = "user2_id"
+        case matchId = "match_id"
         case createdAt = "created_at"
     }
 }
@@ -529,12 +602,16 @@ struct ConversationResponse: Codable {
 struct MessageCreate: Codable {
     let conversationId: String
     let senderId: String
-    let text: String
+    let receiverId: String
+    let originalText: String
+    let originalLanguage: String
 
     enum CodingKeys: String, CodingKey {
-        case text
         case conversationId = "conversation_id"
         case senderId = "sender_id"
+        case receiverId = "receiver_id"
+        case originalText = "original_text"
+        case originalLanguage = "original_language"
     }
 }
 

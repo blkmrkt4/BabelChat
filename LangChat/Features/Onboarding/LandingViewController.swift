@@ -240,38 +240,75 @@ class LandingViewController: UIViewController {
 
     @objc private func signInTapped() {
         print("Sign In tapped")
-        // Navigate to main app with Language Lab selected
-        if let windowScene = UIApplication.shared.connectedScenes.first as? UIWindowScene,
-           let window = windowScene.windows.first {
 
-            // Create Language Lab in navigation controller
-            let languageLabVC = LanguageLabViewController()
-            let navController = UINavigationController(rootViewController: languageLabVC)
+        // Disable button to prevent double-tap
+        signInButton.isEnabled = false
+        signInButton.alpha = 0.6
 
-            // Create tab bar with Language Lab as first tab
-            let tabBarController = MainTabBarController()
+        // Authenticate first, then navigate
+        Task {
+            do {
+                // Try to sign in with test credentials
+                let testEmail = "test@langchat.com"
+                let testPassword = "testpassword123"
 
-            // Insert Language Lab as first tab
-            var viewControllers = tabBarController.viewControllers ?? []
-            viewControllers.insert(navController, at: 0)
-            tabBarController.viewControllers = viewControllers
-            tabBarController.selectedIndex = 0
+                // Just try to sign in - don't attempt sign up
+                try await SupabaseService.shared.signIn(email: testEmail, password: testPassword)
+                print("✅ Signed in successfully")
 
-            // Update tab bar item for Language Lab
-            navController.tabBarItem = UITabBarItem(
-                title: "Lab",
-                image: UIImage(systemName: "flask"),
-                selectedImage: UIImage(systemName: "flask.fill")
-            )
+                // Mark user as signed in
+                UserDefaults.standard.set(true, forKey: "isUserSignedIn")
 
-            // Set as root with animation
-            window.rootViewController = tabBarController
+                // Navigate to main app on main thread
+                await MainActor.run {
+                    if let windowScene = UIApplication.shared.connectedScenes.first as? UIWindowScene,
+                       let window = windowScene.windows.first {
 
-            UIView.transition(with: window,
-                            duration: 0.5,
-                            options: .transitionCrossDissolve,
-                            animations: nil,
-                            completion: nil)
+                        // Create Language Lab in navigation controller
+                        let languageLabVC = LanguageLabViewController()
+                        let navController = UINavigationController(rootViewController: languageLabVC)
+
+                        // Create tab bar with Language Lab as first tab
+                        let tabBarController = MainTabBarController()
+
+                        // Insert Language Lab as first tab
+                        var viewControllers = tabBarController.viewControllers ?? []
+                        viewControllers.insert(navController, at: 0)
+                        tabBarController.viewControllers = viewControllers
+                        tabBarController.selectedIndex = 0
+
+                        // Update tab bar item for Language Lab
+                        navController.tabBarItem = UITabBarItem(
+                            title: "Lab",
+                            image: UIImage(systemName: "flask"),
+                            selectedImage: UIImage(systemName: "flask.fill")
+                        )
+
+                        // Set as root with animation
+                        window.rootViewController = tabBarController
+
+                        UIView.transition(with: window,
+                                        duration: 0.5,
+                                        options: .transitionCrossDissolve,
+                                        animations: nil,
+                                        completion: nil)
+                    }
+                }
+            } catch {
+                // Show error alert on main thread
+                await MainActor.run {
+                    signInButton.isEnabled = true
+                    signInButton.alpha = 1.0
+
+                    let alert = UIAlertController(
+                        title: "Sign In Failed",
+                        message: "Could not authenticate: \(error.localizedDescription)",
+                        preferredStyle: .alert
+                    )
+                    alert.addAction(UIAlertAction(title: "OK", style: .default))
+                    present(alert, animated: true)
+                }
+            }
         }
     }
 }

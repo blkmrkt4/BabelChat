@@ -17,6 +17,11 @@ class SceneDelegate: UIResponder, UIWindowSceneDelegate {
 
         window = UIWindow(windowScene: windowScene)
 
+        // TESTING: Reset sign-in flag to test landing page flow
+        // Comment this out once you complete sign-in flow
+        UserDefaults.standard.set(false, forKey: "isUserSignedIn")
+        print("🔧 TESTING MODE: Reset isUserSignedIn flag")
+
         // Check if user is already signed in (for now, always show landing)
         let isSignedIn = UserDefaults.standard.bool(forKey: "isUserSignedIn")
 

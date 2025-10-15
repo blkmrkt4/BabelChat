@@ -350,7 +350,12 @@ class ChatViewController: UIViewController {
                     inputTextField.placeholder = "Setting up conversation..."
                 }
 
-                let conversation = try await SupabaseService.shared.getOrCreateConversation(with: user.id)
+                print("🔍 Setting up conversation for match: \(match.id)")
+                print("🔍 User: \(user.firstName) (\(user.id))")
+                print("🔍 Current user ID: \(SupabaseService.shared.currentUserId?.uuidString ?? "nil")")
+                print("🔍 Is authenticated: \(SupabaseService.shared.isAuthenticated)")
+
+                let conversation = try await SupabaseService.shared.getOrCreateConversation(forMatchId: match.id)
 
                 await MainActor.run {
                     self.conversationId = conversation.id
@@ -364,11 +369,15 @@ class ChatViewController: UIViewController {
                 await MainActor.run {
                     self.inputTextField.placeholder = "Failed to connect"
                     print("❌ Failed to setup conversation: \(error)")
+                    print("❌ Error details: \(error.localizedDescription)")
+                    if let decodingError = error as? DecodingError {
+                        print("❌ Decoding error: \(decodingError)")
+                    }
 
-                    // Show error alert
+                    // Show error alert with detailed message
                     let alert = UIAlertController(
                         title: "Connection Error",
-                        message: "Failed to setup conversation. Please check your connection and try again.",
+                        message: "Failed to setup conversation: \(error.localizedDescription)\n\nUser: \(self.user.id)\nAuthenticated: \(SupabaseService.shared.isAuthenticated)",
                         preferredStyle: .alert
                     )
                     alert.addAction(UIAlertAction(title: "Retry", style: .default) { _ in
@@ -425,7 +434,12 @@ class ChatViewController: UIViewController {
         Task {
             do {
                 // 1. Send user message to Supabase
-                try await SupabaseService.shared.sendMessage(conversationId: conversationId, text: text)
+                try await SupabaseService.shared.sendMessage(
+                    conversationId: conversationId,
+                    receiverId: user.id,
+                    text: text,
+                    language: conversationLearningLanguage.name
+                )
                 print("✅ User message sent to Supabase")
 
                 // 2. Generate AI response using Scoring model
@@ -446,9 +460,17 @@ class ChatViewController: UIViewController {
                 nativeLanguage: currentUserNativeLanguage.name
             )
 
-            // Send AI response to Supabase
-            try await SupabaseService.shared.sendMessage(conversationId: conversationId, text: aiResponse)
-            print("✅ AI response sent to Supabase")
+            // Send AI response to Supabase (AI is speaking as the matched user)
+            // sender = matched user (user.id), receiver = current user
+            guard let currentUserId = SupabaseService.shared.currentUserId else { return }
+            try await SupabaseService.shared.sendMessageAs(
+                senderId: user.id,
+                conversationId: conversationId,
+                receiverId: currentUserId.uuidString,
+                text: aiResponse,
+                language: conversationLearningLanguage.name
+            )
+            print("✅ AI response sent to Supabase (as \(user.firstName))")
 
             // Display AI response in UI
             await MainActor.run {

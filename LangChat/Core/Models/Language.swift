@@ -141,6 +141,30 @@ enum Language: String, CaseIterable, Codable, Equatable {
         default: return nil
         }
     }
+
+    /// Map a language name (e.g., "English", "Spanish") to a Language enum case
+    /// - Parameter name: Full language name
+    /// - Returns: Corresponding Language case, or nil if not supported
+    static func from(name: String) -> Language? {
+        switch name.lowercased() {
+        case "english": return .english
+        case "spanish": return .spanish
+        case "french": return .french
+        case "german": return .german
+        case "japanese": return .japanese
+        case "korean": return .korean
+        case "chinese", "chinese (mandarin)", "mandarin": return .chinese
+        case "portuguese": return .portuguese
+        case "italian": return .italian
+        case "russian": return .russian
+        case "arabic": return .arabic
+        case "hindi": return .hindi
+        case "dutch": return .dutch
+        case "polish": return .polish
+        case "turkish": return .turkish
+        default: return nil
+        }
+    }
 }
 
 struct UserLanguage: Codable {

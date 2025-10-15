@@ -3,6 +3,7 @@ import UIKit
 class UserDetailViewController: UIViewController {
 
     var user: User?
+    var match: Match? // Store the actual match object
     var isMatched: Bool = false
     var allUsers: [User] = []
     var currentUserIndex: Int = 0
@@ -624,14 +625,25 @@ class UserDetailViewController: UIViewController {
     @objc private func chatTapped() {
         guard let user = user else { return }
 
-        let chatVC = ChatViewController(user: user, match: Match(
-            id: UUID().uuidString,
-            user: user,
-            matchedAt: Date(),
-            hasNewMessage: false,
-            lastMessage: nil,
-            lastMessageTime: nil
-        ))
+        // Use the actual match object if available (from MatchesListViewController)
+        // Otherwise create a temporary one (for profiles that aren't matched yet)
+        let matchToUse: Match
+        if let match = match {
+            matchToUse = match
+            print("✅ Using real match ID: \(match.id)")
+        } else {
+            matchToUse = Match(
+                id: UUID().uuidString,
+                user: user,
+                matchedAt: Date(),
+                hasNewMessage: false,
+                lastMessage: nil,
+                lastMessageTime: nil
+            )
+            print("⚠️ Creating temporary match for unmatched profile")
+        }
+
+        let chatVC = ChatViewController(user: user, match: matchToUse)
         navigationController?.pushViewController(chatVC, animated: true)
     }
 }
