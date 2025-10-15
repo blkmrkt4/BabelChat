@@ -97,6 +97,7 @@ class OnboardingCoordinator {
 
         case .learningLanguages:
             let vc = LearningLanguagesViewController()
+            vc.nativeLanguage = userData.nativeLanguage  // Pass native language to exclude it
             vc.delegate = self
             viewController = vc
 

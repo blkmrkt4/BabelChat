@@ -13,13 +13,22 @@ class LearningLanguagesViewController: BaseOnboardingViewController {
     private var selectedLanguages: Set<Language> = []
     private let maxLanguages = 5
 
+    // Native language to exclude from selection
+    var nativeLanguage: Language?
+
     // MARK: - Lifecycle
     override func configure() {
         step = .learningLanguages
         setTitle("Which languages are you learning?",
                 subtitle: "Select all that interest you (up to 5)")
         setupViews()
-        filteredLanguages = allLanguages
+
+        // Filter out native language from available options
+        if let native = nativeLanguage {
+            filteredLanguages = allLanguages.filter { $0 != native }
+        } else {
+            filteredLanguages = allLanguages
+        }
     }
 
     // MARK: - Setup
@@ -143,10 +152,18 @@ extension LearningLanguagesViewController: UITableViewDelegate {
 // MARK: - UISearchBarDelegate
 extension LearningLanguagesViewController: UISearchBarDelegate {
     func searchBar(_ searchBar: UISearchBar, textDidChange searchText: String) {
-        if searchText.isEmpty {
-            filteredLanguages = allLanguages
+        // Get available languages (excluding native language)
+        let availableLanguages: [Language]
+        if let native = nativeLanguage {
+            availableLanguages = allLanguages.filter { $0 != native }
         } else {
-            filteredLanguages = allLanguages.filter { language in
+            availableLanguages = allLanguages
+        }
+
+        if searchText.isEmpty {
+            filteredLanguages = availableLanguages
+        } else {
+            filteredLanguages = availableLanguages.filter { language in
                 language.name.lowercased().contains(searchText.lowercased()) ||
                 language.nativeName.lowercased().contains(searchText.lowercased())
             }
