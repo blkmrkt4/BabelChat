@@ -18,13 +18,21 @@ struct User: Codable {
     let matchedDate: Date?
     let isOnline: Bool
 
+    // Matching preferences
+    let allowNonNativeMatches: Bool // Allow matching with non-native speakers
+    let minProficiencyLevel: LanguageProficiency // Min proficiency for non-native matches
+    let maxProficiencyLevel: LanguageProficiency // Max proficiency for non-native matches
+
     // Default initializer for backwards compatibility
     init(id: String, username: String, firstName: String, lastName: String? = nil,
          bio: String? = nil, profileImageURL: String? = nil, photoURLs: [String] = [],
          nativeLanguage: UserLanguage, learningLanguages: [UserLanguage],
          openToLanguages: [Language], practiceLanguages: [UserLanguage]? = nil,
          location: String? = nil, showCityInProfile: Bool = true,
-         matchedDate: Date? = nil, isOnline: Bool = false) {
+         matchedDate: Date? = nil, isOnline: Bool = false,
+         allowNonNativeMatches: Bool = false,
+         minProficiencyLevel: LanguageProficiency = .beginner,
+         maxProficiencyLevel: LanguageProficiency = .advanced) {
         self.id = id
         self.username = username
         self.firstName = firstName
@@ -40,6 +48,9 @@ struct User: Codable {
         self.showCityInProfile = showCityInProfile
         self.matchedDate = matchedDate
         self.isOnline = isOnline
+        self.allowNonNativeMatches = allowNonNativeMatches
+        self.minProficiencyLevel = minProficiencyLevel
+        self.maxProficiencyLevel = maxProficiencyLevel
     }
 
     var displayName: String {

@@ -146,6 +146,11 @@ class MatchesListViewController: UIViewController {
         // Parse native language
         let nativeLanguage: Language = Language.from(name: profile.nativeLanguage) ?? .english
 
+        // Parse matching preferences
+        let allowNonNativeMatches = profile.allowNonNativeMatches ?? false
+        let minProficiencyLevel = parseProficiencyLevel(profile.minProficiencyLevel) ?? .beginner
+        let maxProficiencyLevel = parseProficiencyLevel(profile.maxProficiencyLevel) ?? .advanced
+
         return User(
             id: profile.id,
             username: profile.email.split(separator: "@").first.map(String.init) ?? "user",
@@ -161,8 +166,23 @@ class MatchesListViewController: UIViewController {
             location: profile.location,
             showCityInProfile: true,
             matchedDate: Date(),
-            isOnline: false // TODO: Implement online status
+            isOnline: false, // TODO: Implement online status
+            allowNonNativeMatches: allowNonNativeMatches,
+            minProficiencyLevel: minProficiencyLevel,
+            maxProficiencyLevel: maxProficiencyLevel
         )
+    }
+
+    // Helper to parse proficiency level from database string to enum
+    private func parseProficiencyLevel(_ level: String?) -> LanguageProficiency? {
+        guard let level = level else { return nil }
+        switch level.lowercased() {
+        case "beginner": return .beginner
+        case "intermediate": return .intermediate
+        case "advanced": return .advanced
+        case "native": return .native
+        default: return nil
+        }
     }
 
     @objc private func notificationsTapped() {

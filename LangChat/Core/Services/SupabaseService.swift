@@ -478,6 +478,9 @@ struct ProfileResponse: Codable {
     let onboardingCompleted: Bool
     let location: String?
     let lastActive: String?
+    let allowNonNativeMatches: Bool?
+    let minProficiencyLevel: String?
+    let maxProficiencyLevel: String?
 
     enum CodingKeys: String, CodingKey {
         case id, email, bio, location
@@ -491,6 +494,9 @@ struct ProfileResponse: Codable {
         case granularityLevel = "granularity_level"
         case onboardingCompleted = "onboarding_completed"
         case lastActive = "last_active"
+        case allowNonNativeMatches = "allow_non_native_matches"
+        case minProficiencyLevel = "min_proficiency_level"
+        case maxProficiencyLevel = "max_proficiency_level"
     }
 }
 
