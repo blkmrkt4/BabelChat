@@ -7,16 +7,20 @@ class SettingsViewController: UIViewController {
     private let tableView = UITableView(frame: .zero, style: .insetGrouped)
 
     private enum SettingSection: Int, CaseIterable {
-        case account
-        case preferences
+        case profileSettings
+        case matchingSettings
+        case aiSettings
+        case grammarFeedback
         case privacy
         case support
         case about
 
-        var title: String {
+        var title: String? {
             switch self {
-            case .account: return "Account"
-            case .preferences: return "Preferences"
+            case .profileSettings: return nil  // No header for single profile item
+            case .matchingSettings: return nil  // No header for single matching item
+            case .aiSettings: return "AI Settings"
+            case .grammarFeedback: return "Grammar Feedback"
             case .privacy: return "Privacy & Safety"
             case .support: return "Support"
             case .about: return "About"
@@ -25,28 +29,34 @@ class SettingsViewController: UIViewController {
 
         var items: [(title: String, icon: String)] {
             switch self {
-            case .account:
+            case .profileSettings:
                 return [
-                    ("Email", "envelope"),
-                    ("Phone Number", "phone"),
-                    ("Subscription", "crown")
+                    ("Profile Settings", "person.circle")
                 ]
-            case .preferences:
+            case .matchingSettings:
                 return [
-                    ("Grammar Feedback Level", "text.badge.checkmark"),
-                    ("AI Setup", "cpu"),
-                    ("Notifications", "bell"),
-                    ("Appearance", "moon")
+                    ("Matching Settings", "slider.horizontal.3")
+                ]
+            case .aiSettings:
+                return [
+                    ("Translation Model", "arrow.left.arrow.right"),
+                    ("Grammar Model", "text.badge.checkmark"),
+                    ("Model Bindings", "link")
+                ]
+            case .grammarFeedback:
+                return [
+                    ("Feedback Level", "slider.horizontal.3")
                 ]
             case .privacy:
                 return [
                     ("Blocked Users", "person.crop.circle.badge.xmark"),
                     ("Data & Privacy", "lock.shield"),
-                    ("Location", "location"),
-                    ("Photos", "photo")
+                    ("Notifications", "bell"),
+                    ("Appearance", "moon")
                 ]
             case .support:
                 return [
+                    ("Subscription", "crown"),
                     ("Help Center", "questionmark.circle"),
                     ("Contact Us", "envelope"),
                     ("Report a Problem", "exclamationmark.bubble")
@@ -152,20 +162,23 @@ class SettingsViewController: UIViewController {
         guard let settingSection = SettingSection(rawValue: section) else { return }
 
         switch settingSection {
-        case .account:
+        case .profileSettings:
+            showProfileSettings()
+
+        case .matchingSettings:
+            showMatchingSettings()
+
+        case .aiSettings:
             switch row {
-            case 0: showEmailSettings()
-            case 1: showPhoneSettings()
-            case 2: showSubscription()
+            case 0: showAISetup() // Will show AI Setup with translation model tab selected
+            case 1: showAISetup() // Will show AI Setup with grammar model tab selected
+            case 2: showAISetup() // Will show AI Setup with bindings tab selected
             default: break
             }
 
-        case .preferences:
+        case .grammarFeedback:
             switch row {
             case 0: showGrammarFeedbackLevel()
-            case 1: showAISetup()
-            case 2: showNotificationSettings()
-            case 3: showAppearanceSettings()
             default: break
             }
 
@@ -173,16 +186,17 @@ class SettingsViewController: UIViewController {
             switch row {
             case 0: showBlockedUsers()
             case 1: showDataPrivacy()
-            case 2: showLocationSettings()
-            case 3: showPhotoSettings()
+            case 2: showNotificationSettings()
+            case 3: showAppearanceSettings()
             default: break
             }
 
         case .support:
             switch row {
-            case 0: showHelpCenter()
-            case 1: contactSupport()
-            case 2: reportProblem()
+            case 0: showSubscription()
+            case 1: showHelpCenter()
+            case 2: contactSupport()
+            case 3: reportProblem()
             default: break
             }
 
@@ -198,88 +212,16 @@ class SettingsViewController: UIViewController {
     }
 
     // MARK: - Setting Actions
-    private func showEmailSettings() {
-        let currentEmail = UserDefaults.standard.string(forKey: "email") ?? "Not set"
-
-        let alert = UIAlertController(
-            title: "Email Address",
-            message: "Current email: \(currentEmail)",
-            preferredStyle: .alert
-        )
-
-        alert.addTextField { textField in
-            textField.placeholder = "Enter new email"
-            textField.keyboardType = .emailAddress
-            textField.autocapitalizationType = .none
-            textField.text = currentEmail == "Not set" ? "" : currentEmail
-        }
-
-        alert.addAction(UIAlertAction(title: "Cancel", style: .cancel))
-        alert.addAction(UIAlertAction(title: "Save", style: .default) { [weak self, weak alert] _ in
-            guard let newEmail = alert?.textFields?.first?.text, !newEmail.isEmpty else {
-                return
-            }
-
-            // Basic email validation
-            if newEmail.contains("@") && newEmail.contains(".") {
-                UserDefaults.standard.set(newEmail, forKey: "email")
-                self?.tableView.reloadData()
-
-                let successAlert = UIAlertController(
-                    title: "Email Updated",
-                    message: "Your email has been updated successfully.",
-                    preferredStyle: .alert
-                )
-                successAlert.addAction(UIAlertAction(title: "OK", style: .default))
-                self?.present(successAlert, animated: true)
-            } else {
-                let errorAlert = UIAlertController(
-                    title: "Invalid Email",
-                    message: "Please enter a valid email address.",
-                    preferredStyle: .alert
-                )
-                errorAlert.addAction(UIAlertAction(title: "OK", style: .default))
-                self?.present(errorAlert, animated: true)
-            }
-        })
-
-        present(alert, animated: true)
+    private func showProfileSettings() {
+        let profileSettingsVC = ProfileSettingsViewController()
+        navigationController?.pushViewController(profileSettingsVC, animated: true)
     }
 
-    private func showPhoneSettings() {
-        let currentPhone = UserDefaults.standard.string(forKey: "phoneNumber") ?? "Not set"
-
-        let alert = UIAlertController(
-            title: "Phone Number",
-            message: "Current phone: \(currentPhone)",
-            preferredStyle: .alert
-        )
-
-        alert.addTextField { textField in
-            textField.placeholder = "Enter phone number"
-            textField.keyboardType = .phonePad
-            textField.text = currentPhone == "Not set" ? "" : currentPhone
-        }
-
-        alert.addAction(UIAlertAction(title: "Cancel", style: .cancel))
-        alert.addAction(UIAlertAction(title: "Save", style: .default) { [weak self, weak alert] _ in
-            guard let newPhone = alert?.textFields?.first?.text, !newPhone.isEmpty else {
-                return
-            }
-
-            UserDefaults.standard.set(newPhone, forKey: "phoneNumber")
-            self?.tableView.reloadData()
-
-            let successAlert = UIAlertController(
-                title: "Phone Updated",
-                message: "Your phone number has been updated successfully.",
-                preferredStyle: .alert
-            )
-            successAlert.addAction(UIAlertAction(title: "OK", style: .default))
-            self?.present(successAlert, animated: true)
-        })
-
-        present(alert, animated: true)
+    private func showMatchingSettings() {
+        // Navigate to comprehensive matching settings screen
+        // This will include: Photos, Bio, Languages, and Matching Preferences
+        let matchingPrefsVC = MatchingPreferencesViewController()
+        navigationController?.pushViewController(matchingPrefsVC, animated: true)
     }
 
     private func showSubscription() {
@@ -319,7 +261,7 @@ class SettingsViewController: UIViewController {
 
         if let popover = alert.popoverPresentationController {
             popover.sourceView = tableView
-            popover.sourceRect = tableView.rectForRow(at: IndexPath(row: 0, section: SettingSection.preferences.rawValue))
+            popover.sourceRect = tableView.rectForRow(at: IndexPath(row: 0, section: SettingSection.grammarFeedback.rawValue))
         }
 
         present(alert, animated: true)
@@ -371,7 +313,7 @@ class SettingsViewController: UIViewController {
 
         if let popover = alert.popoverPresentationController {
             popover.sourceView = tableView
-            popover.sourceRect = tableView.rectForRow(at: IndexPath(row: 3, section: SettingSection.preferences.rawValue))
+            popover.sourceRect = tableView.rectForRow(at: IndexPath(row: 3, section: SettingSection.privacy.rawValue))
         }
 
         present(alert, animated: true)
@@ -385,84 +327,6 @@ class SettingsViewController: UIViewController {
     private func showDataPrivacy() {
         let dataPrivacyVC = DataPrivacyViewController()
         navigationController?.pushViewController(dataPrivacyVC, animated: true)
-    }
-
-    private func showLocationSettings() {
-        let status = CLLocationManager.authorizationStatus()
-
-        var statusText: String
-        var canOpenSettings = true
-
-        switch status {
-        case .notDetermined:
-            statusText = "Not yet requested"
-            canOpenSettings = false
-        case .restricted:
-            statusText = "Restricted by device settings"
-        case .denied:
-            statusText = "Denied - Location services are disabled"
-        case .authorizedAlways, .authorizedWhenInUse:
-            statusText = "Authorized - Location services are enabled"
-        @unknown default:
-            statusText = "Unknown"
-        }
-
-        let alert = UIAlertController(
-            title: "Location Permission",
-            message: "Status: \(statusText)\n\nLocation is used to match you with language partners nearby.",
-            preferredStyle: .alert
-        )
-
-        if canOpenSettings {
-            alert.addAction(UIAlertAction(title: "Open Settings", style: .default) { _ in
-                if let url = URL(string: UIApplication.openSettingsURLString) {
-                    UIApplication.shared.open(url)
-                }
-            })
-        }
-
-        alert.addAction(UIAlertAction(title: "OK", style: .cancel))
-
-        present(alert, animated: true)
-    }
-
-    private func showPhotoSettings() {
-        let status = PHPhotoLibrary.authorizationStatus()
-
-        var statusText: String
-        var canOpenSettings = true
-
-        switch status {
-        case .notDetermined:
-            statusText = "Not yet requested"
-            canOpenSettings = false
-        case .restricted:
-            statusText = "Restricted by device settings"
-        case .denied:
-            statusText = "Denied - Photo library access is disabled"
-        case .authorized, .limited:
-            statusText = "Authorized - Photo library access is enabled"
-        @unknown default:
-            statusText = "Unknown"
-        }
-
-        let alert = UIAlertController(
-            title: "Photo Library Permission",
-            message: "Status: \(statusText)\n\nPhoto library access is used to upload profile pictures.",
-            preferredStyle: .alert
-        )
-
-        if canOpenSettings {
-            alert.addAction(UIAlertAction(title: "Open Settings", style: .default) { _ in
-                if let url = URL(string: UIApplication.openSettingsURLString) {
-                    UIApplication.shared.open(url)
-                }
-            })
-        }
-
-        alert.addAction(UIAlertAction(title: "OK", style: .cancel))
-
-        present(alert, animated: true)
     }
 
     private func showHelpCenter() {
@@ -516,7 +380,7 @@ extension SettingsViewController: UITableViewDataSource {
 
     func tableView(_ tableView: UITableView, titleForHeaderInSection section: Int) -> String? {
         guard let settingSection = SettingSection(rawValue: section) else { return nil }
-        return settingSection.title
+        return settingSection.title  // Returns nil for profile and matchingSettings sections
     }
 
     func tableView(_ tableView: UITableView, cellForRowAt indexPath: IndexPath) -> UITableViewCell {
@@ -527,9 +391,10 @@ extension SettingsViewController: UITableViewDataSource {
         let item = settingSection.items[indexPath.row]
 
         // Use switch cell for specific settings
-        if settingSection == .preferences && indexPath.row == 2 { // Notifications (now at row 2)
+        if settingSection == .privacy && indexPath.row == 2 { // Notifications
             let cell = tableView.dequeueReusableCell(withIdentifier: "SwitchCell", for: indexPath) as! SwitchTableViewCell
-            cell.configure(title: item.title, icon: item.icon, isOn: true)
+            let isEnabled = UserDefaults.standard.object(forKey: "notificationsEnabled") as? Bool ?? true
+            cell.configure(title: item.title, icon: item.icon, isOn: isEnabled)
             cell.switchValueChanged = { isOn in
                 UserDefaults.standard.set(isOn, forKey: "notificationsEnabled")
             }

@@ -1,9 +1,10 @@
 import UIKit
 
-class MatchingPreferencesViewController: BaseOnboardingViewController {
+class MatchingPreferencesViewController: UIViewController {
 
     // MARK: - UI Components
     private let scrollView = UIScrollView()
+    private let contentView = UIView()
     private let stackView = UIStackView()
     private let toggleSwitch = UISwitch()
     private let proficiencyPicker = UISegmentedControl(items: [
@@ -21,22 +22,73 @@ class MatchingPreferencesViewController: BaseOnboardingViewController {
     private var maxProficiency: LanguageProficiency = .advanced
 
     // MARK: - Lifecycle
-    override func configure() {
-        step = .learningLanguages  // Will be added as a new step
-        setTitle("Matching Preferences",
-                subtitle: "Choose who you'd like to practice with")
+    override func viewDidLoad() {
+        super.viewDidLoad()
+        setupNavigationBar()
+        loadSavedPreferences()
         setupViews()
+    }
+
+    private func setupNavigationBar() {
+        title = "Matching Settings"
+        navigationItem.largeTitleDisplayMode = .never
+        view.backgroundColor = .systemBackground
+    }
+
+    private func loadSavedPreferences() {
+        // Load saved preferences from UserDefaults or use defaults
+        allowNonNativeMatches = UserDefaults.standard.object(forKey: "allowNonNativeMatches") as? Bool ?? false
+
+        if let minLevel = UserDefaults.standard.string(forKey: "minProficiencyLevel"),
+           let parsedMin = parseProficiency(minLevel) {
+            minProficiency = parsedMin
+        }
+
+        if let maxLevel = UserDefaults.standard.string(forKey: "maxProficiencyLevel"),
+           let parsedMax = parseProficiency(maxLevel) {
+            maxProficiency = parsedMax
+        }
+
+        // Set picker based on saved values
+        updatePickerSelection()
+    }
+
+    private func parseProficiency(_ level: String) -> LanguageProficiency? {
+        switch level.lowercased() {
+        case "beginner": return .beginner
+        case "intermediate": return .intermediate
+        case "advanced": return .advanced
+        default: return nil
+        }
+    }
+
+    private func updatePickerSelection() {
+        if minProficiency == .beginner && maxProficiency == .advanced {
+            proficiencyPicker.selectedSegmentIndex = 0 // All Levels
+        } else if minProficiency == .beginner && maxProficiency == .intermediate {
+            proficiencyPicker.selectedSegmentIndex = 1 // Beginner-Int
+        } else if minProficiency == .intermediate && maxProficiency == .advanced {
+            proficiencyPicker.selectedSegmentIndex = 2 // Int-Advanced
+        } else if minProficiency == .advanced && maxProficiency == .advanced {
+            proficiencyPicker.selectedSegmentIndex = 3 // Advanced Only
+        } else if minProficiency == .intermediate && maxProficiency == .intermediate {
+            proficiencyPicker.selectedSegmentIndex = 4 // Intermediate Only
+        } else if minProficiency == .beginner && maxProficiency == .beginner {
+            proficiencyPicker.selectedSegmentIndex = 5 // Beginner Only
+        }
     }
 
     // MARK: - Setup
     private func setupViews() {
+        view.addSubview(scrollView)
+        scrollView.addSubview(contentView)
+        contentView.addSubview(stackView)
+
         scrollView.showsVerticalScrollIndicator = false
-        contentView.addSubview(scrollView)
 
         stackView.axis = .vertical
         stackView.spacing = 24
         stackView.alignment = .fill
-        scrollView.addSubview(stackView)
 
         // Non-native matches section
         let nonNativeSection = createSectionView(
@@ -54,24 +106,30 @@ class MatchingPreferencesViewController: BaseOnboardingViewController {
         stackView.addArrangedSubview(proficiencySection)
         proficiencySection.alpha = allowNonNativeMatches ? 1.0 : 0.4
 
-        proficiencyPicker.selectedSegmentIndex = 0
+        proficiencyPicker.isEnabled = allowNonNativeMatches
         proficiencyPicker.addTarget(self, action: #selector(proficiencyChanged), for: .valueChanged)
 
         // Layout
         scrollView.translatesAutoresizingMaskIntoConstraints = false
+        contentView.translatesAutoresizingMaskIntoConstraints = false
         stackView.translatesAutoresizingMaskIntoConstraints = false
 
         NSLayoutConstraint.activate([
-            scrollView.topAnchor.constraint(equalTo: contentView.topAnchor),
-            scrollView.leadingAnchor.constraint(equalTo: contentView.leadingAnchor),
-            scrollView.trailingAnchor.constraint(equalTo: contentView.trailingAnchor),
-            scrollView.bottomAnchor.constraint(equalTo: contentView.bottomAnchor),
+            scrollView.topAnchor.constraint(equalTo: view.safeAreaLayoutGuide.topAnchor),
+            scrollView.leadingAnchor.constraint(equalTo: view.leadingAnchor),
+            scrollView.trailingAnchor.constraint(equalTo: view.trailingAnchor),
+            scrollView.bottomAnchor.constraint(equalTo: view.bottomAnchor),
 
-            stackView.topAnchor.constraint(equalTo: scrollView.topAnchor),
-            stackView.leadingAnchor.constraint(equalTo: scrollView.leadingAnchor),
-            stackView.trailingAnchor.constraint(equalTo: scrollView.trailingAnchor),
-            stackView.bottomAnchor.constraint(equalTo: scrollView.bottomAnchor),
-            stackView.widthAnchor.constraint(equalTo: scrollView.widthAnchor)
+            contentView.topAnchor.constraint(equalTo: scrollView.topAnchor),
+            contentView.leadingAnchor.constraint(equalTo: scrollView.leadingAnchor),
+            contentView.trailingAnchor.constraint(equalTo: scrollView.trailingAnchor),
+            contentView.bottomAnchor.constraint(equalTo: scrollView.bottomAnchor),
+            contentView.widthAnchor.constraint(equalTo: scrollView.widthAnchor),
+
+            stackView.topAnchor.constraint(equalTo: contentView.topAnchor, constant: 20),
+            stackView.leadingAnchor.constraint(equalTo: contentView.leadingAnchor, constant: 20),
+            stackView.trailingAnchor.constraint(equalTo: contentView.trailingAnchor, constant: -20),
+            stackView.bottomAnchor.constraint(equalTo: contentView.bottomAnchor, constant: -20)
         ])
     }
 
@@ -161,13 +219,18 @@ class MatchingPreferencesViewController: BaseOnboardingViewController {
     @objc private func toggleChanged() {
         allowNonNativeMatches = toggleSwitch.isOn
 
+        // Save to UserDefaults
+        UserDefaults.standard.set(allowNonNativeMatches, forKey: "allowNonNativeMatches")
+
         // Animate proficiency picker visibility
         UIView.animate(withDuration: 0.3) {
             self.stackView.arrangedSubviews.last?.alpha = self.allowNonNativeMatches ? 1.0 : 0.4
         }
 
         proficiencyPicker.isEnabled = allowNonNativeMatches
-        updateContinueButton(enabled: true)
+
+        // Show confirmation
+        showSavedConfirmation()
     }
 
     @objc private func proficiencyChanged() {
@@ -194,10 +257,18 @@ class MatchingPreferencesViewController: BaseOnboardingViewController {
         default:
             break
         }
+
+        // Save to UserDefaults
+        UserDefaults.standard.set(minProficiency.rawValue, forKey: "minProficiencyLevel")
+        UserDefaults.standard.set(maxProficiency.rawValue, forKey: "maxProficiencyLevel")
+
+        // Show confirmation
+        showSavedConfirmation()
     }
 
-    override func continueButtonTapped() {
-        let preferences = (allowNonNativeMatches, minProficiency, maxProficiency)
-        delegate?.didCompleteStep(withData: preferences)
+    private func showSavedConfirmation() {
+        // Simple visual feedback
+        let feedbackGenerator = UIImpactFeedbackGenerator(style: .light)
+        feedbackGenerator.impactOccurred()
     }
 }

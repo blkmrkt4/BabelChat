@@ -58,13 +58,6 @@ class ProfileViewController: UIViewController {
         // No title needed - it's clear from the tab bar
         navigationController?.navigationBar.prefersLargeTitles = false
 
-        let editButton = UIBarButtonItem(
-            image: UIImage(systemName: "square.and.pencil"),
-            style: .plain,
-            target: self,
-            action: #selector(editProfileTapped)
-        )
-
         let settingsButton = UIBarButtonItem(
             image: UIImage(systemName: "gearshape"),
             style: .plain,
@@ -79,7 +72,7 @@ class ProfileViewController: UIViewController {
             action: #selector(languageLabTapped)
         )
 
-        navigationItem.rightBarButtonItems = [settingsButton, editButton]
+        navigationItem.rightBarButtonItem = settingsButton
         navigationItem.leftBarButtonItem = languageLabButton
     }
 
@@ -306,13 +299,6 @@ class ProfileViewController: UIViewController {
     @objc private func settingsTapped() {
         let settingsVC = SettingsViewController()
         navigationController?.pushViewController(settingsVC, animated: true)
-    }
-
-    @objc private func editProfileTapped() {
-        let editProfileVC = EditProfileViewController()
-        let navController = UINavigationController(rootViewController: editProfileVC)
-        navController.modalPresentationStyle = .fullScreen
-        present(navController, animated: true)
     }
 
     @objc private func languageLabTapped() {

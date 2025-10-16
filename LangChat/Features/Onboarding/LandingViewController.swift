@@ -252,12 +252,23 @@ class LandingViewController: UIViewController {
                 let testEmail = "test@langchat.com"
                 let testPassword = "testpassword123"
 
+                print("🔐 Attempting to sign in with: \(testEmail)")
+
                 // Just try to sign in - don't attempt sign up
                 try await SupabaseService.shared.signIn(email: testEmail, password: testPassword)
-                print("✅ Signed in successfully")
+                print("✅ Signed in successfully!")
 
-                // Mark user as signed in
+                // Get the authenticated user's ID from Supabase
+                guard let userId = SupabaseService.shared.currentUserId else {
+                    throw NSError(domain: "LandingViewController", code: -1,
+                                userInfo: [NSLocalizedDescriptionKey: "Failed to get user ID after sign in"])
+                }
+
+                // Save user ID and mark as signed in
+                UserDefaults.standard.set(userId.uuidString, forKey: "userId")
                 UserDefaults.standard.set(true, forKey: "isUserSignedIn")
+
+                print("✅ User ID saved: \(userId.uuidString)")
 
                 // Navigate to main app on main thread
                 await MainActor.run {

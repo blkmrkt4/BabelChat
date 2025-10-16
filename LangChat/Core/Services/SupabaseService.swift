@@ -263,25 +263,37 @@ extension SupabaseService {
         }
 
         print("🔍 Fetching match: \(matchId)")
-        let match: MatchWithConversation = try await client.database
+        let matches: [MatchWithConversation] = try await client.database
             .from("matches")
             .select("id,conversation_id")  // Remove space in select
             .eq("id", value: matchId)
-            .single()
+            .limit(1)
             .execute()
             .value
+
+        guard let match = matches.first else {
+            throw NSError(domain: "SupabaseService", code: -1,
+                        userInfo: [NSLocalizedDescriptionKey: "Match not found: \(matchId)"])
+        }
         print("✅ Found match, conversation_id: \(match.conversationId ?? "nil")")
 
         // If match has a conversation, fetch and return it
         if let conversationId = match.conversationId, !conversationId.isEmpty {
-            let conversation: ConversationResponse = try await client.database
+            let conversations: [ConversationResponse] = try await client.database
                 .from("conversations")
                 .select()
                 .eq("id", value: conversationId)
-                .single()
+                .limit(1)
                 .execute()
                 .value
-            return conversation
+
+            // If we found the conversation, return it
+            if let conversation = conversations.first {
+                return conversation
+            }
+
+            // Otherwise fall through to create a new one
+            print("⚠️ Conversation \(conversationId) not found, creating new one")
         }
 
         // Create new conversation for this match
@@ -352,14 +364,21 @@ extension SupabaseService {
         // Check if match already has a conversation
         if let conversationId = match.conversationId, !conversationId.isEmpty {
             // Fetch the conversation
-            let conversation: ConversationResponse = try await client.database
+            let conversations: [ConversationResponse] = try await client.database
                 .from("conversations")
                 .select()
                 .eq("id", value: conversationId)
-                .single()
+                .limit(1)
                 .execute()
                 .value
-            return conversation
+
+            // If we found the conversation, return it
+            if let conversation = conversations.first {
+                return conversation
+            }
+
+            // Otherwise fall through to create a new one
+            print("⚠️ Conversation \(conversationId) not found, creating new one")
         }
 
         // Create new conversation for this match
