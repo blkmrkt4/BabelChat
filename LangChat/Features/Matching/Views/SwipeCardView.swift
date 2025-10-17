@@ -20,6 +20,8 @@ class SwipeCardView: UIView {
     private let ageLabel = UILabel()
     private let locationLabel = UILabel()
     private let languageStackView = UIStackView()
+    private let matchScoreBadge = UIView()
+    private let matchScoreLabel = UILabel()
     private let likeLabel = UILabel()
     private let nopeLabel = UILabel()
     private let superLikeLabel = UILabel()
@@ -27,6 +29,10 @@ class SwipeCardView: UIView {
     private var panGestureRecognizer: UIPanGestureRecognizer!
     private var tapGestureRecognizer: UITapGestureRecognizer!
     private var initialCenter: CGPoint = .zero
+
+    // Store match info
+    var matchScore: Int?
+    var matchReasons: [String]?
 
     override init(frame: CGRect) {
         super.init(frame: frame)
@@ -84,6 +90,19 @@ class SwipeCardView: UIView {
         addSubview(languageStackView)
         languageStackView.translatesAutoresizingMaskIntoConstraints = false
 
+        // Setup match score badge
+        matchScoreBadge.backgroundColor = UIColor.systemGreen.withAlphaComponent(0.9)
+        matchScoreBadge.layer.cornerRadius = 20
+        matchScoreBadge.isHidden = true
+        addSubview(matchScoreBadge)
+        matchScoreBadge.translatesAutoresizingMaskIntoConstraints = false
+
+        matchScoreLabel.font = .systemFont(ofSize: 14, weight: .bold)
+        matchScoreLabel.textColor = .white
+        matchScoreLabel.textAlignment = .center
+        matchScoreBadge.addSubview(matchScoreLabel)
+        matchScoreLabel.translatesAutoresizingMaskIntoConstraints = false
+
         setupSwipeLabels()
 
         NSLayoutConstraint.activate([
@@ -103,7 +122,15 @@ class SwipeCardView: UIView {
 
             languageStackView.leadingAnchor.constraint(equalTo: leadingAnchor, constant: 20),
             languageStackView.trailingAnchor.constraint(lessThanOrEqualTo: trailingAnchor, constant: -20),
-            languageStackView.bottomAnchor.constraint(equalTo: bottomAnchor, constant: -20)
+            languageStackView.bottomAnchor.constraint(equalTo: bottomAnchor, constant: -20),
+
+            matchScoreBadge.topAnchor.constraint(equalTo: topAnchor, constant: 20),
+            matchScoreBadge.trailingAnchor.constraint(equalTo: trailingAnchor, constant: -20),
+            matchScoreBadge.widthAnchor.constraint(equalToConstant: 70),
+            matchScoreBadge.heightAnchor.constraint(equalToConstant: 40),
+
+            matchScoreLabel.centerXAnchor.constraint(equalTo: matchScoreBadge.centerXAnchor),
+            matchScoreLabel.centerYAnchor.constraint(equalTo: matchScoreBadge.centerYAnchor)
         ])
     }
 
@@ -177,8 +204,33 @@ class SwipeCardView: UIView {
         guard let user = user else { return }
 
         nameLabel.text = user.firstName
-        ageLabel.text = "25" // Placeholder age
+
+        // Display actual age or hide label if not available
+        if let age = user.age {
+            ageLabel.text = "\(age)"
+            ageLabel.isHidden = false
+        } else {
+            ageLabel.isHidden = true
+        }
+
         locationLabel.text = user.location
+
+        // Display match score if available
+        if let score = matchScore {
+            matchScoreBadge.isHidden = false
+            matchScoreLabel.text = "\(score)%"
+
+            // Color code the badge based on score
+            if score >= 80 {
+                matchScoreBadge.backgroundColor = UIColor.systemGreen.withAlphaComponent(0.9)
+            } else if score >= 60 {
+                matchScoreBadge.backgroundColor = UIColor.systemYellow.withAlphaComponent(0.9)
+            } else {
+                matchScoreBadge.backgroundColor = UIColor.systemOrange.withAlphaComponent(0.9)
+            }
+        } else {
+            matchScoreBadge.isHidden = true
+        }
 
         languageStackView.arrangedSubviews.forEach { $0.removeFromSuperview() }
 

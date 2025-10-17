@@ -244,6 +244,62 @@ extension SupabaseService {
 
         return response
     }
+
+    /// Get already swiped user IDs (to exclude from discovery)
+    func getSwipedUserIds() async throws -> Set<String> {
+        guard let userId = currentUserId else {
+            throw NSError(domain: "SupabaseService", code: -1, userInfo: [NSLocalizedDescriptionKey: "Not authenticated"])
+        }
+
+        let response: [SwipeResponse] = try await client.database
+            .from("swipes")
+            .select()
+            .eq("swiper_id", value: userId.uuidString)
+            .execute()
+            .value
+
+        return Set(response.map { $0.swipedId })
+    }
+
+    /// Get matched user profiles for discover feed with scoring
+    /// Returns profiles sorted by match score
+    func getMatchedDiscoveryProfiles(limit: Int = 20) async throws -> [(user: User, score: Int, reasons: [String])] {
+        guard let userId = currentUserId else {
+            throw NSError(domain: "SupabaseService", code: -1, userInfo: [NSLocalizedDescriptionKey: "Not authenticated"])
+        }
+
+        // 1. Get current user's profile
+        let currentProfile = try await getCurrentProfile()
+        guard let currentUser = currentProfile.toUser() else {
+            throw NSError(domain: "SupabaseService", code: -1, userInfo: [NSLocalizedDescriptionKey: "Failed to convert current profile"])
+        }
+
+        // 2. Get already swiped user IDs to exclude
+        let swipedIds = try await getSwipedUserIds()
+
+        // 3. Fetch all potential candidate profiles
+        let profiles = try await getDiscoveryProfiles(limit: 100) // Fetch more than needed for filtering
+
+        // 4. Convert to User models and filter out swiped profiles
+        let candidateUsers = profiles.compactMap { profile -> User? in
+            if swipedIds.contains(profile.id) {
+                return nil // Skip already swiped
+            }
+            return profile.toUser()
+        }
+
+        // 5. Use MatchingService to filter and score
+        let scoredMatches = MatchingService.shared.findMatches(for: currentUser, from: candidateUsers)
+
+        // 6. Return top matches up to limit
+        return Array(scoredMatches.prefix(limit))
+    }
+
+    /// Simple version that returns just User models
+    func getDiscoveryUsers(limit: Int = 20) async throws -> [User] {
+        let scoredMatches = try await getMatchedDiscoveryProfiles(limit: limit)
+        return scoredMatches.map { $0.user }
+    }
 }
 
 // MARK: - Messaging Methods
@@ -501,8 +557,22 @@ struct ProfileResponse: Codable {
     let minProficiencyLevel: String?
     let maxProficiencyLevel: String?
 
+    // New matching preference fields
+    let gender: String?
+    let genderPreference: String?
+    let minAge: Int?
+    let maxAge: Int?
+    let locationPreference: String?
+    let latitude: Double?
+    let longitude: Double?
+    let preferredCountries: [String]?
+    let travelDestination: TravelDestinationDB?
+    let relationshipIntents: [String]?
+    let learningContexts: [String]?
+    let regionalLanguagePreferences: [RegionalLanguagePreferenceDB]?
+
     enum CodingKeys: String, CodingKey {
-        case id, email, bio, location
+        case id, email, bio, location, latitude, longitude
         case firstName = "first_name"
         case lastName = "last_name"
         case birthYear = "birth_year"
@@ -516,6 +586,138 @@ struct ProfileResponse: Codable {
         case allowNonNativeMatches = "allow_non_native_matches"
         case minProficiencyLevel = "min_proficiency_level"
         case maxProficiencyLevel = "max_proficiency_level"
+        case gender
+        case genderPreference = "gender_preference"
+        case minAge = "min_age"
+        case maxAge = "max_age"
+        case locationPreference = "location_preference"
+        case preferredCountries = "preferred_countries"
+        case travelDestination = "travel_destination"
+        case relationshipIntents = "relationship_intents"
+        case learningContexts = "learning_contexts"
+        case regionalLanguagePreferences = "regional_language_preferences"
+    }
+
+    /// Convert ProfileResponse to User model
+    func toUser() -> User? {
+        // Parse native language
+        guard let nativeLang = Language.allCases.first(where: { $0.code == nativeLanguage || $0.name.lowercased() == nativeLanguage.lowercased() }) else {
+            print("⚠️ Unknown native language: \(nativeLanguage)")
+            return nil
+        }
+
+        let nativeUserLanguage = UserLanguage(
+            language: nativeLang,
+            proficiency: .native,
+            isNative: true
+        )
+
+        // Parse learning languages
+        let learningUserLanguages = (learningLanguages ?? []).compactMap { langString -> UserLanguage? in
+            guard let lang = Language.allCases.first(where: { $0.code == langString || $0.name.lowercased() == langString.lowercased() }) else {
+                return nil
+            }
+
+            // Try to get proficiency from minProficiencyLevel or default to intermediate
+            let proficiency: LanguageProficiency
+            if let profLevel = minProficiencyLevel, let level = LanguageProficiency.from(string: profLevel) {
+                proficiency = level
+            } else {
+                proficiency = .intermediate
+            }
+
+            return UserLanguage(language: lang, proficiency: proficiency, isNative: false)
+        }
+
+        // Convert open to languages (same as learning for now)
+        let openToLanguages = learningUserLanguages.map { $0.language }
+
+        // Create matching preferences
+        let matchingPrefs = createMatchingPreferences()
+
+        return User(
+            id: id,
+            username: email.components(separatedBy: "@").first ?? "user",
+            firstName: firstName,
+            lastName: lastName,
+            bio: bio,
+            profileImageURL: profilePhotos?.first,
+            photoURLs: profilePhotos ?? [],
+            nativeLanguage: nativeUserLanguage,
+            learningLanguages: learningUserLanguages,
+            openToLanguages: openToLanguages,
+            practiceLanguages: nil,
+            location: location,
+            showCityInProfile: true,
+            matchedDate: nil,
+            isOnline: isRecentlyActive(),
+            isAI: false,
+            birthYear: birthYear,
+            matchingPreferences: matchingPrefs
+        )
+    }
+
+    /// Check if user has been active recently (within 24 hours)
+    private func isRecentlyActive() -> Bool {
+        guard let lastActiveString = lastActive else { return false }
+
+        let formatter = ISO8601DateFormatter()
+        guard let lastActiveDate = formatter.date(from: lastActiveString) else { return false }
+
+        let hoursSinceActive = Date().timeIntervalSince(lastActiveDate) / 3600
+        return hoursSinceActive < 24
+    }
+
+    /// Create MatchingPreferences from profile data
+    private func createMatchingPreferences() -> MatchingPreferences {
+        // Parse gender
+        let userGender = Gender.allCases.first(where: { $0.rawValue == gender }) ?? .preferNotToSay
+
+        // Parse gender preference
+        let userGenderPreference = GenderPreference.allCases.first(where: { $0.rawValue == genderPreference }) ?? .all
+
+        // Parse location preference
+        let userLocationPreference = LocationPreference.allCases.first(where: { $0.rawValue == locationPreference }) ?? .anywhere
+
+        // Parse relationship intents
+        let userRelationshipIntents = (relationshipIntents ?? []).compactMap { intentString in
+            RelationshipIntent.allCases.first(where: { $0.rawValue == intentString })
+        }
+        let finalIntents = userRelationshipIntents.isEmpty ? [.languagePracticeOnly] : userRelationshipIntents
+
+        // Parse learning contexts
+        let userLearningContexts = (learningContexts ?? []).compactMap { contextString in
+            LearningContext.allCases.first(where: { $0.rawValue == contextString })
+        }
+        let finalContexts = userLearningContexts.isEmpty ? [.fun] : userLearningContexts
+
+        // Convert travel destination
+        let userTravelDestination = travelDestination?.toModel()
+
+        // Convert regional language preferences
+        let userRegionalPreferences = regionalLanguagePreferences?.compactMap { $0.toModel() }
+
+        // Parse proficiency levels
+        let minProf = minProficiencyLevel.flatMap { LanguageProficiency.from(string: $0) } ?? .beginner
+        let maxProf = maxProficiencyLevel.flatMap { LanguageProficiency.from(string: $0) } ?? .advanced
+
+        return MatchingPreferences(
+            gender: userGender,
+            genderPreference: userGenderPreference,
+            minAge: minAge ?? 18,
+            maxAge: maxAge ?? 80,
+            locationPreference: userLocationPreference,
+            latitude: latitude,
+            longitude: longitude,
+            preferredCountries: preferredCountries,
+            travelDestination: userTravelDestination,
+            relationshipIntents: finalIntents,
+            learningContexts: finalContexts,
+            regionalLanguagePreferences: userRegionalPreferences,
+            allowNonNativeMatches: allowNonNativeMatches ?? false,
+            minProficiencyLevel: minProf,
+            maxProficiencyLevel: maxProf
+        )
     }
 }
 
@@ -652,5 +854,73 @@ struct MessageResponse: Codable {
         case conversationId = "conversation_id"
         case senderId = "sender_id"
         case createdAt = "created_at"
+    }
+}
+
+// MARK: - Database Model Conversions
+
+struct TravelDestinationDB: Codable {
+    let city: String?
+    let country: String
+    let countryName: String
+    let startDate: String?
+    let endDate: String?
+
+    enum CodingKeys: String, CodingKey {
+        case city, country
+        case countryName = "country_name"
+        case startDate = "start_date"
+        case endDate = "end_date"
+    }
+
+    func toModel() -> TravelDestination {
+        let formatter = ISO8601DateFormatter()
+        let start = startDate.flatMap { formatter.date(from: $0) }
+        let end = endDate.flatMap { formatter.date(from: $0) }
+
+        return TravelDestination(
+            city: city,
+            country: country,
+            countryName: countryName,
+            startDate: start,
+            endDate: end
+        )
+    }
+}
+
+struct RegionalLanguagePreferenceDB: Codable {
+    let language: String
+    let preferredCountries: [String]
+
+    enum CodingKeys: String, CodingKey {
+        case language
+        case preferredCountries = "preferred_countries"
+    }
+
+    func toModel() -> RegionalLanguagePreference? {
+        guard let lang = Language.allCases.first(where: {
+            $0.code == language || $0.name.lowercased() == language.lowercased()
+        }) else {
+            return nil
+        }
+
+        return RegionalLanguagePreference(
+            language: lang,
+            preferredCountries: preferredCountries
+        )
+    }
+}
+
+// MARK: - Language Proficiency Extension
+
+extension LanguageProficiency {
+    static func from(string: String) -> LanguageProficiency? {
+        switch string.lowercased() {
+        case "beginner", "beg": return .beginner
+        case "intermediate", "int": return .intermediate
+        case "advanced", "adv": return .advanced
+        case "native": return .native
+        default: return nil
+        }
     }
 }

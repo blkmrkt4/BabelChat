@@ -6,6 +6,10 @@ class DiscoverViewController: UIViewController {
     private var cardViews: [SwipeCardView] = []
     private let emptyStateLabel = UILabel()
     private let reloadButton = UIButton(type: .system)
+    private let loadingIndicator = UIActivityIndicatorView(style: .large)
+
+    // Store matched users with their scores and reasons
+    private var matchedProfiles: [(user: User, score: Int, reasons: [String])] = []
     private var allUsers: [User] = []
 
     override func viewDidLoad() {
@@ -51,6 +55,10 @@ class DiscoverViewController: UIViewController {
         view.addSubview(reloadButton)
         reloadButton.translatesAutoresizingMaskIntoConstraints = false
 
+        loadingIndicator.hidesWhenStopped = true
+        view.addSubview(loadingIndicator)
+        loadingIndicator.translatesAutoresizingMaskIntoConstraints = false
+
         NSLayoutConstraint.activate([
             cardStackView.topAnchor.constraint(equalTo: view.safeAreaLayoutGuide.topAnchor, constant: 20),
             cardStackView.leadingAnchor.constraint(equalTo: view.leadingAnchor, constant: 20),
@@ -63,7 +71,10 @@ class DiscoverViewController: UIViewController {
             emptyStateLabel.trailingAnchor.constraint(equalTo: view.trailingAnchor, constant: -40),
 
             reloadButton.topAnchor.constraint(equalTo: emptyStateLabel.bottomAnchor, constant: 20),
-            reloadButton.centerXAnchor.constraint(equalTo: view.centerXAnchor)
+            reloadButton.centerXAnchor.constraint(equalTo: view.centerXAnchor),
+
+            loadingIndicator.centerXAnchor.constraint(equalTo: view.centerXAnchor),
+            loadingIndicator.centerYAnchor.constraint(equalTo: view.centerYAnchor)
         ])
 
         setupActionButtons()
@@ -133,13 +144,54 @@ class DiscoverViewController: UIViewController {
     }
 
     private func loadCards() {
-        allUsers = createSampleUsers()
+        loadingIndicator.startAnimating()
+
+        Task {
+            do {
+                // Fetch matched profiles from Supabase with scoring
+                matchedProfiles = try await SupabaseService.shared.getMatchedDiscoveryProfiles(limit: 20)
+                allUsers = matchedProfiles.map { $0.user }
+
+                await MainActor.run {
+                    loadingIndicator.stopAnimating()
+
+                    if allUsers.isEmpty {
+                        showEmptyState()
+                    } else {
+                        createCardViews()
+                    }
+                }
+            } catch {
+                print("❌ Error loading discovery profiles: \(error)")
+                await MainActor.run {
+                    loadingIndicator.stopAnimating()
+                    // Fall back to sample users for testing
+                    allUsers = createSampleUsers()
+                    matchedProfiles = allUsers.map { (user: $0, score: 50, reasons: ["Sample user"]) }
+                    createCardViews()
+                }
+            }
+        }
+    }
+
+    private func createCardViews() {
+        // Clear existing cards
+        cardViews.forEach { $0.removeFromSuperview() }
+        cardViews.removeAll()
 
         for (index, user) in allUsers.enumerated() {
             let card = SwipeCardView()
             card.user = user
             card.delegate = self
             card.alpha = index == 0 ? 1 : 0.95
+
+            // Set match score and reasons if available
+            if let matchInfo = matchedProfiles.first(where: { $0.user.id == user.id }) {
+                card.matchScore = matchInfo.score
+                card.matchReasons = matchInfo.reasons
+                print("📊 Card for \(user.firstName): \(matchInfo.score)% - \(matchInfo.reasons.joined(separator: ", "))")
+            }
+
             cardStackView.addSubview(card)
 
             card.translatesAutoresizingMaskIntoConstraints = false
@@ -153,6 +205,11 @@ class DiscoverViewController: UIViewController {
             cardStackView.sendSubviewToBack(card)
             cardViews.append(card)
         }
+    }
+
+    private func showEmptyState() {
+        emptyStateLabel.isHidden = false
+        reloadButton.isHidden = false
     }
 
     private func createSampleUsers() -> [User] {
@@ -277,6 +334,30 @@ class DiscoverViewController: UIViewController {
 
 extension DiscoverViewController: SwipeCardDelegate {
     func didSwipe(_ card: SwipeCardView, direction: SwipeDirection) {
+        guard let user = card.user else { return }
+
+        // Save swipe to Supabase
+        Task {
+            do {
+                let directionString: String
+                switch direction {
+                case .left: directionString = "left"
+                case .right: directionString = "right"
+                case .up: directionString = "super" // Super like
+                }
+
+                try await SupabaseService.shared.recordSwipe(
+                    swipedUserId: user.id,
+                    direction: directionString
+                )
+
+                print("✅ Swipe recorded: \(directionString) on \(user.firstName)")
+            } catch {
+                print("❌ Error recording swipe: \(error)")
+            }
+        }
+
+        // Remove card from UI
         cardViews.removeAll { $0 == card }
         card.removeFromSuperview()
 
@@ -291,6 +372,12 @@ extension DiscoverViewController: SwipeCardDelegate {
             let detailVC = UserDetailViewController()
             detailVC.user = user
             detailVC.isMatched = false // Not matched yet in Discover
+
+            // Pass match score and reasons if available
+            if let matchInfo = matchedProfiles.first(where: { $0.user.id == user.id }) {
+                // Store score and reasons for detail view
+                print("📊 Match Score: \(matchInfo.score)% - Reasons: \(matchInfo.reasons.joined(separator: ", "))")
+            }
 
             // Pass the full list of users and current index for navigation
             detailVC.allUsers = allUsers
