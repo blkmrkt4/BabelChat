@@ -104,6 +104,9 @@ class SupabaseTestViewController: UIViewController {
 
         // Test 6: Test discovery profiles
         addButton(title: "Fetch Discovery Profiles", action: #selector(testDiscoveryProfiles))
+
+        // Test 7: Insert 40 test profiles
+        addButton(title: "🚀 Insert 40 Test Profiles", action: #selector(insertTestProfiles))
     }
 
     @objc private func testSignIn() {
@@ -189,6 +192,52 @@ class SupabaseTestViewController: UIViewController {
                 await MainActor.run {
                     addTestResult(
                         title: "Discovery Profiles Failed",
+                        message: error.localizedDescription,
+                        success: false
+                    )
+                }
+            }
+        }
+    }
+
+    @objc private func insertTestProfiles() {
+        // Show confirmation alert first
+        let alert = UIAlertController(
+            title: "Insert Test Profiles",
+            message: "This will insert 40 test profiles into your Supabase database. This may take a minute. Continue?",
+            preferredStyle: .alert
+        )
+
+        alert.addAction(UIAlertAction(title: "Cancel", style: .cancel))
+        alert.addAction(UIAlertAction(title: "Insert", style: .default) { [weak self] _ in
+            self?.performProfileInsertion()
+        })
+
+        present(alert, animated: true)
+    }
+
+    private func performProfileInsertion() {
+        // Add loading indicator
+        addTestResult(
+            title: "Inserting Test Profiles",
+            message: "Starting insertion of 40 test profiles...",
+            success: true
+        )
+
+        Task {
+            do {
+                try await TestDataGenerator.shared.insertTestProfiles()
+                await MainActor.run {
+                    addTestResult(
+                        title: "Test Profiles Inserted Successfully",
+                        message: "All 40 test profiles have been inserted into the database",
+                        success: true
+                    )
+                }
+            } catch {
+                await MainActor.run {
+                    addTestResult(
+                        title: "Test Profile Insertion Failed",
                         message: error.localizedDescription,
                         success: false
                     )
