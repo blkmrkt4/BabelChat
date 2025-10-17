@@ -13,6 +13,13 @@ enum OnboardingStep: Int, CaseIterable {
     case learningGoals
     case profilePhoto
     case bio
+    case gender
+    case genderPreference
+    case ageRange
+    case locationPreference
+    case travelPlans
+    case relationshipIntent
+    case regionalLanguagePreferences
     case notifications
 
     var title: String {
@@ -29,6 +36,13 @@ enum OnboardingStep: Int, CaseIterable {
         case .learningGoals: return "Learning Goals"
         case .profilePhoto: return "Add Photos"
         case .bio: return "About You"
+        case .gender: return "Your Gender"
+        case .genderPreference: return "Match Preferences"
+        case .ageRange: return "Age Preference"
+        case .locationPreference: return "Location Range"
+        case .travelPlans: return "Travel Plans"
+        case .relationshipIntent: return "What You're Looking For"
+        case .regionalLanguagePreferences: return "Regional Preferences"
         case .notifications: return "Stay Connected"
         }
     }
@@ -122,6 +136,42 @@ class OnboardingCoordinator {
             vc.delegate = self
             viewController = vc
 
+        case .gender:
+            let vc = GenderSelectionViewController()
+            vc.delegate = self
+            viewController = vc
+
+        case .genderPreference:
+            let vc = GenderPreferenceViewController()
+            vc.delegate = self
+            viewController = vc
+
+        case .ageRange:
+            let vc = AgeRangeViewController()
+            vc.delegate = self
+            viewController = vc
+
+        case .locationPreference:
+            let vc = LocationPreferenceViewController()
+            vc.delegate = self
+            viewController = vc
+
+        case .travelPlans:
+            let vc = TravelPlansViewController()
+            vc.delegate = self
+            viewController = vc
+
+        case .relationshipIntent:
+            let vc = RelationshipIntentViewController()
+            vc.delegate = self
+            viewController = vc
+
+        case .regionalLanguagePreferences:
+            let vc = RegionalLanguagePreferencesViewController()
+            vc.learningLanguages = userData.learningLanguages
+            vc.delegate = self
+            viewController = vc
+
         case .notifications:
             let vc = NotificationsPermissionViewController()
             vc.delegate = self
@@ -202,6 +252,29 @@ class OnboardingCoordinator {
             UserDefaults.standard.set(encoded, forKey: "userLanguages")
         }
 
+        // Save matching preferences
+        UserDefaults.standard.set(userData.gender.rawValue, forKey: "gender")
+        UserDefaults.standard.set(userData.genderPreference.rawValue, forKey: "genderPreference")
+        UserDefaults.standard.set(userData.minAge, forKey: "minAge")
+        UserDefaults.standard.set(userData.maxAge, forKey: "maxAge")
+        UserDefaults.standard.set(userData.locationPreference.rawValue, forKey: "locationPreference")
+
+        if let preferredCountries = userData.preferredCountries {
+            UserDefaults.standard.set(preferredCountries, forKey: "preferredCountries")
+        }
+
+        if let travelDestination = userData.travelDestination,
+           let encoded = try? JSONEncoder().encode(travelDestination) {
+            UserDefaults.standard.set(encoded, forKey: "travelDestination")
+        }
+
+        let intentRawValues = userData.relationshipIntents.map { $0.rawValue }
+        UserDefaults.standard.set(intentRawValues, forKey: "relationshipIntents")
+
+        if let encoded = try? JSONEncoder().encode(userData.regionalLanguagePreferences) {
+            UserDefaults.standard.set(encoded, forKey: "regionalLanguagePreferences")
+        }
+
         // Generate a temporary user ID
         let userId = UUID().uuidString
         UserDefaults.standard.set(userId, forKey: "userId")
@@ -262,6 +335,36 @@ extension OnboardingCoordinator: OnboardingStepDelegate {
             if let bio = data as? String {
                 userData.bio = bio
             }
+        case .gender:
+            if let gender = data as? Gender {
+                userData.gender = gender
+            }
+        case .genderPreference:
+            if let preference = data as? GenderPreference {
+                userData.genderPreference = preference
+            }
+        case .ageRange:
+            if let ageRange = data as? (Int, Int) {
+                userData.minAge = ageRange.0
+                userData.maxAge = ageRange.1
+            }
+        case .locationPreference:
+            if let locationPref = data as? (LocationPreference, [String]?) {
+                userData.locationPreference = locationPref.0
+                userData.preferredCountries = locationPref.1
+            }
+        case .travelPlans:
+            if let travel = data as? TravelDestination? {
+                userData.travelDestination = travel
+            }
+        case .relationshipIntent:
+            if let intents = data as? [RelationshipIntent] {
+                userData.relationshipIntents = intents
+            }
+        case .regionalLanguagePreferences:
+            if let regionalPrefs = data as? [RegionalLanguagePreference] {
+                userData.regionalLanguagePreferences = regionalPrefs
+            }
         case .notifications:
             // Permission handled
             break
@@ -289,6 +392,17 @@ struct OnboardingUserData {
     var learningGoals: [String] = []
     var profilePhotos: [UIImage] = []
     var bio: String?
+
+    // Matching preferences
+    var gender: Gender = .preferNotToSay
+    var genderPreference: GenderPreference = .all
+    var minAge: Int = 18
+    var maxAge: Int = 80
+    var locationPreference: LocationPreference = .anywhere
+    var preferredCountries: [String]?
+    var travelDestination: TravelDestination?
+    var relationshipIntents: [RelationshipIntent] = [.languagePracticeOnly]
+    var regionalLanguagePreferences: [RegionalLanguagePreference] = []
 
     func toUserLanguageData() -> UserLanguageData {
         let native = UserLanguage(

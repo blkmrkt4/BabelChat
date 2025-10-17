@@ -17,19 +17,49 @@ struct User: Codable {
     let showCityInProfile: Bool // Privacy setting for showing city
     let matchedDate: Date?
     let isOnline: Bool
+    let isAI: Bool // Indicates if this is an AI practice partner
+    let birthYear: Int? // Birth year for age calculation
 
-    // Matching preferences
-    let allowNonNativeMatches: Bool // Allow matching with non-native speakers
-    let minProficiencyLevel: LanguageProficiency // Min proficiency for non-native matches
-    let maxProficiencyLevel: LanguageProficiency // Max proficiency for non-native matches
+    // Matching preferences (new comprehensive preferences model)
+    let matchingPreferences: MatchingPreferences
+
+    // MARK: - Deprecated properties (kept for backwards compatibility)
+    // These are now part of matchingPreferences but kept here for compatibility
+    @available(*, deprecated, message: "Use matchingPreferences.allowNonNativeMatches instead")
+    var allowNonNativeMatches: Bool {
+        return matchingPreferences.allowNonNativeMatches
+    }
+
+    @available(*, deprecated, message: "Use matchingPreferences.minProficiencyLevel instead")
+    var minProficiencyLevel: LanguageProficiency {
+        return matchingPreferences.minProficiencyLevel
+    }
+
+    @available(*, deprecated, message: "Use matchingPreferences.maxProficiencyLevel instead")
+    var maxProficiencyLevel: LanguageProficiency {
+        return matchingPreferences.maxProficiencyLevel
+    }
 
     // Default initializer for backwards compatibility
-    init(id: String, username: String, firstName: String, lastName: String? = nil,
-         bio: String? = nil, profileImageURL: String? = nil, photoURLs: [String] = [],
-         nativeLanguage: UserLanguage, learningLanguages: [UserLanguage],
-         openToLanguages: [Language], practiceLanguages: [UserLanguage]? = nil,
-         location: String? = nil, showCityInProfile: Bool = true,
-         matchedDate: Date? = nil, isOnline: Bool = false,
+    init(id: String,
+         username: String,
+         firstName: String,
+         lastName: String? = nil,
+         bio: String? = nil,
+         profileImageURL: String? = nil,
+         photoURLs: [String] = [],
+         nativeLanguage: UserLanguage,
+         learningLanguages: [UserLanguage],
+         openToLanguages: [Language],
+         practiceLanguages: [UserLanguage]? = nil,
+         location: String? = nil,
+         showCityInProfile: Bool = true,
+         matchedDate: Date? = nil,
+         isOnline: Bool = false,
+         isAI: Bool = false,
+         birthYear: Int? = nil,
+         matchingPreferences: MatchingPreferences? = nil,
+         // Deprecated parameters (for backwards compatibility)
          allowNonNativeMatches: Bool = false,
          minProficiencyLevel: LanguageProficiency = .beginner,
          maxProficiencyLevel: LanguageProficiency = .advanced) {
@@ -48,9 +78,20 @@ struct User: Codable {
         self.showCityInProfile = showCityInProfile
         self.matchedDate = matchedDate
         self.isOnline = isOnline
-        self.allowNonNativeMatches = allowNonNativeMatches
-        self.minProficiencyLevel = minProficiencyLevel
-        self.maxProficiencyLevel = maxProficiencyLevel
+        self.isAI = isAI
+        self.birthYear = birthYear
+
+        // Use provided matchingPreferences or create default from old parameters
+        if let matchingPreferences = matchingPreferences {
+            self.matchingPreferences = matchingPreferences
+        } else {
+            // Create default preferences using old parameters for backwards compatibility
+            self.matchingPreferences = MatchingPreferences(
+                allowNonNativeMatches: allowNonNativeMatches,
+                minProficiencyLevel: minProficiencyLevel,
+                maxProficiencyLevel: maxProficiencyLevel
+            )
+        }
     }
 
     var displayName: String {
@@ -90,5 +131,18 @@ struct User: Codable {
             }
             return location
         }
+    }
+
+    // Calculate age from birth year
+    var age: Int? {
+        guard let birthYear = birthYear else { return nil }
+        let currentYear = Calendar.current.component(.year, from: Date())
+        return currentYear - birthYear
+    }
+
+    // Get age range display string
+    var ageRangeDisplay: String {
+        guard let age = age else { return "Age not specified" }
+        return "\(age)"
     }
 }

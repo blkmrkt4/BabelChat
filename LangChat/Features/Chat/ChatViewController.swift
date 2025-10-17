@@ -264,84 +264,244 @@ class ChatViewController: UIViewController {
             return
         }
 
-        // Load sample messages with language learning features (first time only)
+        // Load language-specific sample messages (first time only)
         let userLanguage = user.nativeLanguage.language
 
-        messages = [
-            Message(
-                id: "1",
-                senderId: user.id,
-                recipientId: "currentUser",
-                text: "Hi! I saw you're learning \(user.learningLanguages.first?.language.name ?? "languages"). I'm a native speaker and would love to help!",
-                timestamp: Date(timeIntervalSinceNow: -3600),
-                isRead: true,
-                originalLanguage: .english,
-                translatedText: "¡Hola! Vi que estás aprendiendo español. ¡Soy hablante nativo y me encantaría ayudarte!",
-                grammarSuggestions: nil,
-                alternatives: ["I'd be happy to help!", "I can help you practice!", "Let's practice together!"],
-                culturalNotes: nil
-            ),
-            Message(
-                id: "2",
-                senderId: "currentUser",
-                recipientId: user.id,
-                text: "That would be amazing! I'm really trying to improve my conversational skills.",
-                timestamp: Date(timeIntervalSinceNow: -3000),
-                isRead: true,
-                originalLanguage: .english,
-                translatedText: "¡Eso sería increíble! Realmente estoy tratando de mejorar mis habilidades conversacionales.",
-                grammarSuggestions: ["Consider: 'That would be wonderful' for more formal tone"],
-                alternatives: ["That sounds great!", "I'd really appreciate that!", "Yes please!"],
-                culturalNotes: nil
-            ),
-            Message(
-                id: "3",
-                senderId: user.id,
-                recipientId: "currentUser",
-                text: "¿Te gustaría empezar con frases básicas o prefieres un tema específico?",
-                timestamp: Date(timeIntervalSinceNow: -2400),
-                isRead: true,
-                originalLanguage: userLanguage,
-                translatedText: "Would you like to start with basic phrases or prefer a specific topic?",
-                grammarSuggestions: ["Perfect use of conditional!", "Good formal register"],
-                alternatives: ["¿Qué tal si empezamos con...?", "¿Por dónde quieres empezar?"],
-                culturalNotes: "Using 'usted' form shows respect in initial conversations"
-            ),
-            Message(
-                id: "4",
-                senderId: "currentUser",
-                recipientId: user.id,
-                text: "Let's start with everyday conversation. I struggle with informal speech.",
-                timestamp: Date(timeIntervalSinceNow: -1800),
-                isRead: true,
-                originalLanguage: .english,
-                translatedText: "Empecemos con conversación diaria. Tengo problemas con el habla informal.",
-                grammarSuggestions: ["Good structure!", "Consider: 'I have difficulty with' instead of 'struggle'"],
-                alternatives: ["Daily conversations would be great", "I need help with casual talk"],
-                culturalNotes: nil
-            ),
-            Message(
-                id: "5",
-                senderId: user.id,
-                recipientId: "currentUser",
-                text: "¡Buena elección! El habla informal es muy importante. Te enseñaré expresiones comunes.",
-                timestamp: Date(timeIntervalSinceNow: -1200),
-                isRead: true,
-                originalLanguage: userLanguage,
-                translatedText: "Great choice! Informal speech is very important. I'll teach you common expressions.",
-                grammarSuggestions: nil,
-                alternatives: ["¡Perfecto!", "¡Excelente decisión!", "¡Me parece genial!"],
-                culturalNotes: "Exclamation marks are commonly used in Spanish to show enthusiasm"
-            )
-        ]
+        // Generate appropriate welcome messages based on the bot's language
+        switch userLanguage {
+        case .spanish:
+            messages = createSpanishWelcomeMessages()
+        case .french:
+            messages = createFrenchWelcomeMessages()
+        case .japanese:
+            messages = createJapaneseWelcomeMessages()
+        case .german:
+            messages = createGermanWelcomeMessages()
+        case .chinese:
+            messages = createChineseWelcomeMessages()
+        default:
+            // Generic English messages for other languages
+            messages = createGenericWelcomeMessages(language: userLanguage)
+        }
 
         tableView.reloadData()
         scrollToBottom(animated: false)
     }
 
+    // MARK: - Language-Specific Welcome Messages
+
+    private func createSpanishWelcomeMessages() -> [Message] {
+        return [
+            Message(
+                id: "1",
+                senderId: user.id,
+                recipientId: "currentUser",
+                text: "¡Hola! Soy María. ¿Cómo estás?",
+                timestamp: Date(timeIntervalSinceNow: -300),
+                isRead: true,
+                originalLanguage: .spanish,
+                translatedText: "Hello! I'm María. How are you?",
+                grammarSuggestions: nil,
+                alternatives: nil,
+                culturalNotes: nil
+            ),
+            Message(
+                id: "2",
+                senderId: user.id,
+                recipientId: "currentUser",
+                text: "Estoy aquí para ayudarte a practicar español. ¡Empecemos!",
+                timestamp: Date(timeIntervalSinceNow: -240),
+                isRead: true,
+                originalLanguage: .spanish,
+                translatedText: "I'm here to help you practice Spanish. Let's get started!",
+                grammarSuggestions: nil,
+                alternatives: nil,
+                culturalNotes: nil
+            )
+        ]
+    }
+
+    private func createFrenchWelcomeMessages() -> [Message] {
+        return [
+            Message(
+                id: "1",
+                senderId: user.id,
+                recipientId: "currentUser",
+                text: "Bonjour ! Je m'appelle Sophie. Comment vas-tu ?",
+                timestamp: Date(timeIntervalSinceNow: -300),
+                isRead: true,
+                originalLanguage: .french,
+                translatedText: "Hello! My name is Sophie. How are you?",
+                grammarSuggestions: nil,
+                alternatives: nil,
+                culturalNotes: nil
+            ),
+            Message(
+                id: "2",
+                senderId: user.id,
+                recipientId: "currentUser",
+                text: "Je suis là pour t'aider à pratiquer le français. Commençons !",
+                timestamp: Date(timeIntervalSinceNow: -240),
+                isRead: true,
+                originalLanguage: .french,
+                translatedText: "I'm here to help you practice French. Let's begin!",
+                grammarSuggestions: nil,
+                alternatives: nil,
+                culturalNotes: nil
+            )
+        ]
+    }
+
+    private func createJapaneseWelcomeMessages() -> [Message] {
+        return [
+            Message(
+                id: "1",
+                senderId: user.id,
+                recipientId: "currentUser",
+                text: "こんにちは！ゆきです。元気ですか？",
+                timestamp: Date(timeIntervalSinceNow: -300),
+                isRead: true,
+                originalLanguage: .japanese,
+                translatedText: "Hello! I'm Yuki. How are you?",
+                grammarSuggestions: nil,
+                alternatives: nil,
+                culturalNotes: nil
+            ),
+            Message(
+                id: "2",
+                senderId: user.id,
+                recipientId: "currentUser",
+                text: "日本語の練習を手伝います。始めましょう！",
+                timestamp: Date(timeIntervalSinceNow: -240),
+                isRead: true,
+                originalLanguage: .japanese,
+                translatedText: "I'll help you practice Japanese. Let's begin!",
+                grammarSuggestions: nil,
+                alternatives: nil,
+                culturalNotes: nil
+            )
+        ]
+    }
+
+    private func createGermanWelcomeMessages() -> [Message] {
+        return [
+            Message(
+                id: "1",
+                senderId: user.id,
+                recipientId: "currentUser",
+                text: "Hallo! Ich bin Max. Wie geht es dir?",
+                timestamp: Date(timeIntervalSinceNow: -300),
+                isRead: true,
+                originalLanguage: .german,
+                translatedText: "Hello! I'm Max. How are you?",
+                grammarSuggestions: nil,
+                alternatives: nil,
+                culturalNotes: nil
+            ),
+            Message(
+                id: "2",
+                senderId: user.id,
+                recipientId: "currentUser",
+                text: "Ich bin hier, um dir beim Deutschlernen zu helfen. Lass uns anfangen!",
+                timestamp: Date(timeIntervalSinceNow: -240),
+                isRead: true,
+                originalLanguage: .german,
+                translatedText: "I'm here to help you learn German. Let's start!",
+                grammarSuggestions: nil,
+                alternatives: nil,
+                culturalNotes: nil
+            )
+        ]
+    }
+
+    private func createChineseWelcomeMessages() -> [Message] {
+        return [
+            Message(
+                id: "1",
+                senderId: user.id,
+                recipientId: "currentUser",
+                text: "你好！我是林。你好吗？",
+                timestamp: Date(timeIntervalSinceNow: -300),
+                isRead: true,
+                originalLanguage: .chinese,
+                translatedText: "Hello! I'm Lin. How are you?",
+                grammarSuggestions: nil,
+                alternatives: nil,
+                culturalNotes: nil
+            ),
+            Message(
+                id: "2",
+                senderId: user.id,
+                recipientId: "currentUser",
+                text: "我会帮你练习中文。我们开始吧！",
+                timestamp: Date(timeIntervalSinceNow: -240),
+                isRead: true,
+                originalLanguage: .chinese,
+                translatedText: "I'll help you practice Chinese. Let's begin!",
+                grammarSuggestions: nil,
+                alternatives: nil,
+                culturalNotes: nil
+            )
+        ]
+    }
+
+    private func createGenericWelcomeMessages(language: Language) -> [Message] {
+        return [
+            Message(
+                id: "1",
+                senderId: user.id,
+                recipientId: "currentUser",
+                text: "Hello! I'm \(user.firstName). Ready to practice \(language.name)?",
+                timestamp: Date(timeIntervalSinceNow: -300),
+                isRead: true,
+                originalLanguage: .english,
+                translatedText: nil,
+                grammarSuggestions: nil,
+                alternatives: nil,
+                culturalNotes: nil
+            ),
+            Message(
+                id: "2",
+                senderId: user.id,
+                recipientId: "currentUser",
+                text: "I'm here to help you learn. Let's start!",
+                timestamp: Date(timeIntervalSinceNow: -240),
+                isRead: true,
+                originalLanguage: .english,
+                translatedText: nil,
+                grammarSuggestions: nil,
+                alternatives: nil,
+                culturalNotes: nil
+            )
+        ]
+    }
+
     // MARK: - Supabase Integration
 
     private func setupConversation() {
+        // AI bots don't need Supabase - they're local only
+        if user.isAI {
+            // Use local ID for AI bot conversations
+            conversationId = "local_\(user.id)"
+            isConversationReady = true
+            inputTextField.placeholder = "Type a message..."
+            sendButton.isEnabled = !(inputTextField.text?.isEmpty ?? true)
+            print("✅ AI bot conversation ready (local only): \(user.firstName)")
+            return
+        }
+
+        // Check if this is a local-only conversation (no Supabase match)
+        if match.id.hasPrefix("local_match_") {
+            // Local conversation without a match record
+            conversationId = "local_conv_\(user.id)"
+            isConversationReady = true
+            inputTextField.placeholder = "Type a message..."
+            sendButton.isEnabled = !(inputTextField.text?.isEmpty ?? true)
+            print("✅ Local conversation ready (no Supabase): \(user.firstName)")
+            return
+        }
+
+        // For real users with matches, set up Supabase conversation
         Task {
             do {
                 // Disable send button while setting up
@@ -433,14 +593,21 @@ class ChatViewController: UIViewController {
         // Send to Supabase and generate AI response
         Task {
             do {
-                // 1. Send user message to Supabase
-                try await SupabaseService.shared.sendMessage(
-                    conversationId: conversationId,
-                    receiverId: user.id,
-                    text: text,
-                    language: conversationLearningLanguage.name
-                )
-                print("✅ User message sent to Supabase")
+                // Check if this is a local-only conversation
+                let isLocalConversation = user.isAI || match.id.hasPrefix("local_match_")
+
+                // 1. Send user message to Supabase (skip for local conversations)
+                if !isLocalConversation {
+                    try await SupabaseService.shared.sendMessage(
+                        conversationId: conversationId,
+                        receiverId: user.id,
+                        text: text,
+                        language: conversationLearningLanguage.name
+                    )
+                    print("✅ User message sent to Supabase")
+                } else {
+                    print("✅ Local conversation (no Supabase sync)")
+                }
 
                 // 2. Generate AI response using Scoring model
                 await generateAIResponse(to: text, conversationId: conversationId)
@@ -452,25 +619,36 @@ class ChatViewController: UIViewController {
 
     private func generateAIResponse(to userMessage: String, conversationId: String) async {
         do {
-            // Use the Scoring model/prompt to generate a response
-            // User is writing in learning language, AI responds in same language
-            let aiResponse = try await AIConfigurationManager.shared.scoreText(
-                text: userMessage,
-                learningLanguage: conversationLearningLanguage.name,
-                nativeLanguage: currentUserNativeLanguage.name
-            )
+            // Check if chatting with AI bot - use conversational prompt
+            let aiResponse: String
+            if user.isAI {
+                // Generate natural conversational response for AI practice partners
+                aiResponse = try await generateConversationalResponse(userMessage: userMessage)
+            } else {
+                // Use the Scoring model for grammar-focused feedback (real users)
+                aiResponse = try await AIConfigurationManager.shared.scoreText(
+                    text: userMessage,
+                    learningLanguage: conversationLearningLanguage.name,
+                    nativeLanguage: currentUserNativeLanguage.name
+                )
+            }
 
-            // Send AI response to Supabase (AI is speaking as the matched user)
-            // sender = matched user (user.id), receiver = current user
-            guard let currentUserId = SupabaseService.shared.currentUserId else { return }
-            try await SupabaseService.shared.sendMessageAs(
-                senderId: user.id,
-                conversationId: conversationId,
-                receiverId: currentUserId.uuidString,
-                text: aiResponse,
-                language: conversationLearningLanguage.name
-            )
-            print("✅ AI response sent to Supabase (as \(user.firstName))")
+            // Send AI response to Supabase (skip for local conversations)
+            let isLocalConversation = user.isAI || match.id.hasPrefix("local_match_")
+
+            if !isLocalConversation {
+                guard let currentUserId = SupabaseService.shared.currentUserId else { return }
+                try await SupabaseService.shared.sendMessageAs(
+                    senderId: user.id,
+                    conversationId: conversationId,
+                    receiverId: currentUserId.uuidString,
+                    text: aiResponse,
+                    language: conversationLearningLanguage.name
+                )
+                print("✅ AI response sent to Supabase (as \(user.firstName))")
+            } else {
+                print("✅ Local conversation - response generated locally")
+            }
 
             // Display AI response in UI
             await MainActor.run {
@@ -498,6 +676,67 @@ class ChatViewController: UIViewController {
         } catch {
             print("❌ Failed to generate AI response: \(error)")
         }
+    }
+
+    /// Generate a natural conversational response for AI practice partners
+    private func generateConversationalResponse(userMessage: String) async throws -> String {
+        // Build conversation history for context (last 5 messages)
+        let recentMessages = messages.suffix(5)
+        var conversationHistory = ""
+        for msg in recentMessages {
+            let speaker = msg.isSentByCurrentUser ? "Student" : user.firstName
+            conversationHistory += "\(speaker): \(msg.text)\n"
+        }
+
+        // Create conversational prompt
+        let systemPrompt = """
+        You are \(user.firstName), a friendly and patient native \(conversationLearningLanguage.name) speaker helping someone learn your language.
+
+        IMPORTANT: You MUST respond ONLY in \(conversationLearningLanguage.name). Never use English or any other language in your response.
+
+        Your role:
+        - Have natural, engaging conversations in \(conversationLearningLanguage.name)
+        - Adjust your language level to match the student's proficiency
+        - Use common expressions and natural phrasing
+        - Keep responses concise (1-3 sentences)
+        - Be encouraging and supportive
+        - If the student makes an error, gently model the correct form in your response without explicitly correcting
+
+        Context: You are chatting with a language learner who wants to practice \(conversationLearningLanguage.name).
+
+        Conversation so far:
+        \(conversationHistory)
+
+        Respond naturally to continue the conversation.
+        """
+
+        let messages = [
+            ChatMessage(role: "system", content: systemPrompt),
+            ChatMessage(role: "user", content: userMessage)
+        ]
+
+        // Use the translation model if available, otherwise use a default model
+        let modelId: String
+        if let config = AIConfigurationManager.shared.getConfiguration(for: .translation) {
+            modelId = config.modelId
+        } else {
+            // Fallback to a capable model
+            modelId = "anthropic/claude-3.5-sonnet"
+        }
+
+        let response = try await OpenRouterService.shared.sendChatCompletion(
+            model: modelId,
+            messages: messages,
+            temperature: 0.8,  // Higher temperature for more natural, varied responses
+            maxTokens: 150
+        )
+
+        guard let content = response.choices.first?.message.content else {
+            throw NSError(domain: "ChatViewController", code: -1,
+                        userInfo: [NSLocalizedDescriptionKey: "Empty response from AI"])
+        }
+
+        return content.trimmingCharacters(in: .whitespacesAndNewlines)
     }
 
     private func scrollToBottom(animated: Bool) {

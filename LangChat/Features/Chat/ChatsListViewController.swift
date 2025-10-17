@@ -44,6 +44,20 @@ class ChatsListViewController: UIViewController {
     private func loadChats() {
         var loadedChats: [Match] = []
 
+        // Add AI practice partners first (always available)
+        let aiBots = AIBotFactory.createAIBots()
+        for bot in aiBots {
+            let match = Match(
+                id: bot.id,
+                user: bot,
+                matchedAt: Date(),
+                hasNewMessage: false,
+                lastMessage: "Start practicing \(bot.nativeLanguage.language.name)!",
+                lastMessageTime: nil // AI bots always appear at bottom
+            )
+            loadedChats.append(match)
+        }
+
         // Scan UserDefaults for all conversation keys
         let defaults = UserDefaults.standard
         let allKeys = defaults.dictionaryRepresentation().keys
@@ -53,6 +67,11 @@ class ChatsListViewController: UIViewController {
 
             // Extract user ID from key
             let userId = String(key.dropFirst("conversation_".count))
+
+            // Skip if this is an AI bot (already added above)
+            if userId.hasPrefix("ai_bot_") {
+                continue
+            }
 
             // Load messages for this conversation
             guard let data = defaults.data(forKey: key),
@@ -66,8 +85,9 @@ class ChatsListViewController: UIViewController {
 
             // Try to load saved user data for this conversation
             if let savedUser = loadSavedUser(userId: userId) {
+                // Use a local match ID format for conversations without a match record
                 let match = Match(
-                    id: userId,
+                    id: "local_match_\(userId)",  // Local-only match ID
                     user: savedUser,
                     matchedAt: messages.first?.timestamp ?? Date(),
                     hasNewMessage: false, // Could be enhanced to track unread
@@ -78,8 +98,12 @@ class ChatsListViewController: UIViewController {
             }
         }
 
-        // Sort by last message time (most recent first)
-        loadedChats.sort { ($0.lastMessageTime ?? Date.distantPast) > ($1.lastMessageTime ?? Date.distantPast) }
+        // Sort by last message time (most recent first), but AI bots without messages stay at end
+        loadedChats.sort { (match1, match2) -> Bool in
+            let time1 = match1.lastMessageTime ?? Date.distantPast
+            let time2 = match2.lastMessageTime ?? Date.distantPast
+            return time1 > time2
+        }
 
         chats = loadedChats
         tableView.reloadData()
@@ -150,6 +174,7 @@ class ChatTableViewCell: UITableViewCell {
     private let timeLabel = UILabel()
     private let unreadBadge = UIView()
     private let onlineIndicator = UIView()
+    private let aiBadge = UILabel()
 
     override init(style: UITableViewCell.CellStyle, reuseIdentifier: String?) {
         super.init(style: style, reuseIdentifier: reuseIdentifier)
@@ -198,6 +223,16 @@ class ChatTableViewCell: UITableViewCell {
         contentView.addSubview(onlineIndicator)
         onlineIndicator.translatesAutoresizingMaskIntoConstraints = false
 
+        aiBadge.text = "AI"
+        aiBadge.font = .systemFont(ofSize: 10, weight: .semibold)
+        aiBadge.textColor = .white
+        aiBadge.backgroundColor = .systemPurple
+        aiBadge.textAlignment = .center
+        aiBadge.layer.cornerRadius = 8
+        aiBadge.clipsToBounds = true
+        contentView.addSubview(aiBadge)
+        aiBadge.translatesAutoresizingMaskIntoConstraints = false
+
         NSLayoutConstraint.activate([
             profileImageView.leadingAnchor.constraint(equalTo: contentView.leadingAnchor, constant: 16),
             profileImageView.centerYAnchor.constraint(equalTo: contentView.centerYAnchor),
@@ -223,7 +258,12 @@ class ChatTableViewCell: UITableViewCell {
             onlineIndicator.bottomAnchor.constraint(equalTo: profileImageView.bottomAnchor),
             onlineIndicator.trailingAnchor.constraint(equalTo: profileImageView.trailingAnchor),
             onlineIndicator.widthAnchor.constraint(equalToConstant: 10),
-            onlineIndicator.heightAnchor.constraint(equalToConstant: 10)
+            onlineIndicator.heightAnchor.constraint(equalToConstant: 10),
+
+            aiBadge.leadingAnchor.constraint(equalTo: nameLabel.trailingAnchor, constant: 6),
+            aiBadge.centerYAnchor.constraint(equalTo: nameLabel.centerYAnchor),
+            aiBadge.widthAnchor.constraint(equalToConstant: 24),
+            aiBadge.heightAnchor.constraint(equalToConstant: 16)
         ])
     }
 
@@ -232,14 +272,23 @@ class ChatTableViewCell: UITableViewCell {
         messageLabel.text = match.lastMessage
         unreadBadge.isHidden = !match.hasNewMessage
         onlineIndicator.isHidden = !match.user.isOnline
+        aiBadge.isHidden = !match.user.isAI
 
         if let lastMessageTime = match.lastMessageTime {
             let formatter = RelativeDateTimeFormatter()
             formatter.unitsStyle = .abbreviated
             timeLabel.text = formatter.localizedString(for: lastMessageTime, relativeTo: Date())
+        } else {
+            timeLabel.text = ""
         }
 
-        profileImageView.image = UIImage(systemName: "person.fill")
-        profileImageView.tintColor = .systemGray3
+        // Use robot icon for AI bots
+        if match.user.isAI {
+            profileImageView.image = UIImage(systemName: "brain.head.profile")
+            profileImageView.tintColor = .systemPurple
+        } else {
+            profileImageView.image = UIImage(systemName: "person.fill")
+            profileImageView.tintColor = .systemGray3
+        }
     }
 }
