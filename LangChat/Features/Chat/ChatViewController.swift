@@ -688,55 +688,69 @@ class ChatViewController: UIViewController {
             conversationHistory += "\(speaker): \(msg.text)\n"
         }
 
-        // Create conversational prompt
-        let systemPrompt = """
-        You are \(user.firstName), a friendly and patient native \(conversationLearningLanguage.name) speaker helping someone learn your language.
+        // Get chatting configuration from Supabase
+        let config: AIConfig
+        do {
+            config = try await AIConfigurationManager.shared.getConfiguration(for: .chatting)
+        } catch {
+            // Fallback to translation config if chatting not configured
+            print("⚠️ Chatting config not found, falling back to translation config")
+            config = try await AIConfigurationManager.shared.getConfiguration(for: .translation)
+        }
 
-        IMPORTANT: You MUST respond ONLY in \(conversationLearningLanguage.name). Never use English or any other language in your response.
-
-        Your role:
-        - Have natural, engaging conversations in \(conversationLearningLanguage.name)
-        - Adjust your language level to match the student's proficiency
-        - Use common expressions and natural phrasing
-        - Keep responses concise (1-3 sentences)
-        - Be encouraging and supportive
-        - If the student makes an error, gently model the correct form in your response without explicitly correcting
-
-        Context: You are chatting with a language learner who wants to practice \(conversationLearningLanguage.name).
-
-        Conversation so far:
-        \(conversationHistory)
-
-        Respond naturally to continue the conversation.
-        """
+        // Process prompt template with variables
+        let systemPrompt = config.promptTemplate
+            .replacingOccurrences(of: "{bot_name}", with: user.firstName)
+            .replacingOccurrences(of: "{language}", with: conversationLearningLanguage.name)
+            .replacingOccurrences(of: "{conversation_history}", with: conversationHistory)
 
         let messages = [
             ChatMessage(role: "system", content: systemPrompt),
             ChatMessage(role: "user", content: userMessage)
         ]
 
-        // Use the translation model if available, otherwise use a default model
-        let modelId: String
-        if let config = AIConfigurationManager.shared.getConfiguration(for: .translation) {
-            modelId = config.modelId
-        } else {
-            // Fallback to a capable model
-            modelId = "anthropic/claude-3.5-sonnet"
+        // Try primary model, then fallbacks
+        let modelIds = [
+            config.modelId,
+            config.fallbackModel1Id,
+            config.fallbackModel2Id,
+            config.fallbackModel3Id
+        ].compactMap { $0 }.filter { !$0.isEmpty }
+
+        var lastError: Error?
+
+        for (index, modelId) in modelIds.enumerated() {
+            do {
+                print("🤖 Chatting with model \(index == 0 ? "primary" : "fallback \(index)"): \(modelId)")
+
+                let response = try await OpenRouterService.shared.sendChatCompletion(
+                    model: modelId,
+                    messages: messages,
+                    temperature: Double(config.temperature),
+                    maxTokens: config.maxTokens
+                )
+
+                guard let content = response.choices.first?.message.content else {
+                    throw NSError(domain: "ChatViewController", code: -1,
+                                userInfo: [NSLocalizedDescriptionKey: "Empty response from AI"])
+                }
+
+                return content.trimmingCharacters(in: CharacterSet.whitespacesAndNewlines)
+            } catch {
+                lastError = error
+                print("❌ Model \(modelId) failed: \(error.localizedDescription)")
+
+                // If not the last model, try next fallback
+                if index < modelIds.count - 1 {
+                    print("⚠️ Trying fallback model...")
+                    continue
+                }
+            }
         }
 
-        let response = try await OpenRouterService.shared.sendChatCompletion(
-            model: modelId,
-            messages: messages,
-            temperature: 0.8,  // Higher temperature for more natural, varied responses
-            maxTokens: 150
-        )
-
-        guard let content = response.choices.first?.message.content else {
-            throw NSError(domain: "ChatViewController", code: -1,
-                        userInfo: [NSLocalizedDescriptionKey: "Empty response from AI"])
-        }
-
-        return content.trimmingCharacters(in: .whitespacesAndNewlines)
+        // All models failed
+        throw lastError ?? NSError(domain: "ChatViewController", code: -1,
+                                  userInfo: [NSLocalizedDescriptionKey: "All chatting models failed"])
     }
 
     private func scrollToBottom(animated: Bool) {
@@ -897,6 +911,49 @@ extension ChatViewController: SwipeableMessageCellDelegate {
                 self.tableView.beginUpdates()
                 self.tableView.endUpdates()
             }
+        }
+    }
+
+    func cell(_ cell: SwipeableMessageCell, didRequestDeleteMessage message: Message) {
+        let alert = UIAlertController(
+            title: "Delete Message",
+            message: "Are you sure you want to delete this message?",
+            preferredStyle: .alert
+        )
+
+        alert.addAction(UIAlertAction(title: "Cancel", style: .cancel))
+        alert.addAction(UIAlertAction(title: "Delete", style: .destructive) { [weak self] _ in
+            guard let self = self else { return }
+
+            // Remove from array
+            if let index = self.messages.firstIndex(where: { $0.id == message.id }) {
+                self.messages.remove(at: index)
+
+                // Update table
+                let indexPath = IndexPath(row: index, section: 0)
+                self.tableView.deleteRows(at: [indexPath], with: .fade)
+
+                // Save messages
+                self.saveMessages()
+
+                // TODO: Delete from Supabase when real-time is implemented
+            }
+        })
+
+        present(alert, animated: true)
+    }
+
+    func cell(_ cell: SwipeableMessageCell, didRequestReplyToMessage message: Message) {
+        // Set placeholder text with quote
+        let quotedText = "Replying to: \"\(message.text)\"\n"
+        inputTextField.text = quotedText
+
+        // Move cursor to end
+        inputTextField.becomeFirstResponder()
+
+        // Move cursor after the quote
+        if let newPosition = inputTextField.position(from: inputTextField.endOfDocument, offset: 0) {
+            inputTextField.selectedTextRange = inputTextField.textRange(from: newPosition, to: newPosition)
         }
     }
 }

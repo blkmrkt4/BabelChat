@@ -9,12 +9,14 @@ class TestDataGenerator {
     private init() {}
 
     /// Insert all 40 test profiles to Supabase
-    func insertTestProfiles() async throws {
+    /// Returns a result message with success/failure details
+    func insertTestProfiles() async throws -> String {
         print("🚀 Starting test profile generation...")
 
         let profiles = createAllTestProfiles()
         var successCount = 0
         var failureCount = 0
+        var errorMessages: [String] = []
 
         for (index, profile) in profiles.enumerated() {
             do {
@@ -23,25 +25,35 @@ class TestDataGenerator {
                 print("✅ [\(index + 1)/\(profiles.count)] Inserted: \(profile.firstName) from \(profile.location ?? "Unknown")")
             } catch {
                 failureCount += 1
-                print("❌ Failed to insert \(profile.firstName): \(error.localizedDescription)")
+                let errorMsg = "\(profile.firstName): \(error.localizedDescription)"
+                errorMessages.append(errorMsg)
+                print("❌ [\(index + 1)/\(profiles.count)] Failed to insert \(errorMsg)")
             }
 
             // Small delay to avoid rate limiting
             try? await Task.sleep(nanoseconds: 100_000_000) // 0.1 seconds
         }
 
-        print("\n📊 Results:")
-        print("   ✅ Success: \(successCount)")
-        print("   ❌ Failed: \(failureCount)")
-        print("   📈 Total: \(profiles.count)")
+        let summary = """
+        📊 Insertion Results:
+        ✅ Success: \(successCount)
+        ❌ Failed: \(failureCount)
+        📈 Total: \(profiles.count)
+
+        \(failureCount > 0 ? "Errors:\n" + errorMessages.prefix(5).joined(separator: "\n") : "All profiles inserted successfully!")
+        \(failureCount > 5 ? "\n... and \(failureCount - 5) more errors" : "")
+        """
+
+        print("\n" + summary)
+        return summary
     }
 
     /// Insert a single profile to Supabase
     private func insertProfile(_ profile: TestProfile) async throws {
         let supabase = SupabaseService.shared.client
 
-        let profileData = ProfileInsert(
-            id: profile.id,
+        // Don't include id - let database generate it to avoid foreign key constraint
+        let profileData = ProfileInsertWithoutId(
             email: profile.email,
             phoneNumber: profile.phoneNumber,
             firstName: profile.firstName,
@@ -211,8 +223,7 @@ struct TestProfile {
 }
 
 // MARK: - Profile Insert Model (Encodable for Supabase)
-struct ProfileInsert: Codable {
-    let id: String
+struct ProfileInsertWithoutId: Codable {
     let email: String
     let phoneNumber: String
     let firstName: String
@@ -240,7 +251,7 @@ struct ProfileInsert: Codable {
     let lastActive: String
 
     enum CodingKeys: String, CodingKey {
-        case id, email, bio, age, location, gender, latitude, longitude
+        case email, bio, age, location, gender, latitude, longitude
         case phoneNumber = "phone_number"
         case firstName = "first_name"
         case lastName = "last_name"

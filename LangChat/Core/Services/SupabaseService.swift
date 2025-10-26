@@ -911,6 +911,109 @@ struct RegionalLanguagePreferenceDB: Codable {
     }
 }
 
+// MARK: - Model Evaluations Methods
+extension SupabaseService {
+
+    /// Get all model evaluations for a specific category
+    func getModelEvaluations(category: String) async throws -> [ModelEvaluationResponse] {
+        let response: [ModelEvaluationResponse] = try await client.database
+            .from("model_evaluations")
+            .select()
+            .eq("category", value: category)
+            .order("score", ascending: false)
+            .execute()
+            .value
+
+        return response
+    }
+
+    /// Get the highest scoring evaluation for each model in a category
+    func getBestModelEvaluations(category: String) async throws -> [String: ModelEvaluationResponse] {
+        let allEvaluations = try await getModelEvaluations(category: category)
+
+        var bestEvaluations: [String: ModelEvaluationResponse] = [:]
+
+        for evaluation in allEvaluations {
+            if let existing = bestEvaluations[evaluation.modelId] {
+                if evaluation.score > existing.score {
+                    bestEvaluations[evaluation.modelId] = evaluation
+                }
+            } else {
+                bestEvaluations[evaluation.modelId] = evaluation
+            }
+        }
+
+        return bestEvaluations
+    }
+}
+
+// MARK: - Model Evaluation Data Models
+struct ModelEvaluationResponse: Codable {
+    let id: String
+    let timestamp: String
+    let testInput: String
+    let sourceLang: String
+    let targetLang: String
+    let baselineType: String
+    let baselineModelId: String?
+    let baselineModelName: String?
+    let googleTranslateOutput: String
+    let modelId: String
+    let modelName: String
+    let modelOutput: String
+    let responseTime: Double?
+    let evaluationModelId: String
+    let evaluationModelName: String
+    let modelPrompt: String?
+    let evaluationPrompt: String?
+    let score: Double
+    let scores: [String: Double]?
+    let detailedScores: DetailedScores?
+    let evaluation: String
+    let category: String
+    let error: String?
+    let errorType: String?
+
+    struct DetailedScores: Codable {
+        let translationAccuracy: ScoreWithReason?
+        let responseSpeed: ScoreWithReason?
+        let combinedTotal: Double?
+
+        struct ScoreWithReason: Codable {
+            let score: Double
+            let reason: String
+        }
+
+        enum CodingKeys: String, CodingKey {
+            case translationAccuracy = "translation_accuracy"
+            case responseSpeed = "response_speed"
+            case combinedTotal = "combined_total"
+        }
+    }
+
+    enum CodingKeys: String, CodingKey {
+        case id, timestamp, category, error, evaluation
+        case testInput = "test_input"
+        case sourceLang = "source_lang"
+        case targetLang = "target_lang"
+        case baselineType = "baseline_type"
+        case baselineModelId = "baseline_model_id"
+        case baselineModelName = "baseline_model_name"
+        case googleTranslateOutput = "google_translate_output"
+        case modelId = "model_id"
+        case modelName = "model_name"
+        case modelOutput = "model_output"
+        case responseTime = "response_time"
+        case evaluationModelId = "evaluation_model_id"
+        case evaluationModelName = "evaluation_model_name"
+        case modelPrompt = "model_prompt"
+        case evaluationPrompt = "evaluation_prompt"
+        case score, scores
+        case detailedScores = "detailed_scores"
+        case errorType = "error_type"
+    }
+}
+
 // MARK: - Language Proficiency Extension
 
 extension LanguageProficiency {

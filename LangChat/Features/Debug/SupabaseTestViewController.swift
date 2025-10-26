@@ -220,17 +220,17 @@ class SupabaseTestViewController: UIViewController {
         // Add loading indicator
         addTestResult(
             title: "Inserting Test Profiles",
-            message: "Starting insertion of 40 test profiles...",
+            message: "Starting insertion of 40 test profiles... Please wait ~4 seconds.",
             success: true
         )
 
         Task {
             do {
-                try await TestDataGenerator.shared.insertTestProfiles()
+                let resultMessage = try await TestDataGenerator.shared.insertTestProfiles()
                 await MainActor.run {
                     addTestResult(
-                        title: "Test Profiles Inserted Successfully",
-                        message: "All 40 test profiles have been inserted into the database",
+                        title: "Test Profile Insertion Complete",
+                        message: resultMessage,
                         success: true
                     )
                 }
@@ -238,7 +238,7 @@ class SupabaseTestViewController: UIViewController {
                 await MainActor.run {
                     addTestResult(
                         title: "Test Profile Insertion Failed",
-                        message: error.localizedDescription,
+                        message: "Critical error: \(error.localizedDescription)",
                         success: false
                     )
                 }

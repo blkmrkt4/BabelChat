@@ -4,12 +4,14 @@ enum AIModelCategory: String, CaseIterable {
     case translation = "translation"
     case grammar = "grammar"
     case scoring = "scoring"
+    case chatting = "chatting"
 
     var displayName: String {
         switch self {
         case .translation: return "Translation"
         case .grammar: return "Grammar"
         case .scoring: return "Scoring"
+        case .chatting: return "Chatting"
         }
     }
 }
@@ -103,7 +105,8 @@ extension AIModelConfig {
         let defaultPrompts: [AIModelCategory: String] = [
             .translation: "You are a professional translator. Translate the following text from {source_language} to {target_language}. Maintain the tone and style of the original message. Only return the translation, no explanations.",
             .grammar: "You are a language expert. Check the following {language} text for grammar errors and provide corrections with brief explanations. Format: {\"corrections\": [...], \"explanation\": \"...\"}",
-            .scoring: "Rate the following {language} text for correctness on a scale of 0-100. Consider grammar, spelling, and natural expression. Return only a JSON: {\"score\": X, \"brief_feedback\": \"...\"}"
+            .scoring: "Rate the following {language} text for correctness on a scale of 0-100. Consider grammar, spelling, and natural expression. Return only a JSON: {\"score\": X, \"brief_feedback\": \"...\"}",
+            .chatting: "You are a friendly and patient native speaker helping someone learn your language. Have natural, engaging conversations. Adjust your language level to match the student's proficiency. Keep responses concise (1-3 sentences). Be encouraging and supportive."
         ]
 
         return AIModelConfig(

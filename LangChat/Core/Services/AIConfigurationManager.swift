@@ -9,28 +9,23 @@ class AIConfigurationManager {
 
     // MARK: - Configuration Retrieval
 
-    /// Get the saved configuration for a specific category
+    /// Get the configuration for a specific category from Supabase
+    /// Falls back to hardcoded defaults if Supabase is unavailable
     /// - Parameter category: The category (translation, grammar, scoring)
-    /// - Returns: SavedConfiguration if one exists for the category
-    func getConfiguration(for category: AICategory) -> SavedConfiguration? {
-        guard let data = UserDefaults.standard.data(forKey: "AIModelConfigs"),
-              let allConfigs = try? JSONDecoder().decode([String: SavedConfig].self, from: data),
-              let savedConfig = allConfigs[category.rawValue] else {
-            return nil
+    /// - Returns: AIConfig from Supabase or fallback
+    func getConfiguration(for category: AICategory) async throws -> AIConfig {
+        do {
+            return try await AIConfigService.shared.getConfiguration(for: category)
+        } catch {
+            print("⚠️ Failed to fetch AI config from Supabase: \(error). Using fallback.")
+            return AIConfigService.shared.getFallbackConfiguration(for: category)
         }
-
-        return SavedConfiguration(
-            modelId: savedConfig.modelId,
-            modelName: savedConfig.modelName,
-            modelProvider: savedConfig.modelProvider,
-            category: category,
-            promptTemplate: savedConfig.masterPrompt
-        )
     }
 
-    /// Check if a configuration exists for a category
-    func hasConfiguration(for category: AICategory) -> Bool {
-        return getConfiguration(for: category) != nil
+    /// Force refresh configurations from Supabase
+    /// Bypasses the 24-hour cache
+    func refreshConfigurations() async throws {
+        try await AIConfigService.shared.refreshAllConfigurations()
     }
 
     // MARK: - Prompt Processing
@@ -49,16 +44,14 @@ class AIConfigurationManager {
 
     // MARK: - Translation
 
-    /// Translate text using the saved translation model
+    /// Translate text using the configured translation model
     /// - Parameters:
     ///   - text: The text to translate
     ///   - learningLanguage: Source language (language being learned)
     ///   - nativeLanguage: Target language (user's native language)
     /// - Returns: Translated text
     func translate(text: String, learningLanguage: String, nativeLanguage: String) async throws -> String {
-        guard let config = getConfiguration(for: .translation) else {
-            throw AIConfigurationError.noConfigurationFound(category: .translation)
-        }
+        let config = try await getConfiguration(for: .translation)
 
         let prompt = fillPromptTemplate(config.promptTemplate, learningLanguage: learningLanguage, nativeLanguage: nativeLanguage)
 
@@ -70,8 +63,8 @@ class AIConfigurationManager {
         let response = try await OpenRouterService.shared.sendChatCompletion(
             model: config.modelId,
             messages: messages,
-            temperature: 0.7,
-            maxTokens: 1000
+            temperature: Double(config.temperature),
+            maxTokens: config.maxTokens
         )
 
         guard let content = response.choices.first?.message.content else {
@@ -83,7 +76,7 @@ class AIConfigurationManager {
 
     // MARK: - Grammar Check
 
-    /// Check grammar using the saved grammar model
+    /// Check grammar using the configured grammar model
     /// - Parameters:
     ///   - text: The text to check
     ///   - learningLanguage: The language the text is written in
@@ -91,16 +84,19 @@ class AIConfigurationManager {
     ///   - sensitivityLevel: The level of detail for feedback (optional, uses default if not specified)
     /// - Returns: Grammar check result (JSON string)
     func checkGrammar(text: String, learningLanguage: String, nativeLanguage: String, sensitivityLevel: GrammarSensitivityLevel? = nil) async throws -> String {
-        guard let config = getConfiguration(for: .grammar) else {
-            throw AIConfigurationError.noConfigurationFound(category: .grammar)
-        }
+        let config = try await getConfiguration(for: .grammar)
 
-        // If sensitivity level is specified, use the corresponding template from saved grammar config
+        // Select prompt based on sensitivity level
         var promptTemplate = config.promptTemplate
-        if let level = sensitivityLevel,
-           let grammarData = UserDefaults.standard.data(forKey: "GrammarConfiguration"),
-           let grammarConfig = try? JSONDecoder().decode(GrammarConfiguration.self, from: grammarData) {
-            promptTemplate = grammarConfig.getPrompt(for: level)
+        if let level = sensitivityLevel {
+            switch level {
+            case .minimal:
+                promptTemplate = config.grammarLevel1Prompt ?? config.promptTemplate
+            case .moderate:
+                promptTemplate = config.grammarLevel2Prompt ?? config.promptTemplate
+            case .verbose:
+                promptTemplate = config.grammarLevel3Prompt ?? config.promptTemplate
+            }
         }
 
         let prompt = fillPromptTemplate(promptTemplate, learningLanguage: learningLanguage, nativeLanguage: nativeLanguage)
@@ -113,8 +109,8 @@ class AIConfigurationManager {
         let response = try await OpenRouterService.shared.sendChatCompletion(
             model: config.modelId,
             messages: messages,
-            temperature: 0.3,
-            maxTokens: 1500
+            temperature: Double(config.temperature),
+            maxTokens: config.maxTokens
         )
 
         guard let content = response.choices.first?.message.content else {
@@ -126,16 +122,14 @@ class AIConfigurationManager {
 
     // MARK: - Scoring
 
-    /// Score text using the saved scoring model
+    /// Score text using the configured scoring model
     /// - Parameters:
     ///   - text: The text to score
     ///   - learningLanguage: The language the text is written in
     ///   - nativeLanguage: The user's native language
     /// - Returns: Score result (JSON string)
     func scoreText(text: String, learningLanguage: String, nativeLanguage: String) async throws -> String {
-        guard let config = getConfiguration(for: .scoring) else {
-            throw AIConfigurationError.noConfigurationFound(category: .scoring)
-        }
+        let config = try await getConfiguration(for: .scoring)
 
         let prompt = fillPromptTemplate(config.promptTemplate, learningLanguage: learningLanguage, nativeLanguage: nativeLanguage)
 
@@ -147,8 +141,8 @@ class AIConfigurationManager {
         let response = try await OpenRouterService.shared.sendChatCompletion(
             model: config.modelId,
             messages: messages,
-            temperature: 0.3,
-            maxTokens: 800
+            temperature: Double(config.temperature),
+            maxTokens: config.maxTokens
         )
 
         guard let content = response.choices.first?.message.content else {
@@ -165,31 +159,14 @@ enum AICategory: String, CaseIterable {
     case translation = "translation"
     case grammar = "grammar"
     case scoring = "scoring"
-}
-
-struct SavedConfiguration {
-    let modelId: String
-    let modelName: String
-    let modelProvider: String
-    let category: AICategory
-    let promptTemplate: String
-}
-
-struct SavedConfig: Codable {
-    let modelId: String
-    let modelName: String
-    let modelProvider: String
-    let masterPrompt: String
+    case chatting = "chatting"
 }
 
 enum AIConfigurationError: LocalizedError {
-    case noConfigurationFound(category: AICategory)
     case emptyResponse
 
     var errorDescription: String? {
         switch self {
-        case .noConfigurationFound(let category):
-            return "No AI model configured for \(category.rawValue). Please configure one in Settings > AI Setup."
         case .emptyResponse:
             return "The AI model returned an empty response."
         }

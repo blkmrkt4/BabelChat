@@ -44,20 +44,6 @@ class ChatsListViewController: UIViewController {
     private func loadChats() {
         var loadedChats: [Match] = []
 
-        // Add AI practice partners first (always available)
-        let aiBots = AIBotFactory.createAIBots()
-        for bot in aiBots {
-            let match = Match(
-                id: bot.id,
-                user: bot,
-                matchedAt: Date(),
-                hasNewMessage: false,
-                lastMessage: "Start practicing \(bot.nativeLanguage.language.name)!",
-                lastMessageTime: nil // AI bots always appear at bottom
-            )
-            loadedChats.append(match)
-        }
-
         // Scan UserDefaults for all conversation keys
         let defaults = UserDefaults.standard
         let allKeys = defaults.dictionaryRepresentation().keys
@@ -67,11 +53,6 @@ class ChatsListViewController: UIViewController {
 
             // Extract user ID from key
             let userId = String(key.dropFirst("conversation_".count))
-
-            // Skip if this is an AI bot (already added above)
-            if userId.hasPrefix("ai_bot_") {
-                continue
-            }
 
             // Load messages for this conversation
             guard let data = defaults.data(forKey: key),
@@ -96,9 +77,10 @@ class ChatsListViewController: UIViewController {
                 )
                 loadedChats.append(match)
             }
+            // If no user data found, skip this conversation (no placeholder)
         }
 
-        // Sort by last message time (most recent first), but AI bots without messages stay at end
+        // Sort by last message time (most recent first), AI bots without messages stay at end
         loadedChats.sort { (match1, match2) -> Bool in
             let time1 = match1.lastMessageTime ?? Date.distantPast
             let time2 = match2.lastMessageTime ?? Date.distantPast
@@ -110,33 +92,20 @@ class ChatsListViewController: UIViewController {
     }
 
     private func loadSavedUser(userId: String) -> User? {
-        // Try to load from saved match data
+        // Check if this is an AI bot
+        if userId.hasPrefix("ai_bot_") {
+            // Load AI bot from factory
+            let aiBots = AIBotFactory.createAIBots()
+            return aiBots.first(where: { $0.id == userId })
+        }
+
+        // Try to load from saved match data for real users
         guard let data = UserDefaults.standard.data(forKey: "user_\(userId)"),
               let user = try? JSONDecoder().decode(User.self, from: data) else {
-            // If no saved user, create a placeholder
-            return createPlaceholderUser(userId: userId)
+            // No saved user data - return nil instead of placeholder
+            return nil
         }
         return user
-    }
-
-    private func createPlaceholderUser(userId: String) -> User {
-        // Create placeholder user for conversations where user data wasn't saved
-        return User(
-            id: userId,
-            username: "user_\(userId)",
-            firstName: "User",
-            lastName: "",
-            bio: "",
-            profileImageURL: nil,
-            photoURLs: [],
-            nativeLanguage: UserLanguage(language: .korean, proficiency: .native, isNative: true),
-            learningLanguages: [UserLanguage(language: .english, proficiency: .intermediate, isNative: false)],
-            openToLanguages: [.english],
-            practiceLanguages: nil,
-            location: "Unknown",
-            matchedDate: Date(),
-            isOnline: false
-        )
     }
 }
 

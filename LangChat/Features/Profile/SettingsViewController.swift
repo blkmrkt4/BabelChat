@@ -9,7 +9,9 @@ class SettingsViewController: UIViewController {
     private enum SettingSection: Int, CaseIterable {
         case profileSettings
         case matchingSettings
+        #if DEBUG
         case aiSettings
+        #endif
         case grammarFeedback
         case privacy
         case support
@@ -19,7 +21,9 @@ class SettingsViewController: UIViewController {
             switch self {
             case .profileSettings: return nil  // No header for single profile item
             case .matchingSettings: return nil  // No header for single matching item
+            #if DEBUG
             case .aiSettings: return "AI Settings"
+            #endif
             case .grammarFeedback: return "Grammar Feedback"
             case .privacy: return "Privacy & Safety"
             case .support: return "Support"
@@ -37,12 +41,12 @@ class SettingsViewController: UIViewController {
                 return [
                     ("Matching Settings", "slider.horizontal.3")
                 ]
+            #if DEBUG
             case .aiSettings:
                 return [
-                    ("Translation Model", "arrow.left.arrow.right"),
-                    ("Grammar Model", "text.badge.checkmark"),
-                    ("Model Bindings", "link")
+                    ("Model Bindings", "link.circle")
                 ]
+            #endif
             case .grammarFeedback:
                 return [
                     ("Feedback Level", "slider.horizontal.3")
@@ -168,13 +172,11 @@ class SettingsViewController: UIViewController {
         case .matchingSettings:
             showMatchingSettings()
 
+        #if DEBUG
         case .aiSettings:
-            switch row {
-            case 0: showAISetup() // Will show AI Setup with translation model tab selected
-            case 1: showAISetup() // Will show AI Setup with grammar model tab selected
-            case 2: showAISetup() // Will show AI Setup with bindings tab selected
-            default: break
-            }
+            // Only one item now - Model Bindings (view-only)
+            showModelBindings()
+        #endif
 
         case .grammarFeedback:
             switch row {
@@ -267,12 +269,13 @@ class SettingsViewController: UIViewController {
         present(alert, animated: true)
     }
 
-    private func showAISetup() {
-        let aiSetupVC = AISetupContainerViewController()
-        let navController = UINavigationController(rootViewController: aiSetupVC)
-        navController.modalPresentationStyle = .fullScreen
-        present(navController, animated: true)
+    #if DEBUG
+    private func showModelBindings() {
+        let bindingsVC = AIModelBindingsViewController()
+        bindingsVC.title = "Model Bindings"
+        navigationController?.pushViewController(bindingsVC, animated: true)
     }
+    #endif
 
     private func showNotificationSettings() {
         print("Show notification settings")

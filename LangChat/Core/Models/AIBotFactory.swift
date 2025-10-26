@@ -10,7 +10,8 @@ class AIBotFactory {
             createFrenchBot(),
             createJapaneseBot(),
             createGermanBot(),
-            createMandarinBot()
+            createMandarinBot(),
+            createPortugueseBot()
         ]
     }
 
@@ -133,6 +134,32 @@ class AIBotFactory {
             learningLanguages: [UserLanguage(language: .english, proficiency: .intermediate, isNative: false)],
             openToLanguages: [.chinese, .english],
             practiceLanguages: [UserLanguage(language: .chinese, proficiency: .native, isNative: true)],
+            location: "Virtual, Worldwide",
+            showCityInProfile: true,
+            matchedDate: Date(),
+            isOnline: true,
+            isAI: true,
+            allowNonNativeMatches: true,
+            minProficiencyLevel: .beginner,
+            maxProficiencyLevel: .advanced
+        )
+    }
+
+    // MARK: - Portuguese Bot
+
+    private static func createPortugueseBot() -> User {
+        return User(
+            id: "ai_bot_portuguese",
+            username: "racquel_ai",
+            firstName: "Racquel",
+            lastName: "AI Assistant",
+            bio: "Olá! I'm your AI language partner for practicing Portuguese. Vamos conversar! 🤖🇧🇷",
+            profileImageURL: nil,
+            photoURLs: [],
+            nativeLanguage: UserLanguage(language: .portuguese, proficiency: .native, isNative: true),
+            learningLanguages: [UserLanguage(language: .english, proficiency: .intermediate, isNative: false)],
+            openToLanguages: [.portuguese, .english],
+            practiceLanguages: [UserLanguage(language: .portuguese, proficiency: .native, isNative: true)],
             location: "Virtual, Worldwide",
             showCityInProfile: true,
             matchedDate: Date(),

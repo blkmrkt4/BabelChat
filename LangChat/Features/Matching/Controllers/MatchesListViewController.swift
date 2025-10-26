@@ -40,6 +40,7 @@ class MatchesListViewController: UIViewController {
         collectionView.delegate = self
         collectionView.dataSource = self
         collectionView.register(MatchCollectionViewCell.self, forCellWithReuseIdentifier: "MatchCell")
+        collectionView.register(BotPracticeCardCell.self, forCellWithReuseIdentifier: "BotPracticeCard")
 
         view.addSubview(collectionView)
         collectionView.translatesAutoresizingMaskIntoConstraints = false
@@ -191,37 +192,103 @@ class MatchesListViewController: UIViewController {
 }
 
 extension MatchesListViewController: UICollectionViewDataSource {
+    func numberOfSections(in collectionView: UICollectionView) -> Int {
+        return 2 // Section 0: Bot practice card, Section 1: Matches
+    }
+
     func collectionView(_ collectionView: UICollectionView, numberOfItemsInSection section: Int) -> Int {
-        return matches.count
+        if section == 0 {
+            return 1 // Bot practice card
+        } else {
+            return matches.count
+        }
     }
 
     func collectionView(_ collectionView: UICollectionView, cellForItemAt indexPath: IndexPath) -> UICollectionViewCell {
-        let cell = collectionView.dequeueReusableCell(withReuseIdentifier: "MatchCell", for: indexPath) as! MatchCollectionViewCell
-        cell.configure(with: matches[indexPath.row])
-        return cell
+        if indexPath.section == 0 {
+            let cell = collectionView.dequeueReusableCell(withReuseIdentifier: "BotPracticeCard", for: indexPath) as! BotPracticeCardCell
+            return cell
+        } else {
+            let cell = collectionView.dequeueReusableCell(withReuseIdentifier: "MatchCell", for: indexPath) as! MatchCollectionViewCell
+            cell.configure(with: matches[indexPath.row])
+            return cell
+        }
     }
 }
 
 extension MatchesListViewController: UICollectionViewDelegate {
     func collectionView(_ collectionView: UICollectionView, didSelectItemAt indexPath: IndexPath) {
-        let match = matches[indexPath.row]
-        let detailVC = UserDetailViewController()
-        detailVC.user = match.user
-        detailVC.match = match // Pass the actual match object with real database ID
-        detailVC.isMatched = true // Already matched
+        if indexPath.section == 0 {
+            // Bot practice card tapped - show bot selection
+            showBotSelection()
+        } else {
+            let match = matches[indexPath.row]
+            let detailVC = UserDetailViewController()
+            detailVC.user = match.user
+            detailVC.match = match // Pass the actual match object with real database ID
+            detailVC.isMatched = true // Already matched
 
-        // Pass the full list of matched users and current index for navigation
-        detailVC.allUsers = matches.map { $0.user }
-        detailVC.currentUserIndex = indexPath.row
+            // Pass the full list of matched users and current index for navigation
+            detailVC.allUsers = matches.map { $0.user }
+            detailVC.currentUserIndex = indexPath.row
 
-        navigationController?.pushViewController(detailVC, animated: true)
+            navigationController?.pushViewController(detailVC, animated: true)
+        }
+    }
+
+    private func showBotSelection() {
+        let alert = UIAlertController(
+            title: "Practice with a Bot",
+            message: "Choose a language to practice",
+            preferredStyle: .actionSheet
+        )
+
+        let aiBots = AIBotFactory.createAIBots()
+        for bot in aiBots {
+            let action = UIAlertAction(
+                title: "\(bot.firstName) - \(bot.nativeLanguage.language.name)",
+                style: .default
+            ) { [weak self] _ in
+                self?.startChatWithBot(bot)
+            }
+            alert.addAction(action)
+        }
+
+        alert.addAction(UIAlertAction(title: "Cancel", style: .cancel))
+
+        if let popover = alert.popoverPresentationController {
+            popover.sourceView = collectionView
+            popover.sourceRect = CGRect(x: view.bounds.midX, y: view.bounds.midY, width: 0, height: 0)
+        }
+
+        present(alert, animated: true)
+    }
+
+    private func startChatWithBot(_ bot: User) {
+        let match = Match(
+            id: bot.id,
+            user: bot,
+            matchedAt: Date(),
+            hasNewMessage: false,
+            lastMessage: "Start practicing!",
+            lastMessageTime: Date()
+        )
+        let chatVC = ChatViewController(user: bot, match: match)
+        navigationController?.pushViewController(chatVC, animated: true)
     }
 }
 
 extension MatchesListViewController: UICollectionViewDelegateFlowLayout {
     func collectionView(_ collectionView: UICollectionView, layout collectionViewLayout: UICollectionViewLayout, sizeForItemAt indexPath: IndexPath) -> CGSize {
-        let width = (view.frame.width - 48) / 2
-        return CGSize(width: width, height: width * 1.3)
+        if indexPath.section == 0 {
+            // Bot practice card - full width, thin height
+            let width = view.frame.width - 32 // 16pt padding on each side
+            return CGSize(width: width, height: 60)
+        } else {
+            // Match cards - 2 columns
+            let width = (view.frame.width - 48) / 2
+            return CGSize(width: width, height: width * 1.3)
+        }
     }
 }
 
@@ -358,5 +425,67 @@ class MatchCollectionViewCell: UICollectionViewCell {
             imageView.image = UIImage(systemName: "person.fill")
             imageView.tintColor = .systemGray3
         }
+    }
+}
+
+// MARK: - Bot Practice Card Cell
+
+class BotPracticeCardCell: UICollectionViewCell {
+
+    private let iconImageView = UIImageView()
+    private let titleLabel = UILabel()
+    private let chevronImageView = UIImageView()
+
+    override init(frame: CGRect) {
+        super.init(frame: frame)
+        setupViews()
+    }
+
+    required init?(coder: NSCoder) {
+        super.init(coder: coder)
+        setupViews()
+    }
+
+    private func setupViews() {
+        contentView.backgroundColor = .systemPurple.withAlphaComponent(0.1)
+        contentView.layer.cornerRadius = 12
+        contentView.layer.borderWidth = 1
+        contentView.layer.borderColor = UIColor.systemPurple.withAlphaComponent(0.3).cgColor
+
+        // Robot icon
+        iconImageView.image = UIImage(systemName: "brain.head.profile")
+        iconImageView.tintColor = .systemPurple
+        iconImageView.contentMode = .scaleAspectFit
+        contentView.addSubview(iconImageView)
+        iconImageView.translatesAutoresizingMaskIntoConstraints = false
+
+        // Title label
+        titleLabel.text = "Practice with a Bot"
+        titleLabel.font = .systemFont(ofSize: 17, weight: .semibold)
+        titleLabel.textColor = .systemPurple
+        contentView.addSubview(titleLabel)
+        titleLabel.translatesAutoresizingMaskIntoConstraints = false
+
+        // Chevron
+        chevronImageView.image = UIImage(systemName: "chevron.right")
+        chevronImageView.tintColor = .systemPurple
+        chevronImageView.contentMode = .scaleAspectFit
+        contentView.addSubview(chevronImageView)
+        chevronImageView.translatesAutoresizingMaskIntoConstraints = false
+
+        NSLayoutConstraint.activate([
+            iconImageView.leadingAnchor.constraint(equalTo: contentView.leadingAnchor, constant: 16),
+            iconImageView.centerYAnchor.constraint(equalTo: contentView.centerYAnchor),
+            iconImageView.widthAnchor.constraint(equalToConstant: 32),
+            iconImageView.heightAnchor.constraint(equalToConstant: 32),
+
+            titleLabel.leadingAnchor.constraint(equalTo: iconImageView.trailingAnchor, constant: 12),
+            titleLabel.centerYAnchor.constraint(equalTo: contentView.centerYAnchor),
+
+            chevronImageView.trailingAnchor.constraint(equalTo: contentView.trailingAnchor, constant: -16),
+            chevronImageView.centerYAnchor.constraint(equalTo: contentView.centerYAnchor),
+            chevronImageView.widthAnchor.constraint(equalToConstant: 16),
+            chevronImageView.heightAnchor.constraint(equalToConstant: 16)
+        ])
     }
 }

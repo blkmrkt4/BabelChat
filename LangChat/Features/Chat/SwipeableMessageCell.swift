@@ -1,9 +1,11 @@
 import UIKit
 import AVFoundation
 
-// Protocol to notify when pane changes
+// Protocol to notify when pane changes and actions
 protocol SwipeableMessageCellDelegate: AnyObject {
     func cell(_ cell: SwipeableMessageCell, didSwipeToPaneIndex paneIndex: Int)
+    func cell(_ cell: SwipeableMessageCell, didRequestDeleteMessage message: Message)
+    func cell(_ cell: SwipeableMessageCell, didRequestReplyToMessage message: Message)
 }
 
 class SwipeableMessageCell: UITableViewCell {
@@ -77,6 +79,11 @@ class SwipeableMessageCell: UITableViewCell {
             .first?.screen.bounds.width ?? 375
         scrollView.setContentOffset(CGPoint(x: screenWidth, y: 0), animated: false)
 
+        // Reset pane visibility - show only center pane
+        leftPane.isHidden = true
+        centerPane.isHidden = false
+        rightPane.isHidden = true
+
         // Clear previous content
         grammarStackView.arrangedSubviews.forEach { $0.removeFromSuperview() }
         alternativesStackView.arrangedSubviews.forEach { $0.removeFromSuperview() }
@@ -101,6 +108,11 @@ class SwipeableMessageCell: UITableViewCell {
         containerView.addSubview(leftPane)
         containerView.addSubview(centerPane)
         containerView.addSubview(rightPane)
+
+        // Initially show only center pane
+        leftPane.isHidden = true
+        centerPane.isHidden = false
+        rightPane.isHidden = true
 
         setupCenterPane()
         setupRightPane()
@@ -342,23 +354,34 @@ class SwipeableMessageCell: UITableViewCell {
 
     // MARK: - Gestures
     private func setupGestures() {
-        // Double tap for pronunciation
+        // Double tap for pronunciation (only on center pane)
         let doubleTap = UITapGestureRecognizer(target: self, action: #selector(pronounceMessage))
         doubleTap.numberOfTapsRequired = 2
         centerPane.addGestureRecognizer(doubleTap)
 
-        // Long press to save phrase
-        let longPress = UILongPressGestureRecognizer(target: self, action: #selector(savePhrase))
-        centerPane.addGestureRecognizer(longPress)
+        // Add context menu interaction to bubble view
+        let contextMenuInteraction = UIContextMenuInteraction(delegate: self)
+        bubbleView.addInteraction(contextMenuInteraction)
+        bubbleView.isUserInteractionEnabled = true
 
-        // Swipe gestures on the bubble itself (alternative to scrolling)
-        let leftSwipe = UISwipeGestureRecognizer(target: self, action: #selector(swipeLeft))
-        leftSwipe.direction = .left
-        centerPane.addGestureRecognizer(leftSwipe)
+        // Center pane: swipe left/right to view grammar/translation
+        let centerLeftSwipe = UISwipeGestureRecognizer(target: self, action: #selector(swipeLeftFromCenter))
+        centerLeftSwipe.direction = .left
+        centerPane.addGestureRecognizer(centerLeftSwipe)
 
-        let rightSwipe = UISwipeGestureRecognizer(target: self, action: #selector(swipeRight))
-        rightSwipe.direction = .right
-        centerPane.addGestureRecognizer(rightSwipe)
+        let centerRightSwipe = UISwipeGestureRecognizer(target: self, action: #selector(swipeRightFromCenter))
+        centerRightSwipe.direction = .right
+        centerPane.addGestureRecognizer(centerRightSwipe)
+
+        // Grammar pane: swipe left to go back to messages
+        let grammarSwipe = UISwipeGestureRecognizer(target: self, action: #selector(swipeFromGrammar))
+        grammarSwipe.direction = .left
+        leftPane.addGestureRecognizer(grammarSwipe)
+
+        // Translation pane: swipe right to go back to messages
+        let translationSwipe = UISwipeGestureRecognizer(target: self, action: #selector(swipeFromTranslation))
+        translationSwipe.direction = .right
+        rightPane.addGestureRecognizer(translationSwipe)
     }
 
     @objc private func pronounceMessage() {
@@ -404,53 +427,24 @@ class SwipeableMessageCell: UITableViewCell {
         showToast("🔊 Playing pronunciation...")
     }
 
-    @objc private func savePhrase(_ gesture: UILongPressGestureRecognizer) {
-        guard gesture.state == .began,
-              let message = currentMessage else { return }
-
-        // Haptic feedback
-        let impact = UIImpactFeedbackGenerator(style: .medium)
-        impact.impactOccurred()
-
-        // Visual feedback
-        UIView.animate(withDuration: 0.2) {
-            self.bubbleView.backgroundColor = self.bubbleView.backgroundColor?.withAlphaComponent(0.7)
-        } completion: { _ in
-            UIView.animate(withDuration: 0.2) {
-                self.bubbleView.backgroundColor = self.bubbleView.backgroundColor?.withAlphaComponent(1.0)
-            }
-        }
-
-        // Save to user defaults (in real app, would save to CloudKit)
-        var savedPhrases = UserDefaults.standard.stringArray(forKey: "savedPhrases") ?? []
-        savedPhrases.append(message.text)
-        UserDefaults.standard.set(savedPhrases, forKey: "savedPhrases")
-
-        showToast("✅ Phrase saved to vocabulary")
+    @objc private func swipeLeftFromCenter() {
+        // Swipe left on center pane -> show translation (right pane)
+        scrollToPane(2)
     }
 
-    @objc private func swipeLeft() {
-        // When swiping left on center pane, show translation (right pane)
-        // This follows natural iOS swipe direction
-        let screenWidth = scrollView.bounds.width
-        let currentPage = Int(scrollView.contentOffset.x / screenWidth)
-        if currentPage == 1 { // Currently on center pane
-            scrollToPane(2) // Go to right pane (translation)
-        } else if currentPage == 2 { // Currently on right pane
-            scrollToPane(1) // Go back to center
-        }
+    @objc private func swipeRightFromCenter() {
+        // Swipe right on center pane -> show grammar (left pane)
+        scrollToPane(0)
     }
 
-    @objc private func swipeRight() {
-        // When swiping right on center pane, show grammar/alternatives (left pane)
-        // This follows natural iOS swipe direction
-        let screenWidth = scrollView.bounds.width
-        let currentPage = Int(scrollView.contentOffset.x / screenWidth)
-        if currentPage == 1 { // Currently on center pane
-            scrollToPane(0) // Go to left pane (grammar)
-        } else if currentPage == 0 { // Currently on left pane
-            scrollToPane(1) // Go back to center
-        }
+    @objc private func swipeFromGrammar() {
+        // Swipe left on grammar pane -> go back to messages (center pane)
+        scrollToPane(1)
+    }
+
+    @objc private func swipeFromTranslation() {
+        // Swipe right on translation pane -> go back to messages (center pane)
+        scrollToPane(1)
     }
 
     private func scrollToPane(_ paneIndex: Int) {
@@ -507,6 +501,9 @@ class SwipeableMessageCell: UITableViewCell {
             .compactMap { $0 as? UIWindowScene }
             .first?.screen.bounds.width ?? 375
             self?.scrollView.setContentOffset(CGPoint(x: screenWidth, y: 0), animated: false)
+
+            // Show only center pane initially
+            self?.updatePaneVisibility(for: 1)
         }
     }
 
@@ -820,15 +817,75 @@ class SwipeableMessageCell: UITableViewCell {
     }
 }
 
+// MARK: - UIContextMenuInteractionDelegate
+extension SwipeableMessageCell: UIContextMenuInteractionDelegate {
+    func contextMenuInteraction(_ interaction: UIContextMenuInteraction, configurationForMenuAtLocation location: CGPoint) -> UIContextMenuConfiguration? {
+        guard let message = currentMessage else { return nil }
+
+        return UIContextMenuConfiguration(identifier: nil, previewProvider: nil) { _ in
+            // Copy action
+            let copyAction = UIAction(
+                title: "Copy",
+                image: UIImage(systemName: "doc.on.doc")
+            ) { [weak self] _ in
+                UIPasteboard.general.string = message.text
+                self?.showToast("📋 Copied to clipboard")
+            }
+
+            // Reply action
+            let replyAction = UIAction(
+                title: "Reply",
+                image: UIImage(systemName: "arrowshape.turn.up.left")
+            ) { [weak self] _ in
+                guard let self = self else { return }
+                self.delegate?.cell(self, didRequestReplyToMessage: message)
+            }
+
+            // Delete action
+            let deleteAction = UIAction(
+                title: "Delete",
+                image: UIImage(systemName: "trash"),
+                attributes: .destructive
+            ) { [weak self] _ in
+                guard let self = self else { return }
+                self.delegate?.cell(self, didRequestDeleteMessage: message)
+            }
+
+            return UIMenu(title: "", children: [replyAction, copyAction, deleteAction])
+        }
+    }
+}
+
 // MARK: - UIScrollViewDelegate
 extension SwipeableMessageCell: UIScrollViewDelegate {
+    func scrollViewWillBeginDragging(_ scrollView: UIScrollView) {
+        // Disable interaction on all panes during scroll to prevent touch conflicts
+        leftPane.isUserInteractionEnabled = false
+        centerPane.isUserInteractionEnabled = false
+        rightPane.isUserInteractionEnabled = false
+    }
+
     func scrollViewDidEndDecelerating(_ scrollView: UIScrollView) {
+        handleScrollEnd(scrollView)
+    }
+
+    func scrollViewDidEndScrollingAnimation(_ scrollView: UIScrollView) {
+        // Also handle programmatic scrolling (from swipe gestures)
+        handleScrollEnd(scrollView)
+    }
+
+    private func handleScrollEnd(_ scrollView: UIScrollView) {
         let pageWidth = scrollView.frame.width
-        let currentPage = Int(scrollView.contentOffset.x / pageWidth)
+        guard pageWidth > 0 else { return }
+
+        let currentPage = Int(round(scrollView.contentOffset.x / pageWidth))
 
         // Haptic feedback when changing panes
         let impact = UIImpactFeedbackGenerator(style: .light)
         impact.impactOccurred()
+
+        // Update visibility FIRST before any other logic
+        updatePaneVisibility(for: currentPage)
 
         // Notify delegate of pane change
         delegate?.cell(self, didSwipeToPaneIndex: currentPage)
@@ -855,8 +912,29 @@ extension SwipeableMessageCell: UIScrollViewDelegate {
         }
     }
 
-    func scrollViewDidEndScrollingAnimation(_ scrollView: UIScrollView) {
-        // Also handle programmatic scrolling (from swipe gestures)
-        scrollViewDidEndDecelerating(scrollView)
+    private func updatePaneVisibility(for currentPage: Int) {
+        // Hide ALL panes and disable interaction
+        leftPane.isHidden = true
+        leftPane.isUserInteractionEnabled = false
+        centerPane.isHidden = true
+        centerPane.isUserInteractionEnabled = false
+        rightPane.isHidden = true
+        rightPane.isUserInteractionEnabled = false
+
+        // Show and enable ONLY the active pane
+        switch currentPage {
+        case 0:
+            leftPane.isHidden = false
+            leftPane.isUserInteractionEnabled = true
+        case 1:
+            centerPane.isHidden = false
+            centerPane.isUserInteractionEnabled = true
+        case 2:
+            rightPane.isHidden = false
+            rightPane.isUserInteractionEnabled = true
+        default:
+            centerPane.isHidden = false
+            centerPane.isUserInteractionEnabled = true
+        }
     }
 }
