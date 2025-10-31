@@ -22,6 +22,7 @@ import {
   deleteTemplate,
   type SavedTemplate
 } from '@/lib/templateStorage'
+import { createAIConfig, getAIConfigs } from '@/lib/supabase'
 
 const LANGUAGES = Object.keys(GOOGLE_LANG_CODES)
 
@@ -218,6 +219,7 @@ export default function ModelEvaluation() {
     loadCustomCategories()
     loadSavedInputs()
     loadSavedTemplates()
+    loadCategoryConfig() // Load category-specific config from Supabase
   }, [category])
 
   const loadSavedTemplates = () => {
@@ -294,17 +296,37 @@ Respond in EXACTLY this JSON format (all text in English):
     }
   }, [evaluationPrompt])
 
-  const loadCustomCategories = () => {
-    if (typeof window !== 'undefined') {
+  const loadCustomCategories = async () => {
+    if (typeof window === 'undefined') return
+
+    try {
+      // Load all categories from Supabase
+      const allConfigs = await getAIConfigs()
+
+      // Extract custom categories (not in DEFAULT_CATEGORIES)
+      const customFromDb = allConfigs
+        .map(config => config.category)
+        .filter(cat => !DEFAULT_CATEGORIES.includes(cat as any))
+
+      // Merge with localStorage (for backward compatibility)
       const saved = localStorage.getItem('custom_categories')
+      let fromLocalStorage: string[] = []
       if (saved) {
         try {
-          const parsed = JSON.parse(saved)
-          setCustomCategories(parsed)
+          fromLocalStorage = JSON.parse(saved)
         } catch (e) {
-          console.error('Error loading custom categories:', e)
+          console.error('Error parsing localStorage:', e)
         }
       }
+
+      // Combine and deduplicate
+      const combined = [...new Set([...customFromDb, ...fromLocalStorage])]
+      setCustomCategories(combined)
+
+      // Update localStorage to match Supabase
+      localStorage.setItem('custom_categories', JSON.stringify(combined))
+    } catch (e) {
+      console.error('Error loading custom categories:', e)
     }
   }
 
@@ -315,7 +337,7 @@ Respond in EXACTLY this JSON format (all text in English):
     setCustomCategories(categories)
   }
 
-  const addCustomCategory = () => {
+  const addCustomCategory = async () => {
     const trimmed = newCategoryName.trim().toLowerCase()
     if (!trimmed) {
       alert('Please enter a category name')
@@ -328,10 +350,28 @@ Respond in EXACTLY this JSON format (all text in English):
       return
     }
 
-    const updated = [...customCategories, trimmed]
-    saveCustomCategories(updated)
-    setNewCategoryName('')
-    setShowAddCategory(false)
+    try {
+      // Create the category in Supabase with default configuration
+      await createAIConfig(trimmed, {
+        model_id: 'anthropic/claude-3.5-sonnet',
+        model_name: 'Claude 3.5 Sonnet',
+        model_provider: 'anthropic',
+        prompt_template: `You are an AI assistant for ${trimmed}. Provide helpful responses.`,
+        temperature: 0.7,
+        max_tokens: 1000,
+      })
+
+      // After successful Supabase creation, add to localStorage
+      const updated = [...customCategories, trimmed]
+      saveCustomCategories(updated)
+      setNewCategoryName('')
+      setShowAddCategory(false)
+
+      alert(`✓ Category "${trimmed}" created successfully! You can now configure it on the main page.`)
+    } catch (error) {
+      console.error('Error creating category:', error)
+      alert('Failed to create category in database. Please try again.')
+    }
   }
 
   const removeCustomCategory = (categoryToRemove: string) => {
@@ -359,6 +399,36 @@ Respond in EXACTLY this JSON format (all text in English):
     if (typeof window !== 'undefined') {
       const saved = localStorage.getItem('openrouter_api_key')
       if (saved) setApiKey(saved)
+    }
+  }
+
+  const loadCategoryConfig = async () => {
+    try {
+      const { getAIConfig } = await import('@/lib/supabase')
+      const config = await getAIConfig(category)
+
+      if (config) {
+        // Set baseline model from category config
+        setBaselineModelId(config.model_id)
+        setPrompt(config.prompt_template)
+
+        // Set fallbacks if they exist
+        if (config.fallback_model_1_id) {
+          setBaselineFallback1(config.fallback_model_1_id)
+        }
+        if (config.fallback_model_2_id) {
+          setBaselineFallback2(config.fallback_model_2_id)
+        }
+
+        console.log(`✓ Loaded config for category "${category}":`, {
+          model: config.model_name,
+          promptLength: config.prompt_template.length
+        })
+      } else {
+        console.log(`No config found for category "${category}"`)
+      }
+    } catch (error) {
+      console.error('Error loading category config:', error)
     }
   }
 

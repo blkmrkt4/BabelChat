@@ -89,15 +89,36 @@ export default function AIModelSetup() {
     loadCustomCategories()
   }, [category])
 
-  const loadCustomCategories = () => {
-    const saved = localStorage.getItem('custom_categories')
-    if (saved) {
-      try {
-        const parsed = JSON.parse(saved)
-        setCustomCategories(parsed)
-      } catch (e) {
-        console.error('Error loading custom categories:', e)
+  const loadCustomCategories = async () => {
+    try {
+      // Load all categories from Supabase
+      const { getAIConfigs } = await import('@/lib/supabase')
+      const allConfigs = await getAIConfigs()
+
+      // Extract custom categories (not in DEFAULT_CATEGORIES)
+      const customFromDb = allConfigs
+        .map(config => config.category)
+        .filter(cat => !DEFAULT_CATEGORIES.includes(cat as any))
+
+      // Merge with localStorage (for backward compatibility)
+      const saved = localStorage.getItem('custom_categories')
+      let fromLocalStorage: string[] = []
+      if (saved) {
+        try {
+          fromLocalStorage = JSON.parse(saved)
+        } catch (e) {
+          console.error('Error parsing localStorage:', e)
+        }
       }
+
+      // Combine and deduplicate
+      const combined = [...new Set([...customFromDb, ...fromLocalStorage])]
+      setCustomCategories(combined)
+
+      // Update localStorage to match Supabase
+      localStorage.setItem('custom_categories', JSON.stringify(combined))
+    } catch (e) {
+      console.error('Error loading custom categories:', e)
     }
   }
 
