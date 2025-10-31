@@ -570,9 +570,9 @@ private class StreaksCard: UIView {
             languageLabel.centerYAnchor.constraint(equalTo: container.centerYAnchor),
 
             streakLabel.trailingAnchor.constraint(equalTo: container.trailingAnchor),
-            streakLabel.centerYAnchor.constraint(equalTo: container.centerYAnchor),
+            streakLabel.centerYAnchor.constraint(equalTo: container.centerYAnchor)
 
-            container.heightAnchor.constraint(equalToConstant: 24)
+            // Height removed - let stackView's .fillEqually distribution handle sizing
         ])
 
         return container
