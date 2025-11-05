@@ -14,15 +14,19 @@ class BioViewController: BaseOnboardingViewController {
     private let prompts = [
         "What's your language learning story?",
         "What motivates you to learn languages?",
+        "What do you do for work or study?",
+        "What are your hobbies and interests?",
+        "Describe your personality in 3 words",
+        "What kind of conversations excite you?",
         "Share a fun fact about yourself",
-        "What are your hobbies and interests?"
+        "What's your favorite way to practice languages?"
     ]
 
     // MARK: - Lifecycle
     override func configure() {
         step = .bio
         setTitle("Tell us about yourself",
-                subtitle: "Help others get to know you better")
+                subtitle: "Write anything you'd like! Use the prompts below to get started, or share whatever feels right")
         setupViews()
         setupKeyboardObservers()
     }
@@ -30,15 +34,18 @@ class BioViewController: BaseOnboardingViewController {
     // MARK: - Setup
     private func setupViews() {
         // Prompts container
-        promptsContainer.backgroundColor = .secondarySystemBackground
+        promptsContainer.backgroundColor = .white.withAlphaComponent(0.05)
         promptsContainer.layer.cornerRadius = 12
+        promptsContainer.layer.borderWidth = 1
+        promptsContainer.layer.borderColor = UIColor.white.withAlphaComponent(0.2).cgColor
         contentView.addSubview(promptsContainer)
 
         // Prompts label
         let promptsLabel = UILabel()
-        promptsLabel.text = "Need inspiration? Try these prompts:"
+        promptsLabel.text = "Need inspiration? Tap any question to get started:"
         promptsLabel.font = .systemFont(ofSize: 14, weight: .medium)
-        promptsLabel.textColor = .secondaryLabel
+        promptsLabel.textColor = .white.withAlphaComponent(0.8)
+        promptsLabel.numberOfLines = 0
         promptsContainer.addSubview(promptsLabel)
 
         // Prompt buttons stack
@@ -50,7 +57,8 @@ class BioViewController: BaseOnboardingViewController {
         for prompt in prompts {
             let button = UIButton(type: .system)
             button.setTitle(prompt, for: .normal)
-            button.titleLabel?.font = .systemFont(ofSize: 14, weight: .regular)
+            button.titleLabel?.font = .systemFont(ofSize: 13, weight: .regular)
+            button.setTitleColor(.white.withAlphaComponent(0.7), for: .normal)
             button.contentHorizontalAlignment = .left
             button.addTarget(self, action: #selector(promptTapped), for: .touchUpInside)
             promptsStack.addArrangedSubview(button)
@@ -60,26 +68,26 @@ class BioViewController: BaseOnboardingViewController {
 
         // Text view
         textView.font = .systemFont(ofSize: 16, weight: .regular)
-        textView.textColor = .label
-        textView.backgroundColor = .secondarySystemBackground
+        textView.textColor = .white
+        textView.backgroundColor = .white.withAlphaComponent(0.08)
         textView.layer.cornerRadius = 12
         textView.layer.borderWidth = 1
-        textView.layer.borderColor = UIColor.systemGray4.cgColor
-        textView.textContainerInset = UIEdgeInsets(top: 12, left: 12, bottom: 12, right: 12)
+        textView.layer.borderColor = UIColor.white.withAlphaComponent(0.3).cgColor
+        textView.textContainerInset = UIEdgeInsets(top: 16, left: 16, bottom: 16, right: 16)
         textView.delegate = self
         contentView.addSubview(textView)
 
         // Placeholder
-        placeholderLabel.text = "Write something about yourself..."
+        placeholderLabel.text = "Share your story, interests, personality... anything you'd like others to know! There are no wrong answers here."
         placeholderLabel.font = .systemFont(ofSize: 16, weight: .regular)
-        placeholderLabel.textColor = .tertiaryLabel
+        placeholderLabel.textColor = .white.withAlphaComponent(0.4)
         placeholderLabel.numberOfLines = 0
         textView.addSubview(placeholderLabel)
 
         // Character count
         characterCountLabel.text = "0/\(maxCharacters)"
         characterCountLabel.font = .systemFont(ofSize: 12, weight: .regular)
-        characterCountLabel.textColor = .secondaryLabel
+        characterCountLabel.textColor = .white.withAlphaComponent(0.6)
         characterCountLabel.textAlignment = .right
         contentView.addSubview(characterCountLabel)
 
@@ -115,9 +123,9 @@ class BioViewController: BaseOnboardingViewController {
             textView.heightAnchor.constraint(equalToConstant: 150),
 
             // Placeholder
-            placeholderLabel.topAnchor.constraint(equalTo: textView.topAnchor, constant: 12),
-            placeholderLabel.leadingAnchor.constraint(equalTo: textView.leadingAnchor, constant: 16),
-            placeholderLabel.trailingAnchor.constraint(equalTo: textView.trailingAnchor, constant: -16),
+            placeholderLabel.topAnchor.constraint(equalTo: textView.topAnchor, constant: 16),
+            placeholderLabel.leadingAnchor.constraint(equalTo: textView.leadingAnchor, constant: 21),
+            placeholderLabel.trailingAnchor.constraint(equalTo: textView.trailingAnchor, constant: -21),
 
             // Character count
             characterCountLabel.topAnchor.constraint(equalTo: textView.bottomAnchor, constant: 8),

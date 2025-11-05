@@ -183,13 +183,22 @@ class PhoneNumberViewController: BaseOnboardingViewController {
 // MARK: - UITextFieldDelegate
 extension PhoneNumberViewController: UITextFieldDelegate {
     func textField(_ textField: UITextField, shouldChangeCharactersIn range: NSRange, replacementString string: String) -> Bool {
+        // Get current text safely
+        let currentText = textField.text ?? ""
+
+        // Validate range before using it (critical for physical devices)
+        guard range.location >= 0,
+              range.location <= currentText.count,
+              range.location + range.length <= currentText.count else {
+            return false
+        }
+
         // Only allow numbers
         if !string.isEmpty && !string.allSatisfy({ $0.isNumber || $0 == " " || $0 == "-" }) {
             return false
         }
 
         // Limit length
-        let currentText = textField.text ?? ""
         let newText = (currentText as NSString).replacingCharacters(in: range, with: string)
         let cleanText = newText.replacingOccurrences(of: " ", with: "").replacingOccurrences(of: "-", with: "")
 

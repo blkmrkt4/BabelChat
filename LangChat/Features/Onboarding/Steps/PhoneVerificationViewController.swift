@@ -179,14 +179,23 @@ class PhoneVerificationViewController: BaseOnboardingViewController {
 // MARK: - UITextFieldDelegate
 extension PhoneVerificationViewController: UITextFieldDelegate {
     func textField(_ textField: UITextField, shouldChangeCharactersIn range: NSRange, replacementString string: String) -> Bool {
-        // Only allow single digit
+        // Get current text safely
         let currentText = textField.text ?? ""
-        let newText = (currentText as NSString).replacingCharacters(in: range, with: string)
+
+        // Validate range before using it
+        guard range.location >= 0,
+              range.location <= currentText.count,
+              range.location + range.length <= currentText.count else {
+            return false
+        }
 
         // Only allow numbers
         if !string.isEmpty && !string.allSatisfy({ $0.isNumber }) {
             return false
         }
+
+        // Calculate new text safely
+        let newText = (currentText as NSString).replacingCharacters(in: range, with: string)
 
         // Limit to 1 character
         if newText.count > 1 {

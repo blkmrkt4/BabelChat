@@ -11,7 +11,6 @@ enum OnboardingStep: Int, CaseIterable {
     case learningLanguages
     case languageProficiency
     case learningGoals
-    case profilePhoto
     case bio
     case gender
     case genderPreference
@@ -20,6 +19,7 @@ enum OnboardingStep: Int, CaseIterable {
     case travelPlans
     case relationshipIntent
     case regionalLanguagePreferences
+    case profilePhoto
     case notifications
 
     var title: String {
@@ -29,7 +29,7 @@ enum OnboardingStep: Int, CaseIterable {
         case .name: return "Your Name"
         case .email: return "Email Address"
         case .birthYear: return "Birth Year"
-        case .hometown: return "Location"
+        case .hometown: return "Hometown"
         case .nativeLanguage: return "Native Language"
         case .learningLanguages: return "Languages to Learn"
         case .languageProficiency: return "Language Skills"
@@ -205,6 +205,18 @@ class OnboardingCoordinator {
         // Set user as signed in
         UserDefaults.standard.set(true, forKey: "isUserSignedIn")
 
+        // Show pricing page before transitioning to main app
+        showPricingPage()
+    }
+
+    private func showPricingPage() {
+        let pricingVC = PricingViewController()
+        pricingVC.delegate = self
+        pricingVC.modalPresentationStyle = .fullScreen
+        navigationController?.present(pricingVC, animated: true)
+    }
+
+    private func transitionToMainApp() {
         // Transition to main app with Language Lab
         if let windowScene = UIApplication.shared.connectedScenes.first as? UIWindowScene,
            let window = windowScene.windows.first {
@@ -308,8 +320,8 @@ extension OnboardingCoordinator: OnboardingStepDelegate {
                 userData.birthYear = year
             }
         case .hometown:
-            if let location = data as? String {
-                userData.hometown = location
+            if let hometown = data as? String {
+                userData.hometown = hometown
             }
         case .nativeLanguage:
             if let language = data as? Language {
@@ -426,6 +438,30 @@ struct OnboardingUserData {
             openToLanguages: learningLanguages,
             practiceLanguages: nil
         )
+    }
+}
+
+// MARK: - PricingViewControllerDelegate
+extension OnboardingCoordinator: PricingViewControllerDelegate {
+    func didSelectFreeTier() {
+        print("✅ User selected Free tier")
+        navigationController?.dismiss(animated: true) { [weak self] in
+            self?.transitionToMainApp()
+        }
+    }
+
+    func didSelectPremiumTier() {
+        print("✅ User purchased Premium tier")
+        navigationController?.dismiss(animated: true) { [weak self] in
+            self?.transitionToMainApp()
+        }
+    }
+
+    func didSkipPricing() {
+        print("✅ User skipped pricing (continuing with Free tier)")
+        navigationController?.dismiss(animated: true) { [weak self] in
+            self?.transitionToMainApp()
+        }
     }
 }
 

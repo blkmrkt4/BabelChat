@@ -16,7 +16,7 @@ class ProfilePhotoViewController: BaseOnboardingViewController {
     override func configure() {
         step = .profilePhoto
         setTitle("Add photos of yourself",
-                subtitle: "Add at least 3 photos to help others get to know you")
+                subtitle: "Optional: You can add photos now or do it later from your profile")
         setupViews()
     }
 
@@ -59,7 +59,7 @@ class ProfilePhotoViewController: BaseOnboardingViewController {
         // Tips label
         tipsLabel.text = "💡 Tips: Show your personality • Include clear face photos • Smile, you're here to make friends!"
         tipsLabel.font = .systemFont(ofSize: 14, weight: .regular)
-        tipsLabel.textColor = .secondaryLabel
+        tipsLabel.textColor = .white.withAlphaComponent(0.7)
         tipsLabel.numberOfLines = 0
         tipsLabel.textAlignment = .center
         contentView.addSubview(tipsLabel)
@@ -85,7 +85,9 @@ class ProfilePhotoViewController: BaseOnboardingViewController {
             tipsLabel.trailingAnchor.constraint(equalTo: contentView.trailingAnchor)
         ])
 
-        updateContinueButton(enabled: false)
+        // Always enable continue button (can skip)
+        updateContinueButton(enabled: true)
+        continueButton.setTitle("Skip for Now", for: .normal)
     }
 
     // MARK: - Actions
@@ -142,13 +144,14 @@ class ProfilePhotoViewController: BaseOnboardingViewController {
 
     private func updatePhotoCount() {
         photoCount = selectedImages.compactMap { $0 }.count
-        updateContinueButton(enabled: photoCount >= 3)
 
-        // Update subtitle based on count
-        if photoCount < 3 {
-            subtitleLabel.text = "Add at least \(3 - photoCount) more photo\(photoCount == 2 ? "" : "s") to continue"
+        // Update button text based on photo count
+        if photoCount == 0 {
+            continueButton.setTitle("Skip for Now", for: .normal)
+            subtitleLabel.text = "Optional: You can add photos now or do it later from your profile"
         } else {
-            subtitleLabel.text = "Great! You can add more photos or continue"
+            continueButton.setTitle("Continue", for: .normal)
+            subtitleLabel.text = "Looking good! You can add more photos or continue to the next step"
         }
     }
 
@@ -199,8 +202,8 @@ private class PhotoSlotView: UIButton {
         // Border view
         borderView.layer.cornerRadius = 12
         borderView.layer.borderWidth = 2
-        borderView.layer.borderColor = UIColor.systemGray4.cgColor
-        borderView.backgroundColor = .secondarySystemBackground
+        borderView.layer.borderColor = UIColor.white.withAlphaComponent(0.3).cgColor
+        borderView.backgroundColor = .white.withAlphaComponent(0.05)
         borderView.isUserInteractionEnabled = false
         addSubview(borderView)
 
@@ -213,16 +216,16 @@ private class PhotoSlotView: UIButton {
 
         // Placeholder icon
         placeholderIconView.image = UIImage(systemName: "camera.fill")
-        placeholderIconView.tintColor = .systemGray3
+        placeholderIconView.tintColor = .white.withAlphaComponent(0.4)
         placeholderIconView.contentMode = .scaleAspectFit
         placeholderIconView.isUserInteractionEnabled = false
         addSubview(placeholderIconView)
 
-        // Primary badge
+        // Primary badge - use gold color
         primaryBadge.text = "Main"
         primaryBadge.font = .systemFont(ofSize: 11, weight: .bold)
-        primaryBadge.textColor = .white
-        primaryBadge.backgroundColor = .systemBlue
+        primaryBadge.textColor = .black
+        primaryBadge.backgroundColor = UIColor(red: 0.83, green: 0.69, blue: 0.22, alpha: 1.0) // Gold color
         primaryBadge.textAlignment = .center
         primaryBadge.layer.cornerRadius = 8
         primaryBadge.clipsToBounds = true
@@ -263,11 +266,12 @@ private class PhotoSlotView: UIButton {
         placeholderIconView.isHidden = image != nil
 
         if image != nil {
-            borderView.layer.borderColor = UIColor.systemBlue.cgColor
+            // Gold border when photo is added
+            borderView.layer.borderColor = UIColor(red: 0.83, green: 0.69, blue: 0.22, alpha: 1.0).cgColor
             borderView.backgroundColor = .clear
         } else {
-            borderView.layer.borderColor = UIColor.systemGray4.cgColor
-            borderView.backgroundColor = .secondarySystemBackground
+            borderView.layer.borderColor = UIColor.white.withAlphaComponent(0.3).cgColor
+            borderView.backgroundColor = .white.withAlphaComponent(0.05)
         }
     }
 
@@ -275,7 +279,8 @@ private class PhotoSlotView: UIButton {
         primaryBadge.isHidden = !isPrimary
         if isPrimary {
             borderView.layer.borderWidth = 3
-            borderView.layer.borderColor = UIColor.systemBlue.cgColor
+            // Gold border for primary slot
+            borderView.layer.borderColor = UIColor(red: 0.83, green: 0.69, blue: 0.22, alpha: 1.0).cgColor
         }
     }
 }

@@ -18,6 +18,7 @@ class BaseOnboardingViewController: UIViewController {
     // MARK: - Lifecycle
     override func viewDidLoad() {
         super.viewDidLoad()
+        addRippleBackground()
         setupViews()
         setupConstraints()
         setupKeyboardObservers()
@@ -36,7 +37,11 @@ class BaseOnboardingViewController: UIViewController {
 
     // MARK: - Setup
     private func setupViews() {
-        view.backgroundColor = .systemBackground
+        // Background will be set by ripple background
+        view.backgroundColor = .clear
+
+        // Force dark appearance for better contrast with ripple background
+        overrideUserInterfaceStyle = .dark
 
         // Progress view
         progressView.progressTintColor = .systemBlue
@@ -45,19 +50,19 @@ class BaseOnboardingViewController: UIViewController {
 
         // Back button
         backButton.setImage(UIImage(systemName: "chevron.left"), for: .normal)
-        backButton.tintColor = .label
+        backButton.tintColor = .white
         backButton.addTarget(self, action: #selector(backButtonTapped), for: .touchUpInside)
         view.addSubview(backButton)
 
         // Title
         titleLabel.font = .systemFont(ofSize: 28, weight: .bold)
-        titleLabel.textColor = .label
+        titleLabel.textColor = .white
         titleLabel.numberOfLines = 0
         view.addSubview(titleLabel)
 
         // Subtitle
         subtitleLabel.font = .systemFont(ofSize: 16, weight: .regular)
-        subtitleLabel.textColor = .secondaryLabel
+        subtitleLabel.textColor = .white.withAlphaComponent(0.8)
         subtitleLabel.numberOfLines = 0
         view.addSubview(subtitleLabel)
 
