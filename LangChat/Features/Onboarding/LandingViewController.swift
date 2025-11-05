@@ -248,15 +248,22 @@ class LandingViewController: UIViewController {
         // Authenticate first, then navigate
         Task {
             do {
-                // Try to sign in with test credentials
+                #if DEBUG
+                // DEVELOPMENT ONLY: Auto-login with test credentials
+                // TODO: Remove this before production release
                 let testEmail = "test@langchat.com"
                 let testPassword = "testpassword123"
 
-                print("🔐 Attempting to sign in with: \(testEmail)")
+                print("🔐 [DEBUG] Attempting to sign in with: \(testEmail)")
 
                 // Just try to sign in - don't attempt sign up
                 try await SupabaseService.shared.signIn(email: testEmail, password: testPassword)
-                print("✅ Signed in successfully!")
+                print("✅ [DEBUG] Signed in successfully!")
+                #else
+                // PRODUCTION: User must sign in manually
+                print("⚠️ Auto-login disabled in production build")
+                return
+                #endif
 
                 // Get the authenticated user's ID from Supabase
                 guard let userId = SupabaseService.shared.currentUserId else {

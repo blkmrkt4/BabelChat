@@ -7,6 +7,7 @@
 
 import UIKit
 import CoreData
+import AVFoundation
 
 @main
 class AppDelegate: UIResponder, UIApplicationDelegate {
@@ -14,8 +15,50 @@ class AppDelegate: UIResponder, UIApplicationDelegate {
 
 
     func application(_ application: UIApplication, didFinishLaunchingWithOptions launchOptions: [UIApplication.LaunchOptionsKey: Any]?) -> Bool {
+        // Configure audio session for text-to-speech pronunciation
+        // This ensures AVSpeechSynthesizer works on physical devices
+        do {
+            try AVAudioSession.sharedInstance().setCategory(
+                .playback,  // Enables speaker output for TTS
+                mode: .default,
+                options: [.duckOthers, .defaultToSpeaker]  // Duck music, play even when muted
+            )
+            try AVAudioSession.sharedInstance().setActive(true, options: .notifyOthersOnDeactivation)
+            print("✅ Audio session configured for text-to-speech")
+        } catch {
+            print("❌ Failed to configure audio session: \(error.localizedDescription)")
+        }
+
+        // Configure RevenueCat for subscriptions
+        configureRevenueCat()
+
         // Override point for customization after application launch.
         return true
+    }
+
+    // MARK: - RevenueCat Configuration
+    private func configureRevenueCat() {
+        // SECURITY: RevenueCat API key must be stored securely
+        // Option 1: Use Xcode environment variable (Recommended)
+        guard let revenueCatAPIKey = ProcessInfo.processInfo.environment["REVENUECAT_API_KEY"],
+              !revenueCatAPIKey.isEmpty else {
+            fatalError("""
+                ❌ REVENUECAT_API_KEY not found!
+
+                To fix this:
+                1. In Xcode, go to Product > Scheme > Edit Scheme
+                2. Select "Run" on the left
+                3. Go to "Arguments" tab
+                4. Under "Environment Variables", click +
+                5. Add: REVENUECAT_API_KEY = your-api-key-here
+                6. Get your key from: https://app.revenuecat.com
+                """)
+        }
+
+        // Initialize subscription service
+        SubscriptionService.shared.configure(apiKey: revenueCatAPIKey)
+
+        print("💳 RevenueCat configured successfully")
     }
 
     // MARK: UISceneSession Lifecycle

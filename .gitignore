@@ -72,3 +72,13 @@ Temporary Items
 *~
 *.swp
 *.swo
+
+# Claude Code configuration (contains API keys)
+.claude.json
+
+# Supabase configuration with hardcoded keys
+LangChat/Core/Services/SupabaseConfig.swift
+
+# Xcode schemes (contain environment variables with API keys)
+*.xcscheme
+xcshareddata/xcschemes/
