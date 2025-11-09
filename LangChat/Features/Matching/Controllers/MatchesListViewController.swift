@@ -152,14 +152,19 @@ class MatchesListViewController: UIViewController {
         let minProficiencyLevel = parseProficiencyLevel(profile.minProficiencyLevel) ?? .beginner
         let maxProficiencyLevel = parseProficiencyLevel(profile.maxProficiencyLevel) ?? .advanced
 
+        // Split 7-photo array: indices 0-5 for grid, index 6 for profile
+        let allPhotos = profile.profilePhotos ?? []
+        let profileImageURL = allPhotos.count > 6 ? allPhotos[6] : allPhotos.first
+        let gridPhotoURLs = Array(allPhotos.prefix(6))
+
         return User(
             id: profile.id,
             username: profile.email.split(separator: "@").first.map(String.init) ?? "user",
             firstName: profile.firstName,
             lastName: profile.lastName,
             bio: profile.bio,
-            profileImageURL: profile.profilePhotos?.first,
-            photoURLs: profile.profilePhotos ?? [],
+            profileImageURL: profileImageURL,
+            photoURLs: gridPhotoURLs,
             nativeLanguage: UserLanguage(language: nativeLanguage, proficiency: .native, isNative: true),
             learningLanguages: learningLanguages,
             openToLanguages: learningLanguages.map { $0.language },

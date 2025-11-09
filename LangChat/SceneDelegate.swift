@@ -17,24 +17,78 @@ class SceneDelegate: UIResponder, UIWindowSceneDelegate {
 
         window = UIWindow(windowScene: windowScene)
 
-        // TESTING: Reset sign-in flag to test landing page flow
-        // Comment this out once you complete sign-in flow
-        UserDefaults.standard.set(false, forKey: "isUserSignedIn")
-        print("🔧 TESTING MODE: Reset isUserSignedIn flag")
+        // Check if user has an active Supabase session
+        let hasActiveSession = SupabaseService.shared.isAuthenticated
 
-        // Check if user is already signed in (for now, always show landing)
-        let isSignedIn = UserDefaults.standard.bool(forKey: "isUserSignedIn")
+        print("🔍 Session check - Authenticated: \(hasActiveSession)")
 
-        if isSignedIn {
-            window?.rootViewController = MainTabBarController()
+        if hasActiveSession {
+            // User has active session - check if they have completed profile in Supabase
+            // Show a loading state first
+            let loadingVC = UIViewController()
+            loadingVC.view.backgroundColor = UIColor(red: 0.1, green: 0.1, blue: 0.1, alpha: 1.0)
+
+            let activityIndicator = UIActivityIndicatorView(style: .large)
+            activityIndicator.color = .white
+            activityIndicator.translatesAutoresizingMaskIntoConstraints = false
+            loadingVC.view.addSubview(activityIndicator)
+            NSLayoutConstraint.activate([
+                activityIndicator.centerXAnchor.constraint(equalTo: loadingVC.view.centerXAnchor),
+                activityIndicator.centerYAnchor.constraint(equalTo: loadingVC.view.centerYAnchor)
+            ])
+            activityIndicator.startAnimating()
+
+            window?.rootViewController = loadingVC
+            window?.makeKeyAndVisible()
+
+            Task {
+                do {
+                    let hasCompletedProfile = try await SupabaseService.shared.hasCompletedProfile()
+
+                    await MainActor.run {
+                        if hasCompletedProfile {
+                            // User has completed profile - go to main app
+                            print("✅ Profile complete - going to main app")
+                            self.window?.rootViewController = MainTabBarController()
+                        } else {
+                            // User is logged in but hasn't completed profile - show onboarding
+                            print("⚠️ Profile incomplete - showing onboarding")
+                            let navController = UINavigationController()
+                            self.window?.rootViewController = navController
+
+                            let coordinator = OnboardingCoordinator(navigationController: navController)
+                            coordinator.start()
+                        }
+                    }
+                } catch {
+                    // Error checking profile - show auth flow
+                    print("❌ Error checking profile: \(error)")
+                    await MainActor.run {
+                        self.showAuthenticationFlow()
+                    }
+                }
+            }
         } else {
-            // Show landing page in a navigation controller
-            let landingVC = LandingViewController()
-            let navController = UINavigationController(rootViewController: landingVC)
-            window?.rootViewController = navController
+            // No active session - show authentication flow
+            showAuthenticationFlow()
+            window?.makeKeyAndVisible()
+        }
+    }
+
+    private func showAuthenticationFlow() {
+        let shouldShowWelcome = UserEngagementTracker.shared.shouldShowWelcomeScreen
+
+        let rootVC: UIViewController
+        if shouldShowWelcome {
+            rootVC = WelcomeViewController()
+            print("📱 Showing Welcome screen (first time experience)")
+        } else {
+            rootVC = AuthenticationViewController()
+            print("📱 Showing Authentication screen (returning user)")
         }
 
-        window?.makeKeyAndVisible()
+        let navController = UINavigationController(rootViewController: rootVC)
+        window?.rootViewController = navController
     }
 
     func sceneDidDisconnect(_ scene: UIScene) {

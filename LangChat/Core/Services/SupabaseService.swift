@@ -79,6 +79,94 @@ extension SupabaseService {
     }
 }
 
+// MARK: - Storage Methods
+extension SupabaseService {
+
+    /// Upload a photo to Supabase Storage (PRIVATE bucket)
+    /// Returns the storage path (not a URL) for later retrieval
+    func uploadPhoto(_ imageData: Data, userId: String, photoIndex: Int) async throws -> String {
+        let fileName = "\(userId)/photo_\(photoIndex)_\(Date().timeIntervalSince1970).jpg"
+        let bucketName = "user-photos" // This should be a PRIVATE bucket
+
+        // Upload to private storage
+        let path = try await client.storage
+            .from(bucketName)
+            .upload(
+                path: fileName,
+                file: imageData,
+                options: FileOptions(
+                    contentType: "image/jpeg",
+                    upsert: true
+                )
+            )
+
+        // Return the storage path (not URL) - we'll generate signed URLs when needed
+        return fileName
+    }
+
+    /// Get a signed URL for a private photo (expires in 1 hour)
+    func getSignedPhotoURL(path: String, expiresIn: Int = 3600) async throws -> String {
+        let bucketName = "user-photos"
+
+        let signedURL = try await client.storage
+            .from(bucketName)
+            .createSignedURL(path: path, expiresIn: expiresIn)
+
+        return signedURL.absoluteString
+    }
+
+    /// Get signed URLs for multiple photos
+    func getSignedPhotoURLs(paths: [String], expiresIn: Int = 3600) async throws -> [String] {
+        var signedURLs: [String] = []
+
+        for path in paths {
+            if !path.isEmpty && !path.hasPrefix("http") {
+                // It's a storage path, get signed URL
+                let signedURL = try await getSignedPhotoURL(path: path, expiresIn: expiresIn)
+                signedURLs.append(signedURL)
+            } else if path.hasPrefix("http") {
+                // Already a URL (legacy), keep it
+                signedURLs.append(path)
+            } else {
+                // Empty path
+                signedURLs.append("")
+            }
+        }
+
+        return signedURLs
+    }
+
+    /// Update user's photo URLs in database
+    func updateUserPhotos(photoURLs: [String]) async throws {
+        guard let userId = currentUserId else {
+            throw NSError(domain: "SupabaseService", code: -1, userInfo: [NSLocalizedDescriptionKey: "Not authenticated"])
+        }
+
+        try await client.database
+            .from("profiles")
+            .update(["profile_photos": photoURLs])
+            .eq("id", value: userId.uuidString)
+            .execute()
+
+        print("✅ Updated user photos in database")
+    }
+
+    /// Update user's photo captions in database
+    func updatePhotoCaptions(captions: [String?]) async throws {
+        guard let userId = currentUserId else {
+            throw NSError(domain: "SupabaseService", code: -1, userInfo: [NSLocalizedDescriptionKey: "Not authenticated"])
+        }
+
+        try await client.database
+            .from("profiles")
+            .update(["photo_captions": captions])
+            .eq("id", value: userId.uuidString)
+            .execute()
+
+        print("✅ Updated photo captions in database")
+    }
+}
+
 // MARK: - Profile Methods
 extension SupabaseService {
 
@@ -97,6 +185,33 @@ extension SupabaseService {
             .value
 
         return response
+    }
+
+    /// Check if current user has completed their profile (onboarding)
+    /// Returns true if profile exists and has essential fields filled
+    func hasCompletedProfile() async throws -> Bool {
+        guard currentUserId != nil else {
+            return false
+        }
+
+        do {
+            let profile = try await getCurrentProfile()
+
+            // Check if essential onboarding fields are filled
+            let hasFirstName = !profile.firstName.isEmpty
+            let hasNativeLanguage = !profile.nativeLanguage.isEmpty
+            let hasLearningLanguages = profile.learningLanguages != nil && !profile.learningLanguages!.isEmpty
+
+            let isProfileComplete = hasFirstName && hasNativeLanguage && hasLearningLanguages
+
+            print("🔍 Profile check - First name: \(hasFirstName), Native: \(hasNativeLanguage), Learning: \(hasLearningLanguages)")
+
+            return isProfileComplete
+        } catch {
+            // Profile doesn't exist or error fetching
+            print("⚠️ Profile check failed: \(error)")
+            return false
+        }
     }
 
     /// Update current user's profile
@@ -159,7 +274,8 @@ extension SupabaseService {
 extension SupabaseService {
 
     /// Record a swipe
-    func recordSwipe(swipedUserId: String, direction: String) async throws {
+    /// Returns true if this swipe resulted in a mutual match
+    func recordSwipe(swipedUserId: String, direction: String) async throws -> Bool {
         guard let userId = currentUserId else {
             throw NSError(domain: "SupabaseService", code: -1, userInfo: [NSLocalizedDescriptionKey: "Not authenticated"])
         }
@@ -177,15 +293,19 @@ extension SupabaseService {
 
         // Check for mutual match if this was a right swipe
         if direction == "right" {
-            try await checkForMatch(with: swipedUserId)
+            let didMatch = try await checkForMatch(with: swipedUserId)
+            print("✅ Swipe recorded: \(direction)\(didMatch ? " - MATCH!" : "")")
+            return didMatch
         }
 
         print("✅ Swipe recorded: \(direction)")
+        return false
     }
 
     /// Check if there's a mutual match
-    private func checkForMatch(with otherUserId: String) async throws {
-        guard let userId = currentUserId else { return }
+    /// Returns true if a match was created
+    private func checkForMatch(with otherUserId: String) async throws -> Bool {
+        guard let userId = currentUserId else { return false }
 
         // Check if other user swiped right on current user
         let response: [SwipeResponse] = try await client.database
@@ -200,7 +320,10 @@ extension SupabaseService {
         if !response.isEmpty {
             // It's a match! Create match record
             try await createMatch(with: otherUserId)
+            return true
         }
+
+        return false
     }
 
     /// Create a match
@@ -220,6 +343,9 @@ extension SupabaseService {
             .execute()
 
         print("✅ Match created with: \(otherUserId)")
+
+        // Track first match for welcome screen logic
+        UserEngagementTracker.shared.markFirstMatch()
 
         // TODO: Send push notification about match
     }
@@ -261,6 +387,33 @@ extension SupabaseService {
         return Set(response.map { $0.swipedId })
     }
 
+    /// Get already matched user IDs (to exclude from discovery)
+    func getMatchedUserIds() async throws -> Set<String> {
+        guard let userId = currentUserId else {
+            throw NSError(domain: "SupabaseService", code: -1, userInfo: [NSLocalizedDescriptionKey: "Not authenticated"])
+        }
+
+        let response: [MatchResponse] = try await client.database
+            .from("matches")
+            .select("user1_id, user2_id")
+            .or("user1_id.eq.\(userId.uuidString),user2_id.eq.\(userId.uuidString)")
+            .eq("is_mutual", value: true)
+            .execute()
+            .value
+
+        // Extract the other user's ID from each match
+        var matchedIds = Set<String>()
+        for match in response {
+            if match.user1Id == userId.uuidString {
+                matchedIds.insert(match.user2Id)
+            } else {
+                matchedIds.insert(match.user1Id)
+            }
+        }
+
+        return matchedIds
+    }
+
     /// Get matched user profiles for discover feed with scoring
     /// Returns profiles sorted by match score
     func getMatchedDiscoveryProfiles(limit: Int = 20) async throws -> [(user: User, score: Int, reasons: [String])] {
@@ -274,19 +427,26 @@ extension SupabaseService {
             throw NSError(domain: "SupabaseService", code: -1, userInfo: [NSLocalizedDescriptionKey: "Failed to convert current profile"])
         }
 
-        // 2. Get already swiped user IDs to exclude
-        let swipedIds = try await getSwipedUserIds()
+        // 2. Get already swiped user IDs and matched user IDs to exclude
+        async let swipedIds = getSwipedUserIds()
+        async let matchedIds = getMatchedUserIds()
+        let (swiped, matched) = try await (swipedIds, matchedIds)
+        let excludedIds = swiped.union(matched)
+
+        print("🔍 Excluding \(swiped.count) swiped users and \(matched.count) matched users from discovery")
 
         // 3. Fetch all potential candidate profiles
         let profiles = try await getDiscoveryProfiles(limit: 100) // Fetch more than needed for filtering
 
-        // 4. Convert to User models and filter out swiped profiles
+        // 4. Convert to User models and filter out swiped and matched profiles
         let candidateUsers = profiles.compactMap { profile -> User? in
-            if swipedIds.contains(profile.id) {
-                return nil // Skip already swiped
+            if excludedIds.contains(profile.id) {
+                return nil // Skip already swiped or matched
             }
             return profile.toUser()
         }
+
+        print("✅ Found \(candidateUsers.count) potential candidates after filtering")
 
         // 5. Use MatchingService to filter and score
         let scoredMatches = MatchingService.shared.findMatches(for: currentUser, from: candidateUsers)
@@ -478,6 +638,9 @@ extension SupabaseService {
             .execute()
 
         print("✅ Message sent")
+
+        // Track first message for welcome screen logic
+        UserEngagementTracker.shared.markFirstMessage()
     }
 
     /// Send a message as a specific sender (for AI responses)
@@ -547,7 +710,8 @@ struct ProfileResponse: Codable {
     let birthYear: Int?
     let nativeLanguage: String
     let learningLanguages: [String]?
-    let profilePhotos: [String]?
+    let profilePhotos: [String]? // Storage paths, not URLs
+    let photoCaptions: [String?]? // Captions for each photo
     let isPremium: Bool
     let granularityLevel: Int
     let onboardingCompleted: Bool
@@ -569,7 +733,6 @@ struct ProfileResponse: Codable {
     let travelDestination: TravelDestinationDB?
     let relationshipIntents: [String]?
     let learningContexts: [String]?
-    let regionalLanguagePreferences: [RegionalLanguagePreferenceDB]?
 
     enum CodingKeys: String, CodingKey {
         case id, email, bio, location, latitude, longitude
@@ -579,6 +742,7 @@ struct ProfileResponse: Codable {
         case nativeLanguage = "native_language"
         case learningLanguages = "learning_languages"
         case profilePhotos = "profile_photos"
+        case photoCaptions = "photo_captions"
         case isPremium = "is_premium"
         case granularityLevel = "granularity_level"
         case onboardingCompleted = "onboarding_completed"
@@ -595,7 +759,6 @@ struct ProfileResponse: Codable {
         case travelDestination = "travel_destination"
         case relationshipIntents = "relationship_intents"
         case learningContexts = "learning_contexts"
-        case regionalLanguagePreferences = "regional_language_preferences"
     }
 
     /// Convert ProfileResponse to User model
@@ -635,14 +798,19 @@ struct ProfileResponse: Codable {
         // Create matching preferences
         let matchingPrefs = createMatchingPreferences()
 
+        // Split 7-photo array: indices 0-5 for grid, index 6 for profile
+        let allPhotos = profilePhotos ?? []
+        let profileImageURL = allPhotos.count > 6 ? allPhotos[6] : allPhotos.first
+        let gridPhotoURLs = Array(allPhotos.prefix(6))
+
         return User(
             id: id,
             username: email.components(separatedBy: "@").first ?? "user",
             firstName: firstName,
             lastName: lastName,
             bio: bio,
-            profileImageURL: profilePhotos?.first,
-            photoURLs: profilePhotos ?? [],
+            profileImageURL: profileImageURL,
+            photoURLs: gridPhotoURLs,
             nativeLanguage: nativeUserLanguage,
             learningLanguages: learningUserLanguages,
             openToLanguages: openToLanguages,
@@ -694,9 +862,6 @@ struct ProfileResponse: Codable {
         // Convert travel destination
         let userTravelDestination = travelDestination?.toModel()
 
-        // Convert regional language preferences
-        let userRegionalPreferences = regionalLanguagePreferences?.compactMap { $0.toModel() }
-
         // Parse proficiency levels
         let minProf = minProficiencyLevel.flatMap { LanguageProficiency.from(string: $0) } ?? .beginner
         let maxProf = maxProficiencyLevel.flatMap { LanguageProficiency.from(string: $0) } ?? .advanced
@@ -713,7 +878,6 @@ struct ProfileResponse: Codable {
             travelDestination: userTravelDestination,
             relationshipIntents: finalIntents,
             learningContexts: finalContexts,
-            regionalLanguagePreferences: userRegionalPreferences,
             allowNonNativeMatches: allowNonNativeMatches ?? false,
             minProficiencyLevel: minProf,
             maxProficiencyLevel: maxProf
@@ -888,29 +1052,6 @@ struct TravelDestinationDB: Codable {
     }
 }
 
-struct RegionalLanguagePreferenceDB: Codable {
-    let language: String
-    let preferredCountries: [String]
-
-    enum CodingKeys: String, CodingKey {
-        case language
-        case preferredCountries = "preferred_countries"
-    }
-
-    func toModel() -> RegionalLanguagePreference? {
-        guard let lang = Language.allCases.first(where: {
-            $0.code == language || $0.name.lowercased() == language.lowercased()
-        }) else {
-            return nil
-        }
-
-        return RegionalLanguagePreference(
-            language: lang,
-            preferredCountries: preferredCountries
-        )
-    }
-}
-
 // MARK: - Model Evaluations Methods
 extension SupabaseService {
 
@@ -1011,6 +1152,98 @@ struct ModelEvaluationResponse: Codable {
         case score, scores
         case detailedScores = "detailed_scores"
         case errorType = "error_type"
+    }
+}
+
+// MARK: - Reporting Methods
+extension SupabaseService {
+
+    /// Report a user's photo for inappropriate content
+    func reportPhoto(
+        reportedUserId: String,
+        photoURL: String,
+        reason: String,
+        description: String? = nil
+    ) async throws {
+        guard let currentUserId = currentUserId?.uuidString else {
+            throw NSError(domain: "SupabaseService", code: -1,
+                         userInfo: [NSLocalizedDescriptionKey: "Not authenticated"])
+        }
+
+        let report = ReportCreate(
+            reporterId: currentUserId,
+            reportedId: reportedUserId,
+            reason: reason,
+            description: description,
+            photoUrl: photoURL
+        )
+
+        try await client.database
+            .from("reported_users")
+            .insert(report)
+            .execute()
+
+        print("✅ Photo reported successfully")
+    }
+
+    /// Get current user's reports
+    func getUserReports() async throws -> [ReportResponse] {
+        guard let currentUserId = currentUserId?.uuidString else {
+            throw NSError(domain: "SupabaseService", code: -1,
+                         userInfo: [NSLocalizedDescriptionKey: "Not authenticated"])
+        }
+
+        let reports: [ReportResponse] = try await client.database
+            .from("reported_users")
+            .select()
+            .eq("reporter_id", value: currentUserId)
+            .order("created_at", ascending: false)
+            .execute()
+            .value
+
+        return reports
+    }
+}
+
+// MARK: - Report Data Models
+
+struct ReportCreate: Codable {
+    let reporterId: String
+    let reportedId: String
+    let reason: String
+    let description: String?
+    let photoUrl: String?
+
+    enum CodingKeys: String, CodingKey {
+        case reporterId = "reporter_id"
+        case reportedId = "reported_id"
+        case reason
+        case description
+        case photoUrl = "photo_url"
+    }
+}
+
+struct ReportResponse: Codable {
+    let id: String
+    let reporterId: String
+    let reportedId: String
+    let reason: String
+    let description: String?
+    let photoUrl: String?
+    let status: String
+    let createdAt: String
+    let reviewedAt: String?
+
+    enum CodingKeys: String, CodingKey {
+        case id
+        case reporterId = "reporter_id"
+        case reportedId = "reported_id"
+        case reason
+        case description
+        case photoUrl = "photo_url"
+        case status
+        case createdAt = "created_at"
+        case reviewedAt = "reviewed_at"
     }
 }
 

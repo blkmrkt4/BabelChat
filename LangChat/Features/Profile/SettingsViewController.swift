@@ -102,7 +102,14 @@ class SettingsViewController: UIViewController {
         ])
 
         // Add sign out button in footer
-        let footerView = UIView(frame: CGRect(x: 0, y: 0, width: view.frame.width, height: 100))
+        #if DEBUG
+        let footerHeight: CGFloat = 150  // Extra space for debug button
+        #else
+        let footerHeight: CGFloat = 100
+        #endif
+
+        let footerView = UIView(frame: CGRect(x: 0, y: 0, width: view.frame.width, height: footerHeight))
+
         let signOutButton = UIButton(type: .system)
         signOutButton.setTitle("Sign Out", for: .normal)
         signOutButton.setTitleColor(.systemRed, for: .normal)
@@ -114,8 +121,25 @@ class SettingsViewController: UIViewController {
 
         NSLayoutConstraint.activate([
             signOutButton.centerXAnchor.constraint(equalTo: footerView.centerXAnchor),
-            signOutButton.centerYAnchor.constraint(equalTo: footerView.centerYAnchor)
+            signOutButton.topAnchor.constraint(equalTo: footerView.topAnchor, constant: 20)
         ])
+
+        #if DEBUG
+        // Add debug reset button to return to landing page
+        let resetToLandingButton = UIButton(type: .system)
+        resetToLandingButton.setTitle("Reset to Landing Page", for: .normal)
+        resetToLandingButton.setTitleColor(.systemOrange, for: .normal)
+        resetToLandingButton.titleLabel?.font = .systemFont(ofSize: 15, weight: .regular)
+        resetToLandingButton.addTarget(self, action: #selector(resetToLandingPageTapped), for: .touchUpInside)
+
+        footerView.addSubview(resetToLandingButton)
+        resetToLandingButton.translatesAutoresizingMaskIntoConstraints = false
+
+        NSLayoutConstraint.activate([
+            resetToLandingButton.centerXAnchor.constraint(equalTo: footerView.centerXAnchor),
+            resetToLandingButton.topAnchor.constraint(equalTo: signOutButton.bottomAnchor, constant: 16)
+        ])
+        #endif
 
         tableView.tableFooterView = footerView
     }
@@ -129,38 +153,85 @@ class SettingsViewController: UIViewController {
 
         alert.addAction(UIAlertAction(title: "Cancel", style: .cancel))
         alert.addAction(UIAlertAction(title: "Sign Out", style: .destructive) { [weak self] _ in
-            // Clear user data
-            UserDefaults.standard.removeObject(forKey: "isUserSignedIn")
-            UserDefaults.standard.removeObject(forKey: "userLanguages")
-            UserDefaults.standard.removeObject(forKey: "firstName")
-            UserDefaults.standard.removeObject(forKey: "lastName")
-            UserDefaults.standard.removeObject(forKey: "bio")
-            UserDefaults.standard.removeObject(forKey: "phoneNumber")
-            UserDefaults.standard.removeObject(forKey: "email")
-            UserDefaults.standard.removeObject(forKey: "birthYear")
-            UserDefaults.standard.removeObject(forKey: "location")
-            UserDefaults.standard.removeObject(forKey: "userId")
-            UserDefaults.standard.removeObject(forKey: "showCityInProfile")
-            UserDefaults.standard.removeObject(forKey: "notificationsEnabled")
+            Task {
+                do {
+                    // Sign out from Supabase
+                    try await SupabaseService.shared.signOut()
+                    print("✅ Signed out from Supabase")
+                } catch {
+                    print("⚠️ Sign out error: \(error)")
+                }
 
-            // Navigate to landing screen
-            if let windowScene = UIApplication.shared.connectedScenes.first as? UIWindowScene,
-               let window = windowScene.windows.first {
-                let landingVC = LandingViewController()
-                let navController = UINavigationController(rootViewController: landingVC)
-                navController.setNavigationBarHidden(true, animated: false)
-                window.rootViewController = navController
+                await MainActor.run {
+                    // Navigate to authentication screen
+                    if let windowScene = UIApplication.shared.connectedScenes.first as? UIWindowScene,
+                       let window = windowScene.windows.first {
+                        let authVC = AuthenticationViewController()
+                        let navController = UINavigationController(rootViewController: authVC)
+                        navController.setNavigationBarHidden(true, animated: false)
+                        window.rootViewController = navController
 
-                UIView.transition(with: window,
-                                duration: 0.5,
-                                options: .transitionCrossDissolve,
-                                animations: nil,
-                                completion: nil)
+                        UIView.transition(with: window,
+                                        duration: 0.5,
+                                        options: .transitionCrossDissolve,
+                                        animations: nil,
+                                        completion: nil)
+
+                        print("✅ Navigated to authentication screen")
+                    }
+                }
             }
         })
 
         present(alert, animated: true)
     }
+
+    #if DEBUG
+    @objc private func resetToLandingPageTapped() {
+        let alert = UIAlertController(
+            title: "Reset to Landing Page",
+            message: "This will sign you out and reset all engagement tracking, showing the welcome screen as if it's your first time using the app.",
+            preferredStyle: .alert
+        )
+
+        alert.addAction(UIAlertAction(title: "Cancel", style: .cancel))
+        alert.addAction(UIAlertAction(title: "Reset", style: .destructive) { [weak self] _ in
+            Task {
+                do {
+                    // Sign out from Supabase
+                    try await SupabaseService.shared.signOut()
+                    print("✅ Signed out from Supabase")
+                } catch {
+                    print("⚠️ Sign out error: \(error)")
+                }
+
+                await MainActor.run {
+                    // Clear all user data and reset engagement tracking
+                    DebugConfig.resetAllUserData()
+
+                    // Navigate to welcome screen
+                    if let windowScene = UIApplication.shared.connectedScenes.first as? UIWindowScene,
+                       let window = windowScene.windows.first {
+                        let welcomeVC = WelcomeViewController()
+                        let navController = UINavigationController(rootViewController: welcomeVC)
+                        navController.setNavigationBarHidden(true, animated: false)
+                        window.rootViewController = navController
+
+                        UIView.transition(with: window,
+                                        duration: 0.5,
+                                        options: .transitionCrossDissolve,
+                                        animations: nil,
+                                        completion: nil)
+
+                        print("✅ Reset complete - showing welcome screen")
+                    }
+                }
+            }
+        })
+
+        present(alert, animated: true)
+    }
+    #endif
 
     private func handleSettingSelection(section: Int, row: Int) {
         guard let settingSection = SettingSection(rawValue: section) else { return }

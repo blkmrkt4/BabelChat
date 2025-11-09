@@ -12,8 +12,12 @@ class BaseOnboardingViewController: UIViewController {
 
     // MARK: - Properties
     weak var delegate: OnboardingStepDelegate?
-    var step: OnboardingStep = .phoneNumber
+    var step: OnboardingStep = .name
     var keyboardHeight: CGFloat = 0
+
+    #if DEBUG
+    private let resetButton = UIButton(type: .system)
+    #endif
 
     // MARK: - Lifecycle
     override func viewDidLoad() {
@@ -80,6 +84,17 @@ class BaseOnboardingViewController: UIViewController {
         continueButton.addTarget(self, action: #selector(continueButtonTapped), for: .touchUpInside)
         view.addSubview(continueButton)
 
+        #if DEBUG
+        // Reset button (development only)
+        resetButton.setTitle("🔄", for: .normal)
+        resetButton.titleLabel?.font = .systemFont(ofSize: 24, weight: .semibold)
+        resetButton.backgroundColor = .systemRed.withAlphaComponent(0.8)
+        resetButton.setTitleColor(.white, for: .normal)
+        resetButton.layer.cornerRadius = 20
+        resetButton.addTarget(self, action: #selector(resetAllDataTapped), for: .touchUpInside)
+        view.addSubview(resetButton)
+        #endif
+
         updateContinueButton(enabled: false)
     }
 
@@ -126,6 +141,16 @@ class BaseOnboardingViewController: UIViewController {
             continueButton.bottomAnchor.constraint(equalTo: view.safeAreaLayoutGuide.bottomAnchor, constant: -24),
             continueButton.heightAnchor.constraint(equalToConstant: 50)
         ])
+
+        #if DEBUG
+        resetButton.translatesAutoresizingMaskIntoConstraints = false
+        NSLayoutConstraint.activate([
+            resetButton.topAnchor.constraint(equalTo: progressView.bottomAnchor, constant: 16),
+            resetButton.trailingAnchor.constraint(equalTo: view.trailingAnchor, constant: -16),
+            resetButton.widthAnchor.constraint(equalToConstant: 40),
+            resetButton.heightAnchor.constraint(equalToConstant: 40)
+        ])
+        #endif
     }
 
     private func setupKeyboardObservers() {
@@ -172,6 +197,56 @@ class BaseOnboardingViewController: UIViewController {
     @objc func continueButtonTapped() {
         // Override in subclasses
     }
+
+    #if DEBUG
+    @objc private func resetAllDataTapped() {
+        print("🔄 DEBUG: Reset tapped from onboarding screen")
+
+        let alert = UIAlertController(
+            title: "Reset All Data?",
+            message: "This will sign you out and take you back to the welcome screen.",
+            preferredStyle: .alert
+        )
+
+        alert.addAction(UIAlertAction(title: "Cancel", style: .cancel))
+
+        alert.addAction(UIAlertAction(title: "Reset", style: .destructive) { _ in
+            Task {
+                do {
+                    // Sign out from Supabase
+                    try await SupabaseService.shared.signOut()
+                    print("✅ Signed out from Supabase")
+                } catch {
+                    print("⚠️ Sign out error (may not be logged in): \(error)")
+                }
+
+                await MainActor.run {
+                    // Clear all user data
+                    DebugConfig.resetAllUserData()
+
+                    // Navigate back to welcome screen
+                    if let windowScene = UIApplication.shared.connectedScenes.first as? UIWindowScene,
+                       let window = windowScene.windows.first {
+
+                        let welcomeVC = WelcomeViewController()
+                        let navController = UINavigationController(rootViewController: welcomeVC)
+                        window.rootViewController = navController
+
+                        UIView.transition(with: window,
+                                        duration: 0.3,
+                                        options: .transitionCrossDissolve,
+                                        animations: nil,
+                                        completion: nil)
+
+                        print("✅ Reset complete - showing welcome screen")
+                    }
+                }
+            }
+        })
+
+        present(alert, animated: true)
+    }
+    #endif
 
     // MARK: - Keyboard Handling
     @objc private func keyboardWillShow(_ notification: Notification) {

@@ -156,6 +156,15 @@ class EditProfileViewController: UIViewController {
         bioTextView.textContainerInset = UIEdgeInsets(top: 8, left: 8, bottom: 8, right: 8)
         contentView.addSubview(bioTextView)
 
+        // Bio tips label
+        let bioTipsLabel = UILabel()
+        bioTipsLabel.text = "💡 Tip: Share your interests, hobbies, and mention if you're learning other languages!"
+        bioTipsLabel.font = .systemFont(ofSize: 13)
+        bioTipsLabel.textColor = .secondaryLabel
+        bioTipsLabel.numberOfLines = 0
+        contentView.addSubview(bioTipsLabel)
+        bioTipsLabel.translatesAutoresizingMaskIntoConstraints = false
+
         // Location
         let locationLabel = UILabel()
         locationLabel.text = "Location"
@@ -271,8 +280,13 @@ class EditProfileViewController: UIViewController {
             bioLabel.topAnchor.constraint(equalTo: lastNameTextField.bottomAnchor, constant: 24),
             bioLabel.leadingAnchor.constraint(equalTo: contentView.leadingAnchor, constant: 20),
 
+            // Bio tips
+            bioTipsLabel.topAnchor.constraint(equalTo: bioTextView.bottomAnchor, constant: 6),
+            bioTipsLabel.leadingAnchor.constraint(equalTo: contentView.leadingAnchor, constant: 20),
+            bioTipsLabel.trailingAnchor.constraint(equalTo: contentView.trailingAnchor, constant: -20),
+
             // Location fields
-            locationLabelView!.topAnchor.constraint(equalTo: bioTextView.bottomAnchor, constant: 24),
+            locationLabelView!.topAnchor.constraint(equalTo: bioTipsLabel.bottomAnchor, constant: 20),
             locationLabelView!.leadingAnchor.constraint(equalTo: contentView.leadingAnchor, constant: 20),
 
             locationTextField.topAnchor.constraint(equalTo: locationLabelView!.bottomAnchor, constant: 8),

@@ -1,10 +1,7 @@
 import UIKit
 
 enum OnboardingStep: Int, CaseIterable {
-    case phoneNumber = 0
-    case phoneVerification
-    case name
-    case email
+    case name = 0
     case birthYear
     case hometown
     case nativeLanguage
@@ -18,16 +15,12 @@ enum OnboardingStep: Int, CaseIterable {
     case locationPreference
     case travelPlans
     case relationshipIntent
-    case regionalLanguagePreferences
     case profilePhoto
     case notifications
 
     var title: String {
         switch self {
-        case .phoneNumber: return "Phone Number"
-        case .phoneVerification: return "Verify Phone"
         case .name: return "Your Name"
-        case .email: return "Email Address"
         case .birthYear: return "Birth Year"
         case .hometown: return "Hometown"
         case .nativeLanguage: return "Native Language"
@@ -42,7 +35,6 @@ enum OnboardingStep: Int, CaseIterable {
         case .locationPreference: return "Location Range"
         case .travelPlans: return "Travel Plans"
         case .relationshipIntent: return "What You're Looking For"
-        case .regionalLanguagePreferences: return "Regional Preferences"
         case .notifications: return "Stay Connected"
         }
     }
@@ -54,7 +46,7 @@ enum OnboardingStep: Int, CaseIterable {
 
 class OnboardingCoordinator {
     private weak var navigationController: UINavigationController?
-    private var currentStep: OnboardingStep = .phoneNumber
+    private var currentStep: OnboardingStep = .name
     private var userData: OnboardingUserData = OnboardingUserData()
 
     init(navigationController: UINavigationController?) {
@@ -63,7 +55,7 @@ class OnboardingCoordinator {
 
     func start() {
         print("OnboardingCoordinator: Starting onboarding")
-        showStep(.phoneNumber)
+        showStep(.name)
     }
 
     func showStep(_ step: OnboardingStep) {
@@ -73,24 +65,8 @@ class OnboardingCoordinator {
         let viewController: UIViewController
 
         switch step {
-        case .phoneNumber:
-            let vc = PhoneNumberViewController()
-            vc.delegate = self
-            viewController = vc
-
-        case .phoneVerification:
-            let vc = PhoneVerificationViewController()
-            vc.phoneNumber = userData.phoneNumber
-            vc.delegate = self
-            viewController = vc
-
         case .name:
             let vc = NameInputViewController()
-            vc.delegate = self
-            viewController = vc
-
-        case .email:
-            let vc = EmailInputViewController()
             vc.delegate = self
             viewController = vc
 
@@ -166,12 +142,6 @@ class OnboardingCoordinator {
             vc.delegate = self
             viewController = vc
 
-        case .regionalLanguagePreferences:
-            let vc = RegionalLanguagePreferencesViewController()
-            vc.learningLanguages = userData.learningLanguages
-            vc.delegate = self
-            viewController = vc
-
         case .notifications:
             let vc = NotificationsPermissionViewController()
             vc.delegate = self
@@ -202,8 +172,13 @@ class OnboardingCoordinator {
         // Save user data
         saveUserData()
 
-        // Set user as signed in
-        UserDefaults.standard.set(true, forKey: "isUserSignedIn")
+        // Mark that user has engaged with the app (completed onboarding = profile filled)
+        UserEngagementTracker.shared.markOnboardingCompleted()
+        UserEngagementTracker.shared.markProfileFilled()
+
+        // Mark onboarding as complete (for session persistence)
+        UserDefaults.standard.set(true, forKey: "onboardingCompleted")
+        print("✅ Onboarding marked as complete")
 
         // Show pricing page before transitioning to main app
         showPricingPage()
@@ -251,7 +226,6 @@ class OnboardingCoordinator {
 
     private func saveUserData() {
         // Save to UserDefaults for now (later will integrate with backend)
-        UserDefaults.standard.set(userData.phoneNumber, forKey: "phoneNumber")
         UserDefaults.standard.set(userData.firstName, forKey: "firstName")
         UserDefaults.standard.set(userData.lastName, forKey: "lastName")
         UserDefaults.standard.set(userData.email, forKey: "email")
@@ -283,10 +257,6 @@ class OnboardingCoordinator {
         let intentRawValues = userData.relationshipIntents.map { $0.rawValue }
         UserDefaults.standard.set(intentRawValues, forKey: "relationshipIntents")
 
-        if let encoded = try? JSONEncoder().encode(userData.regionalLanguagePreferences) {
-            UserDefaults.standard.set(encoded, forKey: "regionalLanguagePreferences")
-        }
-
         // Generate a temporary user ID
         let userId = UUID().uuidString
         UserDefaults.standard.set(userId, forKey: "userId")
@@ -299,21 +269,10 @@ extension OnboardingCoordinator: OnboardingStepDelegate {
         print("OnboardingCoordinator: didCompleteStep called for \(currentStep) with data: \(String(describing: data))")
         // Store data based on current step
         switch currentStep {
-        case .phoneNumber:
-            if let phone = data as? String {
-                userData.phoneNumber = phone
-            }
-        case .phoneVerification:
-            // Verification confirmed
-            break
         case .name:
             if let name = data as? (String, String) {
                 userData.firstName = name.0
                 userData.lastName = name.1
-            }
-        case .email:
-            if let email = data as? String {
-                userData.email = email
             }
         case .birthYear:
             if let year = data as? Int {
@@ -373,10 +332,6 @@ extension OnboardingCoordinator: OnboardingStepDelegate {
             if let intents = data as? [RelationshipIntent] {
                 userData.relationshipIntents = intents
             }
-        case .regionalLanguagePreferences:
-            if let regionalPrefs = data as? [RegionalLanguagePreference] {
-                userData.regionalLanguagePreferences = regionalPrefs
-            }
         case .notifications:
             // Permission handled
             break
@@ -392,10 +347,9 @@ extension OnboardingCoordinator: OnboardingStepDelegate {
 
 // MARK: - OnboardingUserData
 struct OnboardingUserData {
-    var phoneNumber: String?
     var firstName: String?
     var lastName: String?
-    var email: String?
+    var email: String? // Populated from authentication (Apple Sign In or email login)
     var birthYear: Int?
     var hometown: String?
     var nativeLanguage: Language?
@@ -414,7 +368,6 @@ struct OnboardingUserData {
     var preferredCountries: [String]?
     var travelDestination: TravelDestination?
     var relationshipIntents: [RelationshipIntent] = [.languagePracticeOnly]
-    var regionalLanguagePreferences: [RegionalLanguagePreference] = []
 
     func toUserLanguageData() -> UserLanguageData {
         let native = UserLanguage(

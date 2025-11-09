@@ -11,12 +11,25 @@ class DiscoverViewController: UIViewController {
     // Store matched users with their scores and reasons
     private var matchedProfiles: [(user: User, score: Int, reasons: [String])] = []
     private var allUsers: [User] = []
+    private var hasShownProfileDetail = false // Track if we've shown the profile detail view
 
     override func viewDidLoad() {
         super.viewDidLoad()
         setupNavigationBar()
         setupViews()
         loadCards()
+    }
+
+    override func viewWillAppear(_ animated: Bool) {
+        super.viewWillAppear(animated)
+
+        // If user finished viewing profiles and popped back, reload new profiles
+        if hasShownProfileDetail && !loadingIndicator.isAnimating {
+            hasShownProfileDetail = false
+            allUsers.removeAll()
+            matchedProfiles.removeAll()
+            loadCards()
+        }
     }
 
     private func setupNavigationBar() {
@@ -158,53 +171,63 @@ class DiscoverViewController: UIViewController {
                     if allUsers.isEmpty {
                         showEmptyState()
                     } else {
-                        createCardViews()
+                        // Instead of showing cards, directly show Instagram-style profile view
+                        showProfileDetailView()
                     }
                 }
             } catch {
                 print("❌ Error loading discovery profiles: \(error)")
+                print("❌ Error details: \(error.localizedDescription)")
                 await MainActor.run {
                     loadingIndicator.stopAnimating()
-                    // Fall back to sample users for testing
-                    allUsers = createSampleUsers()
-                    matchedProfiles = allUsers.map { (user: $0, score: 50, reasons: ["Sample user"]) }
-                    createCardViews()
+
+                    // Show error alert instead of falling back to fake users
+                    let alert = UIAlertController(
+                        title: "Unable to Load Profiles",
+                        message: "Error: \(error.localizedDescription)\n\nPlease check:\n- Your profile is complete\n- You have learning languages set\n- Network connection is working",
+                        preferredStyle: .alert
+                    )
+                    alert.addAction(UIAlertAction(title: "Use Sample Profiles", style: .default) { _ in
+                        // Fall back to sample users for testing
+                        self.allUsers = self.createSampleUsers()
+                        self.matchedProfiles = self.allUsers.map { (user: $0, score: 50, reasons: ["Sample user"]) }
+                        self.showProfileDetailView()
+                    })
+                    alert.addAction(UIAlertAction(title: "Cancel", style: .cancel) { _ in
+                        self.showEmptyState()
+                    })
+                    self.present(alert, animated: true)
                 }
             }
         }
     }
 
     private func createCardViews() {
-        // Clear existing cards
-        cardViews.forEach { $0.removeFromSuperview() }
-        cardViews.removeAll()
+        // DEPRECATED: This method is no longer used
+        // Instagram-style profile view is shown directly instead
+    }
 
-        for (index, user) in allUsers.enumerated() {
-            let card = SwipeCardView()
-            card.user = user
-            card.delegate = self
-            card.alpha = index == 0 ? 1 : 0.95
+    private func showProfileDetailView() {
+        // Filter out hidden profiles
+        let hiddenProfileIds = UserDefaults.standard.stringArray(forKey: "hiddenProfileIds") ?? []
+        let visibleUsers = allUsers.filter { !hiddenProfileIds.contains($0.id) }
 
-            // Set match score and reasons if available
-            if let matchInfo = matchedProfiles.first(where: { $0.user.id == user.id }) {
-                card.matchScore = matchInfo.score
-                card.matchReasons = matchInfo.reasons
-                print("📊 Card for \(user.firstName): \(matchInfo.score)% - \(matchInfo.reasons.joined(separator: ", "))")
-            }
-
-            cardStackView.addSubview(card)
-
-            card.translatesAutoresizingMaskIntoConstraints = false
-            NSLayoutConstraint.activate([
-                card.topAnchor.constraint(equalTo: cardStackView.topAnchor),
-                card.leadingAnchor.constraint(equalTo: cardStackView.leadingAnchor),
-                card.trailingAnchor.constraint(equalTo: cardStackView.trailingAnchor),
-                card.bottomAnchor.constraint(equalTo: cardStackView.bottomAnchor)
-            ])
-
-            cardStackView.sendSubviewToBack(card)
-            cardViews.append(card)
+        guard !visibleUsers.isEmpty else {
+            // All profiles were hidden, show empty state
+            showEmptyState()
+            return
         }
+
+        // Create and push UserDetailViewController with the list of users
+        let detailVC = UserDetailViewController()
+        detailVC.user = visibleUsers[0] // Start with first user
+        detailVC.allUsers = visibleUsers // Pass filtered users for navigation
+        detailVC.currentUserIndex = 0
+        detailVC.isMatched = false
+        detailVC.isFromDiscover = true // Hide back button since we navigated automatically
+
+        hasShownProfileDetail = true // Track that we showed profiles
+        navigationController?.pushViewController(detailVC, animated: true)
     }
 
     private func showEmptyState() {
@@ -213,7 +236,163 @@ class DiscoverViewController: UIViewController {
     }
 
     private func createSampleUsers() -> [User] {
+        // Current user profile may be learning: Spanish, Japanese, French, etc.
+        // Create diverse users to match various learning goals
+        // Matching logic: Users who are native in target language AND learning English
+
         return [
+            // FRENCH SPEAKERS LEARNING ENGLISH (Match on French <-> English)
+            User(
+                id: "13",
+                username: "amelie_laurent",
+                firstName: "Amélie",
+                lastName: "Laurent",
+                bio: "Parisian art student who loves museums and coffee. Learning English for my exchange program!",
+                profileImageURL: "https://picsum.photos/seed/amelie_profile/400/400",
+                photoURLs: ImageService.shared.generatePhotoURLs(for: "amelie", count: 6),
+                nativeLanguage: UserLanguage(language: .french, proficiency: .native, isNative: true),
+                learningLanguages: [
+                    UserLanguage(language: .english, proficiency: .intermediate, isNative: false)
+                ],
+                openToLanguages: [.english],
+                practiceLanguages: nil,
+                location: "Paris, France",
+                matchedDate: nil,
+                isOnline: true
+            ),
+            User(
+                id: "14",
+                username: "lucas_moreau",
+                firstName: "Lucas",
+                lastName: "Moreau",
+                bio: "Lyon chef passionate about French cuisine 🥐 Want to improve my English for my cooking channel!",
+                profileImageURL: "https://picsum.photos/seed/lucas_profile/400/400",
+                photoURLs: ImageService.shared.generatePhotoURLs(for: "lucas", count: 6),
+                nativeLanguage: UserLanguage(language: .french, proficiency: .native, isNative: true),
+                learningLanguages: [
+                    UserLanguage(language: .english, proficiency: .beginner, isNative: false),
+                    UserLanguage(language: .italian, proficiency: .beginner, isNative: false)
+                ],
+                openToLanguages: [.english, .italian],
+                practiceLanguages: nil,
+                location: "Lyon, France",
+                matchedDate: nil,
+                isOnline: true
+            ),
+            User(
+                id: "15",
+                username: "chloe_dubois",
+                firstName: "Chloé",
+                lastName: "Dubois",
+                bio: "Marseille native, love sailing and the Mediterranean! Studying English for international business.",
+                profileImageURL: "https://picsum.photos/seed/chloe_profile/400/400",
+                photoURLs: ImageService.shared.generatePhotoURLs(for: "chloe", count: 6),
+                nativeLanguage: UserLanguage(language: .french, proficiency: .native, isNative: true),
+                learningLanguages: [
+                    UserLanguage(language: .english, proficiency: .advanced, isNative: false)
+                ],
+                openToLanguages: [.english],
+                practiceLanguages: nil,
+                location: "Marseille, France",
+                matchedDate: nil,
+                isOnline: true
+            ),
+            User(
+                id: "16",
+                username: "theo_bernard",
+                firstName: "Théo",
+                lastName: "Bernard",
+                bio: "Bordeaux wine enthusiast 🍷 Learning English and Spanish for my wine export business!",
+                profileImageURL: "https://picsum.photos/seed/theo_profile/400/400",
+                photoURLs: ImageService.shared.generatePhotoURLs(for: "theo", count: 6),
+                nativeLanguage: UserLanguage(language: .french, proficiency: .native, isNative: true),
+                learningLanguages: [
+                    UserLanguage(language: .english, proficiency: .intermediate, isNative: false),
+                    UserLanguage(language: .spanish, proficiency: .beginner, isNative: false)
+                ],
+                openToLanguages: [.english, .spanish],
+                practiceLanguages: nil,
+                location: "Bordeaux, France",
+                matchedDate: nil,
+                isOnline: false
+            ),
+            User(
+                id: "17",
+                username: "lea_petit",
+                firstName: "Léa",
+                lastName: "Petit",
+                bio: "Nice photographer capturing the French Riviera 📸 Want to practice English for my travel blog!",
+                profileImageURL: "https://picsum.photos/seed/lea_profile/400/400",
+                photoURLs: ImageService.shared.generatePhotoURLs(for: "lea", count: 6),
+                nativeLanguage: UserLanguage(language: .french, proficiency: .native, isNative: true),
+                learningLanguages: [
+                    UserLanguage(language: .english, proficiency: .intermediate, isNative: false)
+                ],
+                openToLanguages: [.english],
+                practiceLanguages: nil,
+                location: "Nice, France",
+                matchedDate: nil,
+                isOnline: true
+            ),
+            User(
+                id: "18",
+                username: "marie_rousseau",
+                firstName: "Marie",
+                lastName: "Rousseau",
+                bio: "Toulouse software engineer who loves sci-fi and video games. Learning English for tech conferences!",
+                profileImageURL: "https://picsum.photos/seed/marie_profile/400/400",
+                photoURLs: ImageService.shared.generatePhotoURLs(for: "marie", count: 6),
+                nativeLanguage: UserLanguage(language: .french, proficiency: .native, isNative: true),
+                learningLanguages: [
+                    UserLanguage(language: .english, proficiency: .advanced, isNative: false),
+                    UserLanguage(language: .german, proficiency: .beginner, isNative: false)
+                ],
+                openToLanguages: [.english, .german],
+                practiceLanguages: nil,
+                location: "Toulouse, France",
+                matchedDate: nil,
+                isOnline: true
+            ),
+            User(
+                id: "19",
+                username: "antoine_martin",
+                firstName: "Antoine",
+                lastName: "Martin",
+                bio: "Strasbourg musician playing jazz saxophone 🎷 Want to improve English for touring internationally!",
+                profileImageURL: "https://picsum.photos/seed/antoine_profile/400/400",
+                photoURLs: ImageService.shared.generatePhotoURLs(for: "antoine", count: 6),
+                nativeLanguage: UserLanguage(language: .french, proficiency: .native, isNative: true),
+                learningLanguages: [
+                    UserLanguage(language: .english, proficiency: .intermediate, isNative: false)
+                ],
+                openToLanguages: [.english],
+                practiceLanguages: nil,
+                location: "Strasbourg, France",
+                matchedDate: nil,
+                isOnline: true
+            ),
+            User(
+                id: "20",
+                username: "emma_leroy",
+                firstName: "Emma",
+                lastName: "Leroy",
+                bio: "Nantes fashion designer inspired by French elegance ✨ Learning English for fashion weeks abroad!",
+                profileImageURL: "https://picsum.photos/seed/emma_profile/400/400",
+                photoURLs: ImageService.shared.generatePhotoURLs(for: "emma", count: 6),
+                nativeLanguage: UserLanguage(language: .french, proficiency: .native, isNative: true),
+                learningLanguages: [
+                    UserLanguage(language: .english, proficiency: .beginner, isNative: false),
+                    UserLanguage(language: .italian, proficiency: .beginner, isNative: false)
+                ],
+                openToLanguages: [.english, .italian],
+                practiceLanguages: nil,
+                location: "Nantes, France",
+                matchedDate: nil,
+                isOnline: false
+            ),
+
+
+            // SPANISH SPEAKERS LEARNING ENGLISH (Match on Spanish <-> English)
             User(
                 id: "1",
                 username: "maria_garcia",
@@ -234,6 +413,101 @@ class DiscoverViewController: UIViewController {
                 isOnline: true
             ),
             User(
+                id: "5",
+                username: "carlos_mendez",
+                firstName: "Carlos",
+                lastName: "Méndez",
+                bio: "Madrid musician 🎸 Love rock music and teaching guitar. Want to improve my English for touring!",
+                profileImageURL: "https://picsum.photos/seed/carlos_profile/400/400",
+                photoURLs: ImageService.shared.generatePhotoURLs(for: "carlos", count: 6),
+                nativeLanguage: UserLanguage(language: .spanish, proficiency: .native, isNative: true),
+                learningLanguages: [
+                    UserLanguage(language: .english, proficiency: .intermediate, isNative: false)
+                ],
+                openToLanguages: [.english],
+                practiceLanguages: nil,
+                location: "Madrid, Spain",
+                matchedDate: nil,
+                isOnline: true
+            ),
+            User(
+                id: "6",
+                username: "sofia_lopez",
+                firstName: "Sofía",
+                lastName: "López",
+                bio: "Buenos Aires born, coffee addict ☕ Studying English for my marketing career. Also picking up some Portuguese!",
+                profileImageURL: "https://picsum.photos/seed/sofia_profile/400/400",
+                photoURLs: ImageService.shared.generatePhotoURLs(for: "sofia", count: 6),
+                nativeLanguage: UserLanguage(language: .spanish, proficiency: .native, isNative: true),
+                learningLanguages: [
+                    UserLanguage(language: .english, proficiency: .beginner, isNative: false),
+                    UserLanguage(language: .portuguese, proficiency: .beginner, isNative: false)
+                ],
+                openToLanguages: [.english, .portuguese],
+                practiceLanguages: nil,
+                location: "Buenos Aires, Argentina",
+                matchedDate: nil,
+                isOnline: false
+            ),
+            User(
+                id: "7",
+                username: "diego_rivera",
+                firstName: "Diego",
+                lastName: "Rivera",
+                bio: "Mexico City photographer 📸 Love capturing street art and culture. Learning English and French!",
+                profileImageURL: "https://picsum.photos/seed/diego_profile/400/400",
+                photoURLs: ImageService.shared.generatePhotoURLs(for: "diego", count: 6),
+                nativeLanguage: UserLanguage(language: .spanish, proficiency: .native, isNative: true),
+                learningLanguages: [
+                    UserLanguage(language: .english, proficiency: .advanced, isNative: false),
+                    UserLanguage(language: .french, proficiency: .beginner, isNative: false)
+                ],
+                openToLanguages: [.english, .french],
+                practiceLanguages: nil,
+                location: "Mexico City, Mexico",
+                matchedDate: nil,
+                isOnline: true
+            ),
+            User(
+                id: "8",
+                username: "lucia_torres",
+                firstName: "Lucía",
+                lastName: "Torres",
+                bio: "Spanish teacher from Seville who loves flamenco dancing. Want to practice conversational English!",
+                profileImageURL: "https://picsum.photos/seed/lucia_profile/400/400",
+                photoURLs: ImageService.shared.generatePhotoURLs(for: "lucia", count: 6),
+                nativeLanguage: UserLanguage(language: .spanish, proficiency: .native, isNative: true),
+                learningLanguages: [
+                    UserLanguage(language: .english, proficiency: .intermediate, isNative: false)
+                ],
+                openToLanguages: [.english],
+                practiceLanguages: nil,
+                location: "Seville, Spain",
+                matchedDate: nil,
+                isOnline: true
+            ),
+            User(
+                id: "9",
+                username: "isabel_santos",
+                firstName: "Isabel",
+                lastName: "Santos",
+                bio: "Valencia native working in tourism. Learning English for work and German for fun!",
+                profileImageURL: "https://picsum.photos/seed/isabel_profile/400/400",
+                photoURLs: ImageService.shared.generatePhotoURLs(for: "isabel", count: 6),
+                nativeLanguage: UserLanguage(language: .spanish, proficiency: .native, isNative: true),
+                learningLanguages: [
+                    UserLanguage(language: .english, proficiency: .intermediate, isNative: false),
+                    UserLanguage(language: .german, proficiency: .beginner, isNative: false)
+                ],
+                openToLanguages: [.english, .german],
+                practiceLanguages: nil,
+                location: "Valencia, Spain",
+                matchedDate: nil,
+                isOnline: false
+            ),
+
+            // JAPANESE SPEAKERS LEARNING ENGLISH (Match on Japanese <-> English)
+            User(
                 id: "2",
                 username: "yuki_tanaka",
                 firstName: "Yuki",
@@ -251,6 +525,64 @@ class DiscoverViewController: UIViewController {
                 matchedDate: nil,
                 isOnline: false
             ),
+            User(
+                id: "10",
+                username: "sakura_yamamoto",
+                firstName: "Sakura",
+                lastName: "Yamamoto",
+                bio: "Osaka chef who loves creating fusion cuisine 🍜 Learning English and Korean for my food blog!",
+                profileImageURL: "https://picsum.photos/seed/sakura_profile/400/400",
+                photoURLs: ImageService.shared.generatePhotoURLs(for: "sakura", count: 6),
+                nativeLanguage: UserLanguage(language: .japanese, proficiency: .native, isNative: true),
+                learningLanguages: [
+                    UserLanguage(language: .english, proficiency: .beginner, isNative: false),
+                    UserLanguage(language: .korean, proficiency: .beginner, isNative: false)
+                ],
+                openToLanguages: [.english, .korean],
+                practiceLanguages: nil,
+                location: "Osaka, Japan",
+                matchedDate: nil,
+                isOnline: true
+            ),
+            User(
+                id: "11",
+                username: "kenji_sato",
+                firstName: "Kenji",
+                lastName: "Sato",
+                bio: "Kyoto university student studying international relations. Love manga and practicing English!",
+                profileImageURL: "https://picsum.photos/seed/kenji_profile/400/400",
+                photoURLs: ImageService.shared.generatePhotoURLs(for: "kenji", count: 6),
+                nativeLanguage: UserLanguage(language: .japanese, proficiency: .native, isNative: true),
+                learningLanguages: [
+                    UserLanguage(language: .english, proficiency: .advanced, isNative: false)
+                ],
+                openToLanguages: [.english],
+                practiceLanguages: nil,
+                location: "Kyoto, Japan",
+                matchedDate: nil,
+                isOnline: true
+            ),
+            User(
+                id: "12",
+                username: "aiko_nakamura",
+                firstName: "Aiko",
+                lastName: "Nakamura",
+                bio: "Fashion designer from Harajuku ✨ Want to improve my English for international fashion shows. Also learning French!",
+                profileImageURL: "https://picsum.photos/seed/aiko_profile/400/400",
+                photoURLs: ImageService.shared.generatePhotoURLs(for: "aiko", count: 6),
+                nativeLanguage: UserLanguage(language: .japanese, proficiency: .native, isNative: true),
+                learningLanguages: [
+                    UserLanguage(language: .english, proficiency: .intermediate, isNative: false),
+                    UserLanguage(language: .french, proficiency: .beginner, isNative: false)
+                ],
+                openToLanguages: [.english, .french],
+                practiceLanguages: nil,
+                location: "Tokyo, Japan",
+                matchedDate: nil,
+                isOnline: true
+            ),
+
+            // NON-MATCHING USERS (for comparison - won't match with John)
             User(
                 id: "3",
                 username: "pierre_dubois",
@@ -346,12 +678,17 @@ extension DiscoverViewController: SwipeCardDelegate {
                 case .up: directionString = "super" // Super like
                 }
 
-                try await SupabaseService.shared.recordSwipe(
+                let didMatch = try await SupabaseService.shared.recordSwipe(
                     swipedUserId: user.id,
                     direction: directionString
                 )
 
-                print("✅ Swipe recorded: \(directionString) on \(user.firstName)")
+                if didMatch {
+                    print("🎉 IT'S A MATCH with \(user.firstName)!")
+                    // TODO: Show match animation
+                } else {
+                    print("✅ Swipe recorded: \(directionString) on \(user.firstName)")
+                }
             } catch {
                 print("❌ Error recording swipe: \(error)")
             }

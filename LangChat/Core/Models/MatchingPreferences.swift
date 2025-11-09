@@ -186,20 +186,6 @@ struct TravelDestination: Codable, Equatable {
     }
 }
 
-// MARK: - Regional Language Preferences
-
-struct RegionalLanguagePreference: Codable, Equatable {
-    let language: Language
-    let preferredCountries: [String] // ISO country codes
-
-    var displayName: String {
-        let countryNames = preferredCountries.compactMap {
-            Locale.current.localizedString(forRegionCode: $0)
-        }.joined(separator: ", ")
-        return "\(language.name): \(countryNames)"
-    }
-}
-
 // MARK: - Matching Preferences Model
 
 struct MatchingPreferences: Codable {
@@ -246,12 +232,6 @@ struct MatchingPreferences: Codable {
     /// Why the user is learning languages (can select multiple)
     let learningContexts: [LearningContext]
 
-    // MARK: - Regional Preferences
-
-    /// Preferred regions/countries for specific languages
-    /// Example: Learning Spanish and prefer speakers from Spain
-    let regionalLanguagePreferences: [RegionalLanguagePreference]?
-
     // MARK: - Existing Preferences (from original implementation)
 
     /// Allow matching with non-native speakers
@@ -277,7 +257,6 @@ struct MatchingPreferences: Codable {
         travelDestination: TravelDestination? = nil,
         relationshipIntents: [RelationshipIntent] = [.languagePracticeOnly],
         learningContexts: [LearningContext] = [.fun],
-        regionalLanguagePreferences: [RegionalLanguagePreference]? = nil,
         allowNonNativeMatches: Bool = false,
         minProficiencyLevel: LanguageProficiency = .beginner,
         maxProficiencyLevel: LanguageProficiency = .advanced
@@ -293,7 +272,6 @@ struct MatchingPreferences: Codable {
         self.travelDestination = travelDestination
         self.relationshipIntents = relationshipIntents
         self.learningContexts = learningContexts
-        self.regionalLanguagePreferences = regionalLanguagePreferences
         self.allowNonNativeMatches = allowNonNativeMatches
         self.minProficiencyLevel = minProficiencyLevel
         self.maxProficiencyLevel = maxProficiencyLevel
@@ -314,11 +292,6 @@ struct MatchingPreferences: Codable {
     /// Check if user is open to any form of social connection beyond language practice
     var openToSocializing: Bool {
         return relationshipIntents.contains(.friendship) || relationshipIntents.contains(.openToDating)
-    }
-
-    /// Get regional preference for a specific language
-    func regionalPreference(for language: Language) -> [String]? {
-        return regionalLanguagePreferences?.first(where: { $0.language == language })?.preferredCountries
     }
 }
 
