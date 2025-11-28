@@ -12,16 +12,18 @@ class SupabaseService {
 
     // MARK: - Initialization
     private init() {
-        // Validate configuration
-        SupabaseConfig.validateConfiguration()
+        // Initialize Supabase client with credentials from Config.swift
+        // Config.swift loads from environment variables (Xcode scheme or .env file)
+        guard let url = URL(string: Config.supabaseURL) else {
+            fatalError("❌ Invalid Supabase URL in Config.swift")
+        }
 
-        // Initialize Supabase client
         self.client = SupabaseClient(
-            supabaseURL: URL(string: SupabaseConfig.supabaseURL)!,
-            supabaseKey: SupabaseConfig.supabaseAnonKey
+            supabaseURL: url,
+            supabaseKey: Config.supabaseAnonKey
         )
 
-        print("✅ Supabase initialized: \(SupabaseConfig.supabaseURL)")
+        print("✅ Supabase initialized: \(Config.supabaseURL)")
     }
 
     // MARK: - Current User

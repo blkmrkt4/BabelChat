@@ -63,10 +63,10 @@ class SupabaseTestViewController: UIViewController {
 
     private func runTests() {
         // Test 1: Configuration
-        let isConfigured = SupabaseConfig.isConfigured
+        let isConfigured = !Config.supabaseURL.isEmpty && !Config.supabaseAnonKey.isEmpty
         addTestResult(
             title: "Configuration",
-            message: isConfigured ? "Supabase URL and key are set" : "Need to update SupabaseConfig.swift",
+            message: isConfigured ? "Supabase URL and key loaded from Config.swift" : "Need to set environment variables in Xcode scheme or .env file",
             success: isConfigured
         )
 
