@@ -7,6 +7,64 @@ class AIConfigurationManager {
 
     private init() {}
 
+    // MARK: - Resilient Model Execution
+
+    /// Execute a chat completion with automatic fallback to backup models
+    /// Tries primary model first, then fallback models in order if primary fails
+    private func executeWithFallback(
+        config: AIConfig,
+        messages: [ChatMessage],
+        temperature: Double,
+        maxTokens: Int
+    ) async throws -> String {
+        // Build list of models to try (primary + fallbacks)
+        var modelsToTry: [(id: String, name: String)] = [(config.modelId, config.modelName)]
+
+        if let fb1 = config.fallbackModel1Id, !fb1.isEmpty {
+            modelsToTry.append((fb1, config.fallbackModel1Name ?? fb1))
+        }
+        if let fb2 = config.fallbackModel2Id, !fb2.isEmpty {
+            modelsToTry.append((fb2, config.fallbackModel2Name ?? fb2))
+        }
+        if let fb3 = config.fallbackModel3Id, !fb3.isEmpty {
+            modelsToTry.append((fb3, config.fallbackModel3Name ?? fb3))
+        }
+
+        var lastError: Error?
+
+        for (index, model) in modelsToTry.enumerated() {
+            do {
+                if index > 0 {
+                    print("⚠️ Primary model failed, trying fallback \(index): \(model.name)")
+                }
+
+                let response = try await OpenRouterService.shared.sendChatCompletion(
+                    model: model.id,
+                    messages: messages,
+                    temperature: temperature,
+                    maxTokens: maxTokens
+                )
+
+                guard let content = response.choices?.first?.content else {
+                    throw AIConfigurationError.emptyResponse
+                }
+
+                if index > 0 {
+                    print("✅ Fallback model \(model.name) succeeded")
+                }
+
+                return content
+            } catch {
+                print("❌ Model \(model.name) failed: \(error.localizedDescription)")
+                lastError = error
+                // Continue to next model
+            }
+        }
+
+        // All models failed
+        throw lastError ?? AIConfigurationError.allModelsFailed
+    }
+
     // MARK: - Configuration Retrieval
 
     /// Get the configuration for a specific category from Supabase
@@ -45,6 +103,7 @@ class AIConfigurationManager {
     // MARK: - Translation
 
     /// Translate text using the configured translation model
+    /// Automatically falls back to backup models if primary fails
     /// - Parameters:
     ///   - text: The text to translate
     ///   - learningLanguage: Source language (language being learned)
@@ -60,23 +119,18 @@ class AIConfigurationManager {
             ChatMessage(role: "user", content: text)
         ]
 
-        let response = try await OpenRouterService.shared.sendChatCompletion(
-            model: config.modelId,
+        return try await executeWithFallback(
+            config: config,
             messages: messages,
             temperature: Double(config.temperature),
             maxTokens: config.maxTokens
         )
-
-        guard let content = response.choices.first?.message.content else {
-            throw AIConfigurationError.emptyResponse
-        }
-
-        return content
     }
 
     // MARK: - Grammar Check
 
     /// Check grammar using the configured grammar model
+    /// Automatically falls back to backup models if primary fails
     /// - Parameters:
     ///   - text: The text to check
     ///   - learningLanguage: The language the text is written in
@@ -106,23 +160,18 @@ class AIConfigurationManager {
             ChatMessage(role: "user", content: text)
         ]
 
-        let response = try await OpenRouterService.shared.sendChatCompletion(
-            model: config.modelId,
+        return try await executeWithFallback(
+            config: config,
             messages: messages,
             temperature: Double(config.temperature),
             maxTokens: config.maxTokens
         )
-
-        guard let content = response.choices.first?.message.content else {
-            throw AIConfigurationError.emptyResponse
-        }
-
-        return content
     }
 
     // MARK: - Scoring
 
     /// Score text using the configured scoring model
+    /// Automatically falls back to backup models if primary fails
     /// - Parameters:
     ///   - text: The text to score
     ///   - learningLanguage: The language the text is written in
@@ -138,18 +187,12 @@ class AIConfigurationManager {
             ChatMessage(role: "user", content: text)
         ]
 
-        let response = try await OpenRouterService.shared.sendChatCompletion(
-            model: config.modelId,
+        return try await executeWithFallback(
+            config: config,
             messages: messages,
             temperature: Double(config.temperature),
             maxTokens: config.maxTokens
         )
-
-        guard let content = response.choices.first?.message.content else {
-            throw AIConfigurationError.emptyResponse
-        }
-
-        return content
     }
 }
 
@@ -164,11 +207,14 @@ enum AICategory: String, CaseIterable {
 
 enum AIConfigurationError: LocalizedError {
     case emptyResponse
+    case allModelsFailed
 
     var errorDescription: String? {
         switch self {
         case .emptyResponse:
             return "The AI model returned an empty response."
+        case .allModelsFailed:
+            return "All AI models (primary and fallbacks) failed. Please try again later."
         }
     }
 }

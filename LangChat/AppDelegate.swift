@@ -8,6 +8,7 @@
 import UIKit
 import CoreData
 import AVFoundation
+import UserNotifications
 
 @main
 class AppDelegate: UIResponder, UIApplicationDelegate {
@@ -32,27 +33,61 @@ class AppDelegate: UIResponder, UIApplicationDelegate {
         // Configure RevenueCat for subscriptions
         configureRevenueCat()
 
+        // Configure push notifications
+        configurePushNotifications()
+
         // Override point for customization after application launch.
         return true
     }
 
+    // MARK: - Push Notifications Configuration
+    private func configurePushNotifications() {
+        // Set notification delegate
+        UNUserNotificationCenter.current().delegate = PushNotificationService.shared
+
+        // Request permission (will be called after user logs in, but safe to check here too)
+        PushNotificationService.shared.checkAuthorizationStatus { status in
+            switch status {
+            case .authorized:
+                print("✅ Push notifications already authorized")
+                DispatchQueue.main.async {
+                    UIApplication.shared.registerForRemoteNotifications()
+                }
+            case .notDetermined:
+                print("⏳ Push notification permission not yet requested")
+            case .denied:
+                print("⚠️ Push notifications denied by user")
+            case .provisional:
+                print("📱 Push notifications provisionally authorized")
+            case .ephemeral:
+                print("⏱️ Push notifications ephemeral authorization")
+            @unknown default:
+                print("❓ Unknown push notification authorization status")
+            }
+        }
+    }
+
+    // MARK: - Push Notification Callbacks
+    func application(_ application: UIApplication, didRegisterForRemoteNotificationsWithDeviceToken deviceToken: Data) {
+        PushNotificationService.shared.didRegisterForRemoteNotifications(deviceToken: deviceToken)
+    }
+
+    func application(_ application: UIApplication, didFailToRegisterForRemoteNotificationsWithError error: Error) {
+        PushNotificationService.shared.didFailToRegisterForRemoteNotifications(error: error)
+    }
+
     // MARK: - RevenueCat Configuration
     private func configureRevenueCat() {
-        // SECURITY: RevenueCat API key must be stored securely
-        // Option 1: Use Xcode environment variable (Recommended)
-        guard let revenueCatAPIKey = ProcessInfo.processInfo.environment["REVENUECAT_API_KEY"],
-              !revenueCatAPIKey.isEmpty else {
-            fatalError("""
-                ❌ REVENUECAT_API_KEY not found!
-
-                To fix this:
-                1. In Xcode, go to Product > Scheme > Edit Scheme
-                2. Select "Run" on the left
-                3. Go to "Arguments" tab
-                4. Under "Environment Variables", click +
-                5. Add: REVENUECAT_API_KEY = your-api-key-here
-                6. Get your key from: https://app.revenuecat.com
-                """)
+        // SECURITY: RevenueCat API key loaded from Info.plist (set via xcconfig)
+        guard let revenueCatAPIKey = Bundle.main.infoDictionary?["REVENUECAT_API_KEY"] as? String,
+              !revenueCatAPIKey.isEmpty,
+              !revenueCatAPIKey.hasPrefix("$(") else {
+            print("⚠️ REVENUECAT_API_KEY not found in Info.plist!")
+            print("   Make sure Secrets.xcconfig contains REVENUECAT_API_KEY = your-key")
+            print("   Subscriptions will not work until this is configured.")
+            // Don't crash - just skip RevenueCat initialization
+            // This allows the app to run without subscriptions configured
+            return
         }
 
         // Initialize subscription service

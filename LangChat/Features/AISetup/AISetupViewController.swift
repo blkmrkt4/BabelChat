@@ -681,12 +681,15 @@ class AISetupViewController: UIViewController {
 
                 await MainActor.run {
                     self.testButton.isEnabled = true
-                    if let firstChoice = response.choices.first {
-                        self.testOutputTextView.text = firstChoice.message.content
+                    if let content = response.choices?.first?.content {
+                        self.testOutputTextView.text = content
 
                         // Show token usage if available
-                        if let usage = response.usage {
-                            self.testOutputTextView.text += "\n\n---\nTokens: \(usage.total_tokens) (in: \(usage.prompt_tokens), out: \(usage.completion_tokens))"
+                        if let usage = response.usage,
+                           let totalTokens = usage.total_tokens,
+                           let promptTokens = usage.prompt_tokens,
+                           let completionTokens = usage.completion_tokens {
+                            self.testOutputTextView.text += "\n\n---\nTokens: \(totalTokens) (in: \(promptTokens), out: \(completionTokens))"
                         }
 
                         // Increment test count for this model

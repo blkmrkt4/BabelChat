@@ -50,8 +50,25 @@ class OpenRouterService {
             throw OpenRouterError.httpError(statusCode: httpResponse.statusCode, message: errorMessage)
         }
 
-        let completionResponse = try JSONDecoder().decode(ChatCompletionResponse.self, from: data)
-        return completionResponse
+        do {
+            let completionResponse = try JSONDecoder().decode(ChatCompletionResponse.self, from: data)
+
+            // Check for API error in response
+            if let apiError = completionResponse.error {
+                throw OpenRouterError.httpError(
+                    statusCode: apiError.code ?? 500,
+                    message: apiError.message ?? "Unknown API error"
+                )
+            }
+
+            return completionResponse
+        } catch let decodingError as DecodingError {
+            // Log the raw response for debugging
+            let rawResponse = String(data: data, encoding: .utf8) ?? "Unable to decode response"
+            print("❌ OpenRouter decoding error: \(decodingError)")
+            print("📄 Raw response: \(rawResponse)")
+            throw OpenRouterError.httpError(statusCode: httpResponse.statusCode, message: "Failed to decode response: \(decodingError.localizedDescription)")
+        }
     }
 
     // MARK: - Translate Helper
@@ -74,11 +91,12 @@ class OpenRouterService {
 
         let response = try await sendChatCompletion(model: model, messages: messages)
 
-        guard let firstChoice = response.choices.first else {
+        guard let firstChoice = response.choices?.first,
+              let content = firstChoice.content else {
             throw OpenRouterError.emptyResponse
         }
 
-        return firstChoice.message.content
+        return content
     }
 
     // MARK: - Fetch Available Models
@@ -118,20 +136,38 @@ struct ChatCompletionRequest: Codable {
 }
 
 struct ChatCompletionResponse: Codable {
-    let id: String
-    let choices: [Choice]
+    let id: String?
+    let choices: [Choice]?
     let usage: Usage?
+    let error: APIError?
 
     struct Choice: Codable {
-        let index: Int
-        let message: ChatMessage
+        let index: Int?
+        let message: ChoiceMessage?
         let finish_reason: String?
+        let delta: ChoiceMessage?  // For streaming responses
+
+        // Get content from either message or delta
+        var content: String? {
+            return message?.content ?? delta?.content
+        }
+    }
+
+    struct ChoiceMessage: Codable {
+        let role: String?
+        let content: String?
     }
 
     struct Usage: Codable {
-        let prompt_tokens: Int
-        let completion_tokens: Int
-        let total_tokens: Int
+        let prompt_tokens: Int?
+        let completion_tokens: Int?
+        let total_tokens: Int?
+    }
+
+    struct APIError: Codable {
+        let message: String?
+        let code: Int?
+        let type: String?
     }
 }
 
