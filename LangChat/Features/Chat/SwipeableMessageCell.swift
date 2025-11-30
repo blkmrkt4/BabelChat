@@ -56,7 +56,17 @@ class SwipeableMessageCell: UITableViewCell {
 
     // Static cache for translations and grammar checks (across cell reuse)
     private static var translationCache: [String: String] = [:] // messageId: translation
-    private static var grammarCache: [String: String] = [:] // messageId: grammarJSON
+    private static var grammarCache: [String: String] = [:] // messageId: grammarJSON (native language explanation)
+    private static var grammarCacheAlt: [String: String] = [:] // messageId: grammarJSON (learning language explanation)
+
+    // Track which explanation language is currently shown per message
+    private static var grammarExplanationInNative: [String: Bool] = [:] // messageId: true if showing native language
+
+    // Language indicator badge on grammar pane
+    private let grammarLanguageBadge = UILabel()
+
+    // Track the detected language of the current message for grammar
+    private var currentMessageLanguage: Language?
 
     // MARK: - Initialization
     override init(style: UITableViewCell.CellStyle, reuseIdentifier: String?) {
@@ -87,7 +97,9 @@ class SwipeableMessageCell: UITableViewCell {
         // Clear previous content
         grammarStackView.arrangedSubviews.forEach { $0.removeFromSuperview() }
         alternativesStackView.arrangedSubviews.forEach { $0.removeFromSuperview() }
+        grammarLanguageBadge.isHidden = true
         currentMessage = nil
+        currentMessageLanguage = nil
     }
 
     // MARK: - Setup
@@ -178,6 +190,16 @@ class SwipeableMessageCell: UITableViewCell {
         grammarTitleLabel.font = .systemFont(ofSize: 12, weight: .semibold)
         grammarTitleLabel.textColor = .systemGreen
         grammarBubbleView.addSubview(grammarTitleLabel)
+
+        // Language badge (shows current explanation language)
+        grammarLanguageBadge.font = .systemFont(ofSize: 10, weight: .bold)
+        grammarLanguageBadge.textColor = .white
+        grammarLanguageBadge.backgroundColor = .systemGreen
+        grammarLanguageBadge.textAlignment = .center
+        grammarLanguageBadge.layer.cornerRadius = 4
+        grammarLanguageBadge.clipsToBounds = true
+        grammarLanguageBadge.isHidden = true // Hidden until grammar loads
+        grammarBubbleView.addSubview(grammarLanguageBadge)
 
         grammarStackView.axis = .vertical
         grammarStackView.spacing = 8
@@ -315,6 +337,7 @@ class SwipeableMessageCell: UITableViewCell {
         grammarScrollView.translatesAutoresizingMaskIntoConstraints = false
         grammarBubbleView.translatesAutoresizingMaskIntoConstraints = false
         grammarTitleLabel.translatesAutoresizingMaskIntoConstraints = false
+        grammarLanguageBadge.translatesAutoresizingMaskIntoConstraints = false
         grammarStackView.translatesAutoresizingMaskIntoConstraints = false
         alternativesLabel.translatesAutoresizingMaskIntoConstraints = false
         alternativesStackView.translatesAutoresizingMaskIntoConstraints = false
@@ -335,7 +358,13 @@ class SwipeableMessageCell: UITableViewCell {
 
             grammarTitleLabel.topAnchor.constraint(equalTo: grammarBubbleView.topAnchor, constant: 8),
             grammarTitleLabel.leadingAnchor.constraint(equalTo: grammarBubbleView.leadingAnchor, constant: 12),
-            grammarTitleLabel.trailingAnchor.constraint(equalTo: grammarBubbleView.trailingAnchor, constant: -12),
+
+            // Language badge positioned to the right of the title
+            grammarLanguageBadge.centerYAnchor.constraint(equalTo: grammarTitleLabel.centerYAnchor),
+            grammarLanguageBadge.leadingAnchor.constraint(equalTo: grammarTitleLabel.trailingAnchor, constant: 8),
+            grammarLanguageBadge.trailingAnchor.constraint(lessThanOrEqualTo: grammarBubbleView.trailingAnchor, constant: -12),
+            grammarLanguageBadge.widthAnchor.constraint(greaterThanOrEqualToConstant: 28),
+            grammarLanguageBadge.heightAnchor.constraint(equalToConstant: 18),
 
             grammarStackView.topAnchor.constraint(equalTo: grammarTitleLabel.bottomAnchor, constant: 8),
             grammarStackView.leadingAnchor.constraint(equalTo: grammarBubbleView.leadingAnchor, constant: 12),
@@ -378,10 +407,82 @@ class SwipeableMessageCell: UITableViewCell {
         grammarSwipe.direction = .left
         leftPane.addGestureRecognizer(grammarSwipe)
 
+        // Grammar pane: long press to toggle explanation language
+        let grammarLongPress = UILongPressGestureRecognizer(target: self, action: #selector(handleGrammarLongPress))
+        grammarLongPress.minimumPressDuration = 0.5
+        grammarBubbleView.addGestureRecognizer(grammarLongPress)
+        grammarBubbleView.isUserInteractionEnabled = true
+
         // Translation pane: swipe right to go back to messages
         let translationSwipe = UISwipeGestureRecognizer(target: self, action: #selector(swipeFromTranslation))
         translationSwipe.direction = .right
         rightPane.addGestureRecognizer(translationSwipe)
+    }
+
+    @objc private func handleGrammarLongPress(_ gesture: UILongPressGestureRecognizer) {
+        guard gesture.state == .began else { return }
+        guard let message = currentMessage else { return }
+
+        // Haptic feedback
+        let impact = UIImpactFeedbackGenerator(style: .medium)
+        impact.impactOccurred()
+
+        // Determine current and alternate languages
+        let isShowingNative = Self.grammarExplanationInNative[message.id] ?? true
+        let currentLangName = isShowingNative ? nativeLanguage.name : (currentMessageLanguage?.name ?? learningLanguage.name)
+        let alternateLangName = isShowingNative ? (currentMessageLanguage?.name ?? learningLanguage.name) : nativeLanguage.name
+
+        // Show action sheet to toggle language
+        let alert = UIAlertController(
+            title: "Explanation Language",
+            message: "Currently showing explanations in \(currentLangName)",
+            preferredStyle: .actionSheet
+        )
+
+        alert.addAction(UIAlertAction(title: "Show in \(alternateLangName)", style: .default) { [weak self] _ in
+            self?.toggleGrammarExplanationLanguage(for: message)
+        })
+
+        alert.addAction(UIAlertAction(title: "Cancel", style: .cancel))
+
+        // Find the view controller to present from
+        if let viewController = findViewController() {
+            // For iPad, set the popover source
+            if let popover = alert.popoverPresentationController {
+                popover.sourceView = grammarBubbleView
+                popover.sourceRect = grammarBubbleView.bounds
+            }
+            viewController.present(alert, animated: true)
+        }
+    }
+
+    private func findViewController() -> UIViewController? {
+        var responder: UIResponder? = self
+        while let nextResponder = responder?.next {
+            if let viewController = nextResponder as? UIViewController {
+                return viewController
+            }
+            responder = nextResponder
+        }
+        return nil
+    }
+
+    private func toggleGrammarExplanationLanguage(for message: Message) {
+        let isCurrentlyNative = Self.grammarExplanationInNative[message.id] ?? true
+        let newIsNative = !isCurrentlyNative
+
+        // Check if we have the alternate version cached
+        let cacheToUse = newIsNative ? Self.grammarCache : Self.grammarCacheAlt
+
+        if let cachedGrammar = cacheToUse[message.id] {
+            // We have it cached, just display it
+            Self.grammarExplanationInNative[message.id] = newIsNative
+            displayGrammarResult(cachedGrammar, granularity: granularityLevel)
+            updateGrammarLanguageBadge(for: message)
+        } else {
+            // Need to fetch the alternate version
+            fetchAlternateGrammarExplanation(for: message, inNativeLanguage: newIsNative)
+        }
     }
 
     @objc private func pronounceMessage() {
@@ -478,8 +579,21 @@ class SwipeableMessageCell: UITableViewCell {
         }
 
         // Configure grammar pane (initially show loading or cached)
-        if let cachedGrammar = Self.grammarCache[message.id] {
+        // Detect message language for grammar toggle feature
+        let detectedLang = Language.detect(from: message.text)
+        currentMessageLanguage = detectedLang ?? learningLanguage
+
+        // Check if we have cached grammar and display appropriate version
+        let isShowingNative = Self.grammarExplanationInNative[message.id] ?? true
+        let cacheToCheck = isShowingNative ? Self.grammarCache : Self.grammarCacheAlt
+
+        if let cachedGrammar = cacheToCheck[message.id] {
             displayGrammarResult(cachedGrammar, granularity: granularity)
+            updateGrammarLanguageBadge(for: message)
+        } else if let nativeCache = Self.grammarCache[message.id] {
+            // Fallback to native cache if alt not available
+            displayGrammarResult(nativeCache, granularity: granularity)
+            updateGrammarLanguageBadge(for: message)
         } else if message.grammarSuggestions != nil {
             // Use demo data
             configureGrammarPane(message: message, granularity: granularity)
@@ -724,12 +838,14 @@ class SwipeableMessageCell: UITableViewCell {
     private func performGrammarCheck(for message: Message) {
         // Show loading state
         clearGrammarPane()
+        grammarLanguageBadge.isHidden = true
         let loadingLabel = createGrammarLabel(text: "Analyzing grammar...")
         grammarStackView.addArrangedSubview(loadingLabel)
 
         // Detect message language
         let detectedLang = Language.detect(from: message.text)
         let sourceLanguage = detectedLang ?? learningLanguage
+        currentMessageLanguage = sourceLanguage
 
         // Map granularity to sensitivity level
         let sensitivityLevel: GrammarSensitivityLevel = {
@@ -749,15 +865,86 @@ class SwipeableMessageCell: UITableViewCell {
                     sensitivityLevel: sensitivityLevel
                 )
 
-                // Cache and display
+                // Cache in native language cache (default)
                 Self.grammarCache[message.id] = grammarJSON
+                Self.grammarExplanationInNative[message.id] = true
                 displayGrammarResult(grammarJSON, granularity: granularityLevel)
+                updateGrammarLanguageBadge(for: message)
             } catch {
                 clearGrammarPane()
                 let errorLabel = createGrammarLabel(text: "Grammar check failed: \(error.localizedDescription)\n\nTap to retry.")
                 errorLabel.textColor = .systemRed
                 grammarStackView.addArrangedSubview(errorLabel)
                 print("Grammar check error: \(error)")
+            }
+        }
+    }
+
+    private func fetchAlternateGrammarExplanation(for message: Message, inNativeLanguage: Bool) {
+        // Show loading state
+        clearGrammarPane()
+        let loadingLabel = createGrammarLabel(text: "Loading explanation in \(inNativeLanguage ? nativeLanguage.name : (currentMessageLanguage?.name ?? learningLanguage.name))...")
+        grammarStackView.addArrangedSubview(loadingLabel)
+
+        let sourceLanguage = currentMessageLanguage ?? learningLanguage
+
+        // For alternate explanation, we swap which language gets the explanation
+        // If inNativeLanguage = true: explanation in native language (normal)
+        // If inNativeLanguage = false: explanation in the message's language (learning language)
+        let explanationLanguage = inNativeLanguage ? nativeLanguage : sourceLanguage
+
+        // Map granularity to sensitivity level
+        let sensitivityLevel: GrammarSensitivityLevel = {
+            switch granularityLevel {
+            case 1: return .minimal
+            case 3: return .verbose
+            default: return .moderate
+            }
+        }()
+
+        Task { @MainActor in
+            do {
+                // Call grammar check with swapped explanation language
+                let grammarJSON = try await AIConfigurationManager.shared.checkGrammar(
+                    text: message.text,
+                    learningLanguage: sourceLanguage.name,
+                    nativeLanguage: explanationLanguage.name,
+                    sensitivityLevel: sensitivityLevel
+                )
+
+                // Cache in appropriate cache
+                if inNativeLanguage {
+                    Self.grammarCache[message.id] = grammarJSON
+                } else {
+                    Self.grammarCacheAlt[message.id] = grammarJSON
+                }
+
+                Self.grammarExplanationInNative[message.id] = inNativeLanguage
+                displayGrammarResult(grammarJSON, granularity: granularityLevel)
+                updateGrammarLanguageBadge(for: message)
+            } catch {
+                clearGrammarPane()
+                let errorLabel = createGrammarLabel(text: "Failed to load alternate explanation: \(error.localizedDescription)")
+                errorLabel.textColor = .systemRed
+                grammarStackView.addArrangedSubview(errorLabel)
+                print("Alternate grammar explanation error: \(error)")
+            }
+        }
+    }
+
+    private func updateGrammarLanguageBadge(for message: Message) {
+        let isNative = Self.grammarExplanationInNative[message.id] ?? true
+        let language = isNative ? nativeLanguage : (currentMessageLanguage ?? learningLanguage)
+
+        grammarLanguageBadge.text = " \(language.code) "
+        grammarLanguageBadge.isHidden = false
+
+        // Animate the badge update
+        UIView.animate(withDuration: 0.2) {
+            self.grammarLanguageBadge.transform = CGAffineTransform(scaleX: 1.1, y: 1.1)
+        } completion: { _ in
+            UIView.animate(withDuration: 0.1) {
+                self.grammarLanguageBadge.transform = .identity
             }
         }
     }
