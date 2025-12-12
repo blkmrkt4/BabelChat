@@ -4,6 +4,7 @@ class ChatViewController: UIViewController {
 
     private let tableView = UITableView()
     private let inputContainerView = UIView()
+    private let museButton = UIButton(type: .custom)
     private let inputTextField = UITextField()
     private let sendButton = UIButton(type: .system)
 
@@ -85,9 +86,9 @@ class ChatViewController: UIViewController {
         nameLabel.textAlignment = .center
 
         let statusLabel = UILabel()
-        statusLabel.text = user.isOnline ? "Active now" : "Offline"
+        statusLabel.text = getStatusText()
         statusLabel.font = .systemFont(ofSize: 12)
-        statusLabel.textColor = user.isOnline ? .systemGreen : .secondaryLabel
+        statusLabel.textColor = getStatusColor()
         statusLabel.textAlignment = .center
 
         titleView.addSubview(nameLabel)
@@ -152,6 +153,15 @@ class ChatViewController: UIViewController {
 
         view.addSubview(inputContainerView)
 
+        // Setup Muse button (AI assistant)
+        let museImage = UIImage(named: "MuseChat")?.withRenderingMode(.alwaysOriginal)
+        museButton.setImage(museImage, for: .normal)
+        museButton.imageView?.contentMode = .scaleAspectFit
+        museButton.layer.cornerRadius = 22
+        museButton.clipsToBounds = true
+        museButton.addTarget(self, action: #selector(museButtonTapped), for: .touchUpInside)
+        inputContainerView.addSubview(museButton)
+
         // Setup input text field
         inputTextField.placeholder = "Type a message..."
         inputTextField.font = .systemFont(ofSize: 16)
@@ -173,6 +183,7 @@ class ChatViewController: UIViewController {
         // Setup constraints
         tableView.translatesAutoresizingMaskIntoConstraints = false
         inputContainerView.translatesAutoresizingMaskIntoConstraints = false
+        museButton.translatesAutoresizingMaskIntoConstraints = false
         inputTextField.translatesAutoresizingMaskIntoConstraints = false
         sendButton.translatesAutoresizingMaskIntoConstraints = false
 
@@ -189,7 +200,12 @@ class ChatViewController: UIViewController {
             inputBottomConstraint,
             inputContainerView.heightAnchor.constraint(equalToConstant: 50),
 
-            inputTextField.leadingAnchor.constraint(equalTo: inputContainerView.leadingAnchor, constant: 16),
+            museButton.leadingAnchor.constraint(equalTo: inputContainerView.leadingAnchor, constant: 4),
+            museButton.centerYAnchor.constraint(equalTo: inputContainerView.centerYAnchor),
+            museButton.widthAnchor.constraint(equalToConstant: 44),
+            museButton.heightAnchor.constraint(equalToConstant: 44),
+
+            inputTextField.leadingAnchor.constraint(equalTo: museButton.trailingAnchor, constant: 8),
             inputTextField.centerYAnchor.constraint(equalTo: inputContainerView.centerYAnchor),
             inputTextField.trailingAnchor.constraint(equalTo: sendButton.leadingAnchor, constant: -8),
 
@@ -550,6 +566,126 @@ class ChatViewController: UIViewController {
         }
     }
 
+    @objc private func museButtonTapped() {
+        // Show Muse assistant dialog
+        let alert = UIAlertController(
+            title: "Ask your Muse",
+            message: "What would you like to say in \(conversationLearningLanguage.name)?",
+            preferredStyle: .alert
+        )
+
+        alert.addTextField { textField in
+            textField.placeholder = "e.g., How do I say 'I love this restaurant'?"
+            textField.autocapitalizationType = .sentences
+        }
+
+        let askAction = UIAlertAction(title: "Ask", style: .default) { [weak self] _ in
+            guard let self = self,
+                  let query = alert.textFields?.first?.text,
+                  !query.isEmpty else { return }
+
+            self.askMuse(query: query)
+        }
+
+        alert.addAction(askAction)
+        alert.addAction(UIAlertAction(title: "Cancel", style: .cancel))
+
+        present(alert, animated: true)
+    }
+
+    private func askMuse(query: String) {
+        // Show loading indicator
+        let loadingAlert = UIAlertController(
+            title: "Muse is thinking...",
+            message: nil,
+            preferredStyle: .alert
+        )
+        present(loadingAlert, animated: true)
+
+        Task {
+            do {
+                // Get chatting configuration
+                let config = try await AIConfigurationManager.shared.getConfiguration(for: .chatting)
+
+                let systemPrompt = """
+                You are a helpful language assistant called Muse. The user is practicing \(conversationLearningLanguage.name) and needs help composing a message.
+
+                Respond ONLY with the phrase they need in \(conversationLearningLanguage.name). Do not add explanations, translations, or extra text unless specifically asked.
+                Keep it natural and conversational.
+                """
+
+                let chatMessages = [
+                    ChatMessage(role: "system", content: systemPrompt),
+                    ChatMessage(role: "user", content: query)
+                ]
+
+                let response = try await OpenRouterService.shared.sendChatCompletion(
+                    model: config.modelId,
+                    messages: chatMessages,
+                    temperature: Double(config.temperature),
+                    maxTokens: config.maxTokens
+                )
+
+                guard let content = response.choices?.first?.content else {
+                    throw NSError(domain: "MuseError", code: -1,
+                                userInfo: [NSLocalizedDescriptionKey: "Empty response from Muse"])
+                }
+
+                let cleanedResponse = content.trimmingCharacters(in: .whitespacesAndNewlines)
+
+                await MainActor.run {
+                    loadingAlert.dismiss(animated: true) {
+                        self.showMuseResponse(cleanedResponse)
+                    }
+                }
+            } catch {
+                await MainActor.run {
+                    loadingAlert.dismiss(animated: true) {
+                        self.showMuseError(error)
+                    }
+                }
+            }
+        }
+    }
+
+    private func showMuseResponse(_ response: String) {
+        let alert = UIAlertController(
+            title: "Muse suggests:",
+            message: response,
+            preferredStyle: .alert
+        )
+
+        let useAction = UIAlertAction(title: "Use This", style: .default) { [weak self] _ in
+            // Insert the response into the text field
+            if let currentText = self?.inputTextField.text, !currentText.isEmpty {
+                self?.inputTextField.text = currentText + " " + response
+            } else {
+                self?.inputTextField.text = response
+            }
+            self?.sendButton.isEnabled = true
+        }
+
+        let copyAction = UIAlertAction(title: "Copy", style: .default) { _ in
+            UIPasteboard.general.string = response
+        }
+
+        alert.addAction(useAction)
+        alert.addAction(copyAction)
+        alert.addAction(UIAlertAction(title: "Dismiss", style: .cancel))
+
+        present(alert, animated: true)
+    }
+
+    private func showMuseError(_ error: Error) {
+        let alert = UIAlertController(
+            title: "Muse couldn't help",
+            message: "Please try again. Error: \(error.localizedDescription)",
+            preferredStyle: .alert
+        )
+        alert.addAction(UIAlertAction(title: "OK", style: .default))
+        present(alert, animated: true)
+    }
+
     @objc private func sendButtonTapped() {
         guard let text = inputTextField.text, !text.isEmpty else { return }
 
@@ -590,8 +726,11 @@ class ChatViewController: UIViewController {
         tableView.insertRows(at: [indexPath], with: .bottom)
         scrollToBottom(animated: true)
 
-        // Send to Supabase and generate AI response
+        // Send to Supabase and generate AI response (only for AI bots)
         Task {
+            // Update user's last_active timestamp
+            await SupabaseService.shared.updateLastActive()
+
             do {
                 // Check if this is a local-only conversation
                 let isLocalConversation = user.isAI || match.id.hasPrefix("local_match_")
@@ -609,46 +748,27 @@ class ChatViewController: UIViewController {
                     print("✅ Local conversation (no Supabase sync)")
                 }
 
-                // 2. Generate AI response using Scoring model
-                await generateAIResponse(to: text, conversationId: conversationId)
+                // 2. Generate AI response ONLY for AI bots (Muses)
+                // Real users will respond on their own - no auto-response
+                if user.isAI {
+                    await generateAIResponse(to: text, conversationId: conversationId)
+                } else {
+                    print("📤 Message sent to real user - waiting for their response")
+                }
             } catch {
                 print("❌ Failed to send message: \(error)")
             }
         }
     }
 
+    /// Generate AI response for Muse bots only
     private func generateAIResponse(to userMessage: String, conversationId: String) async {
         do {
-            // Check if chatting with AI bot - use conversational prompt
-            let aiResponse: String
-            if user.isAI {
-                // Generate natural conversational response for AI practice partners
-                aiResponse = try await generateConversationalResponse(userMessage: userMessage)
-            } else {
-                // Use the Scoring model for grammar-focused feedback (real users)
-                aiResponse = try await AIConfigurationManager.shared.scoreText(
-                    text: userMessage,
-                    learningLanguage: conversationLearningLanguage.name,
-                    nativeLanguage: currentUserNativeLanguage.name
-                )
-            }
+            // Generate natural conversational response for AI practice partners (Muses)
+            let aiResponse = try await generateConversationalResponse(userMessage: userMessage)
 
-            // Send AI response to Supabase (skip for local conversations)
-            let isLocalConversation = user.isAI || match.id.hasPrefix("local_match_")
-
-            if !isLocalConversation {
-                guard let currentUserId = SupabaseService.shared.currentUserId else { return }
-                try await SupabaseService.shared.sendMessageAs(
-                    senderId: user.id,
-                    conversationId: conversationId,
-                    receiverId: currentUserId.uuidString,
-                    text: aiResponse,
-                    language: conversationLearningLanguage.name
-                )
-                print("✅ AI response sent to Supabase (as \(user.firstName))")
-            } else {
-                print("✅ Local conversation - response generated locally")
-            }
+            // AI bot conversations are local-only (no Supabase sync)
+            print("✅ Muse response generated locally")
 
             // Display AI response in UI
             await MainActor.run {
@@ -674,7 +794,7 @@ class ChatViewController: UIViewController {
                 scrollToBottom(animated: true)
             }
         } catch {
-            print("❌ Failed to generate AI response: \(error)")
+            print("❌ Failed to generate Muse response: \(error)")
         }
     }
 
@@ -730,7 +850,7 @@ class ChatViewController: UIViewController {
                     maxTokens: config.maxTokens
                 )
 
-                guard let content = response.choices.first?.message.content else {
+                guard let content = response.choices?.first?.content else {
                     throw NSError(domain: "ChatViewController", code: -1,
                                 userInfo: [NSLocalizedDescriptionKey: "Empty response from AI"])
                 }
@@ -795,6 +915,30 @@ class ChatViewController: UIViewController {
 
     @objc private func dismissKeyboard() {
         view.endEditing(true)
+    }
+
+    // MARK: - Status Helpers
+
+    private func getStatusText() -> String {
+        // AI Muses are always active
+        if user.isAI {
+            return "Your Muse is Active Now"
+        }
+
+        // Real users - check their online status
+        if user.isOnline {
+            return "Active now"
+        } else {
+            return "Offline"
+        }
+    }
+
+    private func getStatusColor() -> UIColor {
+        if user.isAI || user.isOnline {
+            return .systemGreen
+        } else {
+            return .secondaryLabel
+        }
     }
 
     @objc private func videoCallTapped() {

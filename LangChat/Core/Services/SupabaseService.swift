@@ -1,4 +1,5 @@
 import Foundation
+import UIKit
 import Supabase
 
 /// Central service for managing all Supabase interactions
@@ -44,10 +45,37 @@ class SupabaseService {
 extension SupabaseService {
 
     /// Sign in with Apple
-    func signInWithApple() async throws {
-        // Implement Sign in with Apple OAuth flow
-        // Reference: https://supabase.com/docs/guides/auth/social-login/auth-apple
-        throw NSError(domain: "SupabaseService", code: -1, userInfo: [NSLocalizedDescriptionKey: "Sign in with Apple not yet implemented"])
+    /// - Parameter presentingViewController: The view controller to present the Apple sign in sheet from
+    func signInWithApple(from presentingViewController: UIViewController) async throws {
+        // Use SignInWithAppleService to get Apple credentials
+        let appleResult = try await SignInWithAppleService.shared.signIn(from: presentingViewController)
+
+        // Sign in to Supabase using Apple ID token
+        try await client.auth.signInWithIdToken(
+            credentials: .init(
+                provider: .apple,
+                idToken: appleResult.idToken,
+                nonce: appleResult.nonce
+            )
+        )
+
+        print("✅ Signed in with Apple via Supabase")
+
+        // If this is a new user and we have their name/email, update their profile
+        if let email = appleResult.email {
+            print("📧 Apple provided email: \(email)")
+            // You can save this to the profile if needed
+        }
+
+        if let fullName = appleResult.fullName {
+            let firstName = fullName.givenName ?? ""
+            let lastName = fullName.familyName ?? ""
+            if !firstName.isEmpty {
+                print("👤 Apple provided name: \(firstName) \(lastName)")
+                // Note: Apple only provides name on FIRST sign in
+                // You should save this to user profile immediately
+            }
+        }
     }
 
     /// Sign in with email/password
@@ -189,6 +217,19 @@ extension SupabaseService {
         return response
     }
 
+    /// Fetch a specific user's profile by ID
+    func fetchUserProfile(userId: String) async throws -> User? {
+        let response: ProfileResponse = try await client.database
+            .from("profiles")
+            .select()
+            .eq("id", value: userId)
+            .single()
+            .execute()
+            .value
+
+        return response.toUser()
+    }
+
     /// Check if current user has completed their profile (onboarding)
     /// Returns true if profile exists and has essential fields filled
     func hasCompletedProfile() async throws -> Bool {
@@ -229,6 +270,43 @@ extension SupabaseService {
             .execute()
 
         print("✅ Profile updated")
+    }
+
+    /// Update current user's last_active timestamp to mark them as online
+    func updateLastActive() async {
+        guard let userId = currentUserId else { return }
+
+        do {
+            let now = ISO8601DateFormatter().string(from: Date())
+            try await client.database
+                .from("profiles")
+                .update(["last_active": now])
+                .eq("id", value: userId.uuidString)
+                .execute()
+
+            #if DEBUG
+            print("✅ Updated last_active timestamp")
+            #endif
+        } catch {
+            #if DEBUG
+            print("⚠️ Failed to update last_active: \(error)")
+            #endif
+        }
+    }
+
+    /// Update current user's bio
+    func updateUserBio(bio: String) async throws {
+        guard let userId = currentUserId else {
+            throw NSError(domain: "SupabaseService", code: -1, userInfo: [NSLocalizedDescriptionKey: "Not authenticated"])
+        }
+
+        try await client.database
+            .from("profiles")
+            .update(["bio": bio])
+            .eq("id", value: userId.uuidString)
+            .execute()
+
+        print("✅ Bio updated")
     }
 
     /// Create initial profile after sign up
@@ -373,6 +451,22 @@ extension SupabaseService {
         return response
     }
 
+    /// Delete a match (unmatch)
+    func deleteMatch(matchId: String) async throws {
+        guard currentUserId != nil else {
+            throw NSError(domain: "SupabaseService", code: -1, userInfo: [NSLocalizedDescriptionKey: "Not authenticated"])
+        }
+
+        // Delete the match record
+        try await client.database
+            .from("matches")
+            .delete()
+            .eq("id", value: matchId)
+            .execute()
+
+        print("✅ Match deleted: \(matchId)")
+    }
+
     /// Get already swiped user IDs (to exclude from discovery)
     func getSwipedUserIds() async throws -> Set<String> {
         guard let userId = currentUserId else {
@@ -395,7 +489,18 @@ extension SupabaseService {
             throw NSError(domain: "SupabaseService", code: -1, userInfo: [NSLocalizedDescriptionKey: "Not authenticated"])
         }
 
-        let response: [MatchResponse] = try await client.database
+        // Use a minimal response type for this query
+        struct MatchUserIds: Codable {
+            let user1Id: String
+            let user2Id: String
+
+            enum CodingKeys: String, CodingKey {
+                case user1Id = "user1_id"
+                case user2Id = "user2_id"
+            }
+        }
+
+        let response: [MatchUserIds] = try await client.database
             .from("matches")
             .select("user1_id, user2_id")
             .or("user1_id.eq.\(userId.uuidString),user2_id.eq.\(userId.uuidString)")

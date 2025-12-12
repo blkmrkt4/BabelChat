@@ -149,13 +149,17 @@ class NotificationsPermissionViewController: BaseOnboardingViewController {
 
     // MARK: - Actions
     @objc private func enableNotificationsTapped() {
-        UNUserNotificationCenter.current().requestAuthorization(options: [.alert, .badge, .sound]) { [weak self] granted, error in
+        // Use PushNotificationService for consistent handling
+        PushNotificationService.shared.requestAuthorization { [weak self] granted, error in
             DispatchQueue.main.async {
                 UserDefaults.standard.set(granted, forKey: "notificationsEnabled")
 
+                if let error = error {
+                    print("❌ Error requesting notifications: \(error.localizedDescription)")
+                }
+
                 if granted {
-                    // Register for remote notifications
-                    UIApplication.shared.registerForRemoteNotifications()
+                    print("✅ User enabled notifications during onboarding")
                 }
 
                 self?.completeOnboarding()
@@ -165,6 +169,7 @@ class NotificationsPermissionViewController: BaseOnboardingViewController {
 
     @objc private func skipTapped() {
         UserDefaults.standard.set(false, forKey: "notificationsEnabled")
+        print("⏭️ User skipped notifications during onboarding")
         completeOnboarding()
     }
 

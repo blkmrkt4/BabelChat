@@ -2,9 +2,13 @@ import UIKit
 
 class WelcomeViewController: UIViewController {
 
+    // MARK: - Properties
+    var isViewingFromProfile = false
+
     // MARK: - UI Components
     private let scrollView = UIScrollView()
     private let contentStackView = UIStackView()
+    private let closeButton = UIButton(type: .system)
 
     private let logoLabel = UILabel()
     private let headlineLabel = UILabel()
@@ -116,13 +120,25 @@ class WelcomeViewController: UIViewController {
         contentStackView.addArrangedSubview(premiumContainer)
 
         // Continue button
-        continueButton.setTitle("Get Started", for: .normal)
+        if isViewingFromProfile {
+            continueButton.setTitle("Close", for: .normal)
+        } else {
+            continueButton.setTitle("Get Started", for: .normal)
+        }
         continueButton.titleLabel?.font = .systemFont(ofSize: 18, weight: .semibold)
         continueButton.backgroundColor = .white
         continueButton.setTitleColor(.black, for: .normal)
         continueButton.layer.cornerRadius = 25
         continueButton.addTarget(self, action: #selector(continueTapped), for: .touchUpInside)
         view.addSubview(continueButton)
+
+        // Close button (X) in top-right when viewing from profile
+        if isViewingFromProfile {
+            closeButton.setImage(UIImage(systemName: "xmark.circle.fill"), for: .normal)
+            closeButton.tintColor = .white.withAlphaComponent(0.8)
+            closeButton.addTarget(self, action: #selector(closeTapped), for: .touchUpInside)
+            view.addSubview(closeButton)
+        }
 
         #if DEBUG
         // Reset button (development only)
@@ -229,6 +245,17 @@ class WelcomeViewController: UIViewController {
             continueButton.heightAnchor.constraint(equalToConstant: 50)
         ])
 
+        // Close button constraints (when viewing from profile)
+        if isViewingFromProfile {
+            closeButton.translatesAutoresizingMaskIntoConstraints = false
+            NSLayoutConstraint.activate([
+                closeButton.topAnchor.constraint(equalTo: view.safeAreaLayoutGuide.topAnchor, constant: 16),
+                closeButton.trailingAnchor.constraint(equalTo: view.trailingAnchor, constant: -16),
+                closeButton.widthAnchor.constraint(equalToConstant: 32),
+                closeButton.heightAnchor.constraint(equalToConstant: 32)
+            ])
+        }
+
         #if DEBUG
         resetButton.translatesAutoresizingMaskIntoConstraints = false
         NSLayoutConstraint.activate([
@@ -242,12 +269,21 @@ class WelcomeViewController: UIViewController {
 
     // MARK: - Actions
     @objc private func continueTapped() {
-        // Mark welcome screen as seen
-        UserEngagementTracker.shared.markWelcomeScreenSeen()
+        if isViewingFromProfile {
+            // Just dismiss when viewing from profile
+            dismiss(animated: true)
+        } else {
+            // Mark welcome screen as seen
+            UserEngagementTracker.shared.markWelcomeScreenSeen()
 
-        // Navigate to authentication page (Apple Sign In + Email)
-        let authVC = AuthenticationViewController()
-        navigationController?.pushViewController(authVC, animated: true)
+            // Navigate to authentication page (Apple Sign In + Email)
+            let authVC = AuthenticationViewController()
+            navigationController?.pushViewController(authVC, animated: true)
+        }
+    }
+
+    @objc private func closeTapped() {
+        dismiss(animated: true)
     }
 
     #if DEBUG

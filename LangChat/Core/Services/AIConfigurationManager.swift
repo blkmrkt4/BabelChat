@@ -90,14 +90,16 @@ class AIConfigurationManager {
 
     /// Replace language placeholders in a prompt template
     /// - Parameters:
-    ///   - template: The prompt template with {learning_language} and {native_language} placeholders
+    ///   - template: The prompt template with {learning_language}, {native_language}, and {explanation_language} placeholders
     ///   - learningLanguage: The language being learned (e.g., "Spanish", "French")
     ///   - nativeLanguage: The user's native language (e.g., "English")
+    ///   - explanationLanguage: The language for explanations (defaults to nativeLanguage if not specified)
     /// - Returns: The prompt with placeholders replaced
-    func fillPromptTemplate(_ template: String, learningLanguage: String, nativeLanguage: String) -> String {
+    func fillPromptTemplate(_ template: String, learningLanguage: String, nativeLanguage: String, explanationLanguage: String? = nil) -> String {
         return template
             .replacingOccurrences(of: "{learning_language}", with: learningLanguage)
             .replacingOccurrences(of: "{native_language}", with: nativeLanguage)
+            .replacingOccurrences(of: "{explanation_language}", with: explanationLanguage ?? nativeLanguage)
     }
 
     // MARK: - Translation
@@ -134,10 +136,11 @@ class AIConfigurationManager {
     /// - Parameters:
     ///   - text: The text to check
     ///   - learningLanguage: The language the text is written in
-    ///   - nativeLanguage: The user's native language (for explanations)
+    ///   - nativeLanguage: The user's native language
+    ///   - explanationLanguage: The language for explanations (defaults to nativeLanguage if not specified)
     ///   - sensitivityLevel: The level of detail for feedback (optional, uses default if not specified)
     /// - Returns: Grammar check result (JSON string)
-    func checkGrammar(text: String, learningLanguage: String, nativeLanguage: String, sensitivityLevel: GrammarSensitivityLevel? = nil) async throws -> String {
+    func checkGrammar(text: String, learningLanguage: String, nativeLanguage: String, explanationLanguage: String? = nil, sensitivityLevel: GrammarSensitivityLevel? = nil) async throws -> String {
         let config = try await getConfiguration(for: .grammar)
 
         // Select prompt based on sensitivity level
@@ -153,7 +156,12 @@ class AIConfigurationManager {
             }
         }
 
-        let prompt = fillPromptTemplate(promptTemplate, learningLanguage: learningLanguage, nativeLanguage: nativeLanguage)
+        let prompt = fillPromptTemplate(
+            promptTemplate,
+            learningLanguage: learningLanguage,
+            nativeLanguage: nativeLanguage,
+            explanationLanguage: explanationLanguage
+        )
 
         let messages = [
             ChatMessage(role: "system", content: prompt),

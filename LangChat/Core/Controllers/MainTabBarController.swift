@@ -1,11 +1,59 @@
 import UIKit
 
-class MainTabBarController: UITabBarController {
+class MainTabBarController: UITabBarController, UITabBarControllerDelegate {
 
     override func viewDidLoad() {
         super.viewDidLoad()
+        delegate = self
         setupViewControllers()
         setupAppearance()
+        setupConnectivityBanner()
+    }
+
+    deinit {
+        NotificationCenter.default.removeObserver(self)
+    }
+
+    private func setupConnectivityBanner() {
+        // We no longer add a global connectivity banner to the tab bar controller
+        // because it overlaps with navigation bar content when views are pushed.
+        //
+        // Instead, we just listen for connectivity changes and could show alerts
+        // or banners within individual view controllers if needed.
+        //
+        // The NWPathMonitor typically fires immediately on app launch before UI is ready,
+        // causing false "offline" states. Better to trust the connection and only
+        // show errors when actual network requests fail.
+
+        // Listen for connectivity changes (for future use or logging)
+        NotificationCenter.default.addObserver(
+            self,
+            selector: #selector(networkStatusDidChange),
+            name: NetworkMonitor.connectivityDidChangeNotification,
+            object: nil
+        )
+    }
+
+    @objc private func networkStatusDidChange(_ notification: Notification) {
+        guard let isConnected = notification.userInfo?["isConnected"] as? Bool else { return }
+
+        #if DEBUG
+        print("📶 MainTabBarController: Network status changed - connected: \(isConnected)")
+        #endif
+
+        // We no longer show a banner here - individual views can handle offline state
+        // if needed by showing inline messages or alerts when requests fail
+    }
+
+    // MARK: - UITabBarControllerDelegate
+
+    func tabBarController(_ tabBarController: UITabBarController, shouldSelect viewController: UIViewController) -> Bool {
+        // If tapping the already selected tab, pop to root
+        if let navController = viewController as? UINavigationController,
+           viewController == selectedViewController {
+            navController.popToRootViewController(animated: true)
+        }
+        return true
     }
 
     private func setupViewControllers() {
@@ -21,14 +69,18 @@ class MainTabBarController: UITabBarController {
 
     private func setupAppearance() {
         tabBar.tintColor = .systemBlue
-        tabBar.backgroundColor = .systemBackground
 
         if #available(iOS 15.0, *) {
             let appearance = UITabBarAppearance()
-            appearance.configureWithDefaultBackground()
+            appearance.configureWithOpaqueBackground()
             appearance.backgroundColor = .systemBackground
+
+            // Ensure consistent appearance in all states
             tabBar.standardAppearance = appearance
             tabBar.scrollEdgeAppearance = appearance
+        } else {
+            tabBar.backgroundColor = .systemBackground
+            tabBar.isTranslucent = false
         }
     }
 
@@ -44,12 +96,15 @@ class MainTabBarController: UITabBarController {
 
     private func createMatchesViewController() -> UINavigationController {
         let matchesVC = MatchesListViewController()
-        matchesVC.tabBarItem = UITabBarItem(
+        let tabItem = UITabBarItem(
             title: "Matches",
-            image: UIImage(systemName: "heart.circle"),
-            selectedImage: UIImage(systemName: "heart.circle.fill")
+            image: UIImage(systemName: "person.2"),
+            selectedImage: UIImage(systemName: "person.2.fill")
         )
-        return UINavigationController(rootViewController: matchesVC)
+        matchesVC.tabBarItem = tabItem
+        let navController = UINavigationController(rootViewController: matchesVC)
+        navController.tabBarItem = tabItem
+        return navController
     }
 
     private func createChatsViewController() -> UINavigationController {

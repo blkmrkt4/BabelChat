@@ -428,9 +428,11 @@ class SwipeableMessageCell: UITableViewCell {
         impact.impactOccurred()
 
         // Determine current and alternate languages
+        // The two options should always be: native language OR learning language
+        // (not the detected message language, which could be the same as native)
         let isShowingNative = Self.grammarExplanationInNative[message.id] ?? true
-        let currentLangName = isShowingNative ? nativeLanguage.name : (currentMessageLanguage?.name ?? learningLanguage.name)
-        let alternateLangName = isShowingNative ? (currentMessageLanguage?.name ?? learningLanguage.name) : nativeLanguage.name
+        let currentLangName = isShowingNative ? nativeLanguage.name : learningLanguage.name
+        let alternateLangName = isShowingNative ? learningLanguage.name : nativeLanguage.name
 
         // Show action sheet to toggle language
         let alert = UIAlertController(
@@ -858,10 +860,12 @@ class SwipeableMessageCell: UITableViewCell {
 
         Task { @MainActor in
             do {
+                // Default: explanations in user's native language
                 let grammarJSON = try await AIConfigurationManager.shared.checkGrammar(
                     text: message.text,
                     learningLanguage: sourceLanguage.name,
                     nativeLanguage: nativeLanguage.name,
+                    explanationLanguage: nativeLanguage.name,
                     sensitivityLevel: sensitivityLevel
                 )
 
@@ -883,15 +887,17 @@ class SwipeableMessageCell: UITableViewCell {
     private func fetchAlternateGrammarExplanation(for message: Message, inNativeLanguage: Bool) {
         // Show loading state
         clearGrammarPane()
-        let loadingLabel = createGrammarLabel(text: "Loading explanation in \(inNativeLanguage ? nativeLanguage.name : (currentMessageLanguage?.name ?? learningLanguage.name))...")
+        // Explanations toggle between native language and learning language
+        let targetLanguage = inNativeLanguage ? nativeLanguage : learningLanguage
+        let loadingLabel = createGrammarLabel(text: "Loading explanation in \(targetLanguage.name)...")
         grammarStackView.addArrangedSubview(loadingLabel)
 
+        // The message could be in either language - detect it
         let sourceLanguage = currentMessageLanguage ?? learningLanguage
 
-        // For alternate explanation, we swap which language gets the explanation
-        // If inNativeLanguage = true: explanation in native language (normal)
-        // If inNativeLanguage = false: explanation in the message's language (learning language)
-        let explanationLanguage = inNativeLanguage ? nativeLanguage : sourceLanguage
+        // Determine which language to use for explanations
+        // Explanations are in either native language or learning language
+        let explanationLang = inNativeLanguage ? nativeLanguage.name : learningLanguage.name
 
         // Map granularity to sensitivity level
         let sensitivityLevel: GrammarSensitivityLevel = {
@@ -904,11 +910,12 @@ class SwipeableMessageCell: UITableViewCell {
 
         Task { @MainActor in
             do {
-                // Call grammar check with swapped explanation language
+                // Call grammar check with explicit explanation language
                 let grammarJSON = try await AIConfigurationManager.shared.checkGrammar(
                     text: message.text,
                     learningLanguage: sourceLanguage.name,
-                    nativeLanguage: explanationLanguage.name,
+                    nativeLanguage: nativeLanguage.name,
+                    explanationLanguage: explanationLang,
                     sensitivityLevel: sensitivityLevel
                 )
 
@@ -934,7 +941,8 @@ class SwipeableMessageCell: UITableViewCell {
 
     private func updateGrammarLanguageBadge(for message: Message) {
         let isNative = Self.grammarExplanationInNative[message.id] ?? true
-        let language = isNative ? nativeLanguage : (currentMessageLanguage ?? learningLanguage)
+        // Badge shows native or learning language (not detected message language)
+        let language = isNative ? nativeLanguage : learningLanguage
 
         grammarLanguageBadge.text = " \(language.code) "
         grammarLanguageBadge.isHidden = false
@@ -984,7 +992,7 @@ class SwipeableMessageCell: UITableViewCell {
             }
         } else {
             // New plain text format - just display the text directly
-            // The AI response is pre-formatted with ✓/✗ and proper structure
+            // The AI response is pre-formatted and includes alternatives inline
             let label = createGrammarLabel(text: grammarText)
 
             // Color code based on first character
@@ -995,6 +1003,10 @@ class SwipeableMessageCell: UITableViewCell {
             }
 
             grammarStackView.addArrangedSubview(label)
+
+            // Hide the separate alternatives UI since AI response includes them inline
+            alternativesLabel.isHidden = true
+            alternativesStackView.isHidden = true
         }
     }
 

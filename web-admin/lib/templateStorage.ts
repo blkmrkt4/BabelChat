@@ -5,6 +5,7 @@ export type SavedTemplate = {
   title: string
   content: string
   type: 'evaluation' | 'master' | 'testinput'
+  category?: string  // Optional category for filtering (e.g., 'translation', 'grammar', 'scoring')
   createdAt: string
 }
 
@@ -18,6 +19,18 @@ export function getAllTemplates(): SavedTemplate[] {
 
 export function getTemplatesByType(type: SavedTemplate['type']): SavedTemplate[] {
   return getAllTemplates().filter(t => t.type === type)
+}
+
+export function getTemplatesByTypeAndCategory(type: SavedTemplate['type'], category?: string): SavedTemplate[] {
+  return getAllTemplates().filter(t => {
+    if (t.type !== type) return false
+    // If no category specified, return all of this type
+    if (!category) return true
+    // If template has no category, show it for all categories (backward compatibility)
+    if (!t.category) return true
+    // Match category
+    return t.category === category
+  })
 }
 
 export function saveTemplate(template: Omit<SavedTemplate, 'id' | 'createdAt'>): SavedTemplate {

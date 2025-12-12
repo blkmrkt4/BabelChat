@@ -16,9 +16,13 @@ export default function RootLayout({
   const pathname = usePathname()
 
   const links = [
-    { href: '/bindings', label: 'AI Model Bindings' },
-    { href: '/evaluation', label: 'Round Robin Evaluation' },
+    { href: '/', label: 'AI Model/Prompt Bindings' },
+    { href: '/evaluation', label: 'Model/Prompt Testing' },
     { href: '/round-robin', label: 'Round Robin Results' },
+    { href: '/monitoring', label: 'Monitoring' },
+    { href: '/moderation', label: 'Moderation' },
+    { href: '/pricing', label: 'Pricing' },
+    { href: '/settings', label: 'Settings' },
   ]
 
   return (

@@ -97,63 +97,61 @@ class DiscoverViewController: UIViewController {
         let buttonStackView = UIStackView()
         buttonStackView.axis = .horizontal
         buttonStackView.distribution = .equalSpacing
-        buttonStackView.spacing = 40
+        buttonStackView.spacing = 24
         view.addSubview(buttonStackView)
         buttonStackView.translatesAutoresizingMaskIntoConstraints = false
 
-        let rewindButton = createActionButton(
-            image: "chevron.left",
-            color: .systemGray,
-            action: #selector(rewindTapped)
-        )
-
-        let passButton = createActionButton(
-            image: "xmark.circle.fill",
-            color: .systemRed,
+        // Reject button (red X)
+        let rejectButton = createImageButton(
+            imageName: "RejectButton",
             action: #selector(passTapped)
         )
 
-        let likeButton = createActionButton(
-            image: "heart.circle.fill",
-            color: .systemGreen,
+        // Star button (gold star) - for super like
+        let starButton = createImageButton(
+            imageName: "StarButton",
+            action: #selector(starTapped)
+        )
+
+        // Match button (green chat checkmark)
+        let matchButton = createImageButton(
+            imageName: "MatchButton",
             action: #selector(likeTapped)
         )
 
-        let boostButton = createActionButton(
-            image: "chevron.right",
-            color: .systemGray,
-            action: #selector(boostTapped)
-        )
-
-        buttonStackView.addArrangedSubview(rewindButton)
-        buttonStackView.addArrangedSubview(passButton)
-        buttonStackView.addArrangedSubview(likeButton)
-        buttonStackView.addArrangedSubview(boostButton)
+        buttonStackView.addArrangedSubview(rejectButton)
+        buttonStackView.addArrangedSubview(starButton)
+        buttonStackView.addArrangedSubview(matchButton)
 
         NSLayoutConstraint.activate([
             buttonStackView.centerXAnchor.constraint(equalTo: view.centerXAnchor),
             buttonStackView.bottomAnchor.constraint(equalTo: view.safeAreaLayoutGuide.bottomAnchor, constant: -20),
 
-            rewindButton.widthAnchor.constraint(equalToConstant: 50),
-            rewindButton.heightAnchor.constraint(equalToConstant: 50),
-            passButton.widthAnchor.constraint(equalToConstant: 64),
-            passButton.heightAnchor.constraint(equalToConstant: 64),
-            likeButton.widthAnchor.constraint(equalToConstant: 64),
-            likeButton.heightAnchor.constraint(equalToConstant: 64),
-            boostButton.widthAnchor.constraint(equalToConstant: 50),
-            boostButton.heightAnchor.constraint(equalToConstant: 50)
+            rejectButton.widthAnchor.constraint(equalToConstant: 64),
+            rejectButton.heightAnchor.constraint(equalToConstant: 64),
+            starButton.widthAnchor.constraint(equalToConstant: 64),
+            starButton.heightAnchor.constraint(equalToConstant: 64),
+            matchButton.widthAnchor.constraint(equalToConstant: 64),
+            matchButton.heightAnchor.constraint(equalToConstant: 64)
         ])
     }
 
-    private func createActionButton(image: String, color: UIColor, action: Selector) -> UIButton {
-        let button = UIButton(type: .system)
-        button.setImage(UIImage(systemName: image), for: .normal)
-        button.tintColor = color
-        button.backgroundColor = color.withAlphaComponent(0.1)
-        button.layer.cornerRadius = 22
+    private func createImageButton(imageName: String, action: Selector) -> UIButton {
+        let button = UIButton(type: .custom)
+        let image = UIImage(named: imageName)?.withRenderingMode(.alwaysOriginal)
+        button.setImage(image, for: .normal)
+        button.imageView?.contentMode = .scaleAspectFit
+        button.adjustsImageWhenHighlighted = false
         button.addTarget(self, action: action, for: .touchUpInside)
         button.translatesAutoresizingMaskIntoConstraints = false
         return button
+    }
+
+    @objc private func starTapped() {
+        if let topCard = cardViews.last {
+            // Super like - swipe up
+            topCard.swipeCard(direction: .up)
+        }
     }
 
     private func loadCards() {
@@ -181,19 +179,23 @@ class DiscoverViewController: UIViewController {
                 await MainActor.run {
                     loadingIndicator.stopAnimating()
 
-                    // Show error alert instead of falling back to fake users
+                    // Determine user-friendly error message
+                    let errorMessage: String
+                    if error.localizedDescription.contains("offline") || error.localizedDescription.contains("network") {
+                        errorMessage = "Please check your internet connection and try again."
+                    } else {
+                        errorMessage = "We couldn't load profiles right now. Please try again later."
+                    }
+
                     let alert = UIAlertController(
                         title: "Unable to Load Profiles",
-                        message: "Error: \(error.localizedDescription)\n\nPlease check:\n- Your profile is complete\n- You have learning languages set\n- Network connection is working",
+                        message: errorMessage,
                         preferredStyle: .alert
                     )
-                    alert.addAction(UIAlertAction(title: "Use Sample Profiles", style: .default) { _ in
-                        // Fall back to sample users for testing
-                        self.allUsers = self.createSampleUsers()
-                        self.matchedProfiles = self.allUsers.map { (user: $0, score: 50, reasons: ["Sample user"]) }
-                        self.showProfileDetailView()
+                    alert.addAction(UIAlertAction(title: "Try Again", style: .default) { _ in
+                        self.loadCards()
                     })
-                    alert.addAction(UIAlertAction(title: "Cancel", style: .cancel) { _ in
+                    alert.addAction(UIAlertAction(title: "OK", style: .cancel) { _ in
                         self.showEmptyState()
                     })
                     self.present(alert, animated: true)

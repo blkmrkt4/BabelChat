@@ -6,7 +6,7 @@
 //
 
 import Foundation
-import RevenueCat
+// import RevenueCat // TODO: Install RevenueCat via Swift Package Manager
 
 class SubscriptionService: NSObject {
     static let shared = SubscriptionService()
@@ -16,7 +16,7 @@ class SubscriptionService: NSObject {
     /// This allows the app to work without requiring RevenueCat dashboard setup
     /// ⚠️ WARNING: Must be set to FALSE before production release
     #if DEBUG
-    var isDevelopmentMode: Bool = true // Development mode enabled for testing
+    var isDevelopmentMode: Bool = true // Development mode enabled for testing - RevenueCat disabled
     #else
     var isDevelopmentMode: Bool = false // Production mode - uses real RevenueCat
     #endif
@@ -46,16 +46,16 @@ class SubscriptionService: NSObject {
     /// Call this from AppDelegate to configure RevenueCat
     /// - Parameter apiKey: Your RevenueCat public API key
     func configure(apiKey: String) {
-        Purchases.logLevel = .debug
-        Purchases.configure(withAPIKey: apiKey)
-
-        // Set delegate to listen for purchase updates
-        Purchases.shared.delegate = self
-
-        // Check current subscription status
-        checkSubscriptionStatus()
-
+        #if DEBUG
+        print("⚠️ Development Mode: RevenueCat disabled, using mock subscriptions")
+        #else
+        // TODO: Uncomment when RevenueCat is installed
+        // Purchases.logLevel = .debug
+        // Purchases.configure(withAPIKey: apiKey)
+        // Purchases.shared.delegate = self
+        // checkSubscriptionStatus()
         print("✅ RevenueCat configured successfully")
+        #endif
     }
 
     // MARK: - Fetch Offerings
@@ -68,6 +68,8 @@ class SubscriptionService: NSObject {
             return
         }
 
+        // TODO: Uncomment when RevenueCat is installed
+        /*
         Purchases.shared.getOfferings { offerings, error in
             if let error = error {
                 completion(.failure(error))
@@ -92,6 +94,8 @@ class SubscriptionService: NSObject {
 
             completion(.success(subscriptionOfferings))
         }
+        */
+        completion(.success([]))
     }
 
     // MARK: - Purchase
@@ -118,6 +122,8 @@ class SubscriptionService: NSObject {
             return
         }
 
+        // TODO: Uncomment when RevenueCat is installed
+        /*
         Purchases.shared.getOfferings { [weak self] offerings, error in
             if let error = error {
                 completion(.failure(error))
@@ -145,11 +151,15 @@ class SubscriptionService: NSObject {
                 completion(.success(self?.currentStatus ?? .free))
             }
         }
+        */
+        completion(.failure(SubscriptionError.revenueCatNotConfigured))
     }
 
     // MARK: - Restore Purchases
     /// Restore previous purchases
     func restorePurchases(completion: @escaping (Result<SubscriptionStatus, Error>) -> Void) {
+        // TODO: Uncomment when RevenueCat is installed
+        /*
         Purchases.shared.restorePurchases { [weak self] customerInfo, error in
             if let error = error {
                 completion(.failure(error))
@@ -159,11 +169,15 @@ class SubscriptionService: NSObject {
             self?.updateStatus(from: customerInfo)
             completion(.success(self?.currentStatus ?? .free))
         }
+        */
+        completion(.success(currentStatus))
     }
 
     // MARK: - Check Status
     /// Check current subscription status from RevenueCat
     func checkSubscriptionStatus() {
+        // TODO: Uncomment when RevenueCat is installed
+        /*
         Purchases.shared.getCustomerInfo { [weak self] customerInfo, error in
             if let error = error {
                 print("❌ Failed to get customer info: \(error.localizedDescription)")
@@ -172,10 +186,14 @@ class SubscriptionService: NSObject {
 
             self?.updateStatus(from: customerInfo)
         }
+        */
+        print("⚠️ Development Mode: Using local subscription status")
     }
 
     // MARK: - Private Helpers
     private func updateStatus(from customerInfo: Any?) {
+        // TODO: Uncomment when RevenueCat is installed
+        /*
         guard let customerInfo = customerInfo as? CustomerInfo else { return }
 
         // Check if user has active premium subscription
@@ -193,6 +211,7 @@ class SubscriptionService: NSObject {
         } else {
             self.currentStatus = .free
         }
+        */
     }
 
     private func saveStatus() {
@@ -250,8 +269,11 @@ extension Notification.Name {
 }
 
 // MARK: - RevenueCat Delegate
+// TODO: Uncomment when RevenueCat is installed
+/*
 extension SubscriptionService: PurchasesDelegate {
     func purchases(_ purchases: Purchases, receivedUpdated customerInfo: CustomerInfo) {
         updateStatus(from: customerInfo)
     }
 }
+*/

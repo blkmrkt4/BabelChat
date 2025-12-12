@@ -1,0 +1,44 @@
+# ============================================================================
+# Git Attributes - Additional Security Layer
+# ============================================================================
+# This file adds extra protection to prevent secrets from being committed.
+# Files matching these patterns will be blocked from git operations.
+
+# Environment files - NEVER COMMIT
+.env filter=secret
+.env.* filter=secret -text
+*.env filter=secret
+*.env.local filter=secret
+*.env.development filter=secret
+*.env.production filter=secret
+
+# Credential and key files - NEVER COMMIT
+*secret*.json filter=secret
+*credentials*.json filter=secret
+*.key filter=secret
+*.pem filter=secret
+*.p12 filter=secret
+secrets.json filter=secret
+
+# MCP and Claude Code configs - NEVER COMMIT
+.mcp.json filter=secret
+.claude.json filter=secret
+
+# Binary files that should be treated as such
+*.ipa binary
+*.p12 binary
+*.mobileprovision binary
+
+# Text files that should use LF line endings (cross-platform)
+*.swift text eol=lf
+*.ts text eol=lf
+*.tsx text eol=lf
+*.js text eol=lf
+*.jsx text eol=lf
+*.json text eol=lf
+*.md text eol=lf
+*.sql text eol=lf
+
+# Xcode project files
+*.pbxproj text merge=union
+*.xcworkspacedata text merge=union

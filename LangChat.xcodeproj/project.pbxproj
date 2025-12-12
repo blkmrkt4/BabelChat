@@ -11,6 +11,7 @@
 		8F691F6B2E9EB29100F49850 /* Supabase in Frameworks */ = {isa = PBXBuildFile; productRef = 8F691F6A2E9EB29100F49850 /* Supabase */; };
 		8F691F6D2E9EB29C00F49850 /* PostgREST in Frameworks */ = {isa = PBXBuildFile; productRef = 8F691F6C2E9EB29C00F49850 /* PostgREST */; };
 		8F691F6F2E9EB2A700F49850 /* Auth in Frameworks */ = {isa = PBXBuildFile; productRef = 8F691F6E2E9EB2A700F49850 /* Auth */; };
+		8FBBA6A12EDB57F40019497E /* Secrets.xcconfig in Resources */ = {isa = PBXBuildFile; fileRef = 8FBBA6A02EDB57F40019497E /* Secrets.xcconfig */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXContainerItemProxy section */
@@ -34,6 +35,7 @@
 		8F1BA3AE2E87209F003EDC2A /* LangChat.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = LangChat.app; sourceTree = BUILT_PRODUCTS_DIR; };
 		8F1BA3C82E8720A0003EDC2A /* LangChatTests.xctest */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = LangChatTests.xctest; sourceTree = BUILT_PRODUCTS_DIR; };
 		8F1BA3D22E8720A0003EDC2A /* LangChatUITests.xctest */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = LangChatUITests.xctest; sourceTree = BUILT_PRODUCTS_DIR; };
+		8FBBA6A02EDB57F40019497E /* Secrets.xcconfig */ = {isa = PBXFileReference; lastKnownFileType = text.xcconfig; path = Secrets.xcconfig; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
 /* Begin PBXFileSystemSynchronizedBuildFileExceptionSet section */
@@ -104,6 +106,7 @@
 				8F1BA3D52E8720A0003EDC2A /* LangChatUITests */,
 				8F691F672E9EB28600F49850 /* Frameworks */,
 				8F1BA3AF2E87209F003EDC2A /* Products */,
+				8FBBA6A02EDB57F40019497E /* Secrets.xcconfig */,
 			);
 			sourceTree = "<group>";
 		};
@@ -251,6 +254,7 @@
 			isa = PBXResourcesBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
+				8FBBA6A12EDB57F40019497E /* Secrets.xcconfig in Resources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -392,6 +396,7 @@
 		};
 		8F1BA3DE2E8720A0003EDC2A /* Debug */ = {
 			isa = XCBuildConfiguration;
+			baseConfigurationReference = 8FBBA6A02EDB57F40019497E /* Secrets.xcconfig */;
 			buildSettings = {
 				ALWAYS_SEARCH_USER_PATHS = NO;
 				ASSETCATALOG_COMPILER_GENERATE_SWIFT_ASSET_SYMBOL_EXTENSIONS = YES;
@@ -456,6 +461,7 @@
 		};
 		8F1BA3DF2E8720A0003EDC2A /* Release */ = {
 			isa = XCBuildConfiguration;
+			baseConfigurationReference = 8FBBA6A02EDB57F40019497E /* Secrets.xcconfig */;
 			buildSettings = {
 				ALWAYS_SEARCH_USER_PATHS = NO;
 				ASSETCATALOG_COMPILER_GENERATE_SWIFT_ASSET_SYMBOL_EXTENSIONS = YES;

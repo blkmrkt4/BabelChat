@@ -4,17 +4,225 @@ class ChatsListViewController: UIViewController {
 
     private let tableView = UITableView()
     private var chats: [Match] = []
+    private let emptyStateView = UIView()
+    private let emptyStateLabel = UILabel()
+    private let emptyStateButton = UIButton(type: .system)
 
     override func viewDidLoad() {
         super.viewDidLoad()
         setupNavigationBar()
         setupViews()
+        setupEmptyState()
         loadChats()
     }
 
     private func setupNavigationBar() {
         title = "Chats"
         navigationController?.navigationBar.prefersLargeTitles = true
+
+        // Add "New Chat" button
+        let newChatButton = UIBarButtonItem(
+            image: UIImage(systemName: "square.and.pencil"),
+            style: .plain,
+            target: self,
+            action: #selector(newChatTapped)
+        )
+        navigationItem.rightBarButtonItem = newChatButton
+    }
+
+    @objc private func newChatTapped() {
+        showMatchSelection()
+    }
+
+    private func showMatchSelection() {
+        // Get existing chat user IDs to filter them out
+        let existingChatUserIds = Set(chats.map { $0.user.id })
+
+        // Load matches from Supabase
+        Task {
+            do {
+                // Get match records
+                let matchResponses = try await SupabaseService.shared.getMatches()
+
+                // Filter for mutual matches only
+                let mutualMatches = matchResponses.filter { $0.isMutual }
+
+                guard !mutualMatches.isEmpty else {
+                    await MainActor.run {
+                        self.showMuseSelectionWithMessage("No matches yet. Practice with a Muse while you wait!")
+                    }
+                    return
+                }
+
+                // Get current user ID
+                guard let currentUserId = SupabaseService.shared.currentUserId else {
+                    await MainActor.run { self.showMuseSelection() }
+                    return
+                }
+                let currentUserIdString = currentUserId.uuidString
+
+                // Get the other user's ID from each match
+                var matchedUsers: [(matchId: String, user: User)] = []
+
+                for matchResponse in mutualMatches {
+                    let otherUserId = matchResponse.user1Id == currentUserIdString
+                        ? matchResponse.user2Id
+                        : matchResponse.user1Id
+
+                    // Skip if already have a chat with this user
+                    if existingChatUserIds.contains(otherUserId) {
+                        continue
+                    }
+
+                    // Try to fetch user profile
+                    if let userProfile = try? await SupabaseService.shared.fetchUserProfile(userId: otherUserId) {
+                        matchedUsers.append((matchId: matchResponse.id, user: userProfile))
+                    }
+                }
+
+                await MainActor.run {
+                    if matchedUsers.isEmpty {
+                        self.showMuseSelectionWithMessage("You've started chats with all your matches. Practice with a Muse!")
+                    } else {
+                        self.presentMatchSelectionSheet(matchedUsers: matchedUsers)
+                    }
+                }
+            } catch {
+                await MainActor.run {
+                    print("Failed to load matches: \(error)")
+                    self.showMuseSelection()
+                }
+            }
+        }
+    }
+
+    private func presentMatchSelectionSheet(matchedUsers: [(matchId: String, user: User)]) {
+        let alert = UIAlertController(
+            title: "Start a New Chat",
+            message: "Choose someone to chat with",
+            preferredStyle: .actionSheet
+        )
+
+        // Add matches
+        for (matchId, user) in matchedUsers {
+            let action = UIAlertAction(
+                title: "\(user.firstName) - \(user.nativeLanguage.language.name)",
+                style: .default
+            ) { [weak self] _ in
+                self?.startChatWithMatchedUser(matchId: matchId, user: user)
+            }
+            alert.addAction(action)
+        }
+
+        // Add Muse option
+        alert.addAction(UIAlertAction(title: "Practice with a Muse ✨", style: .default) { [weak self] _ in
+            self?.showMuseSelection()
+        })
+
+        alert.addAction(UIAlertAction(title: "Cancel", style: .cancel))
+
+        if let popover = alert.popoverPresentationController {
+            popover.barButtonItem = navigationItem.rightBarButtonItem
+        }
+
+        present(alert, animated: true)
+    }
+
+    private func showMuseSelectionWithMessage(_ message: String) {
+        let alert = UIAlertController(
+            title: "Meet your Muse",
+            message: message,
+            preferredStyle: .actionSheet
+        )
+
+        let muses = AIBotFactory.createAIBots()
+        for muse in muses {
+            let action = UIAlertAction(
+                title: "\(muse.firstName) - \(muse.nativeLanguage.language.name)",
+                style: .default
+            ) { [weak self] _ in
+                self?.startChatWithMuse(muse)
+            }
+            alert.addAction(action)
+        }
+
+        alert.addAction(UIAlertAction(title: "Cancel", style: .cancel))
+
+        if let popover = alert.popoverPresentationController {
+            popover.barButtonItem = navigationItem.rightBarButtonItem
+        }
+
+        present(alert, animated: true)
+    }
+
+    private func showMuseSelection() {
+        let alert = UIAlertController(
+            title: "Meet your Muse",
+            message: "Choose a language to practice",
+            preferredStyle: .actionSheet
+        )
+
+        let muses = AIBotFactory.createAIBots()
+        for muse in muses {
+            let action = UIAlertAction(
+                title: "\(muse.firstName) - \(muse.nativeLanguage.language.name)",
+                style: .default
+            ) { [weak self] _ in
+                self?.startChatWithMuse(muse)
+            }
+            alert.addAction(action)
+        }
+
+        alert.addAction(UIAlertAction(title: "Cancel", style: .cancel))
+
+        if let popover = alert.popoverPresentationController {
+            popover.barButtonItem = navigationItem.rightBarButtonItem
+        }
+
+        present(alert, animated: true)
+    }
+
+    private func startChat(with match: Match) {
+        // Save user data for later retrieval
+        if let userData = try? JSONEncoder().encode(match.user) {
+            UserDefaults.standard.set(userData, forKey: "user_\(match.user.id)")
+        }
+
+        let chatVC = ChatViewController(user: match.user, match: match)
+        navigationController?.pushViewController(chatVC, animated: true)
+    }
+
+    private func startChatWithMuse(_ muse: User) {
+        let match = Match(
+            id: muse.id,
+            user: muse,
+            matchedAt: Date(),
+            hasNewMessage: false,
+            lastMessage: nil,
+            lastMessageTime: nil
+        )
+
+        let chatVC = ChatViewController(user: muse, match: match)
+        navigationController?.pushViewController(chatVC, animated: true)
+    }
+
+    private func startChatWithMatchedUser(matchId: String, user: User) {
+        // Save user data for later retrieval
+        if let userData = try? JSONEncoder().encode(user) {
+            UserDefaults.standard.set(userData, forKey: "user_\(user.id)")
+        }
+
+        let match = Match(
+            id: matchId,
+            user: user,
+            matchedAt: Date(),
+            hasNewMessage: false,
+            lastMessage: nil,
+            lastMessageTime: nil
+        )
+
+        let chatVC = ChatViewController(user: user, match: match)
+        navigationController?.pushViewController(chatVC, animated: true)
     }
 
     private func setupViews() {
@@ -36,6 +244,53 @@ class ChatsListViewController: UIViewController {
         ])
     }
 
+    private func setupEmptyState() {
+        emptyStateView.isHidden = true
+        view.addSubview(emptyStateView)
+        emptyStateView.translatesAutoresizingMaskIntoConstraints = false
+
+        let stackView = UIStackView()
+        stackView.axis = .vertical
+        stackView.spacing = 16
+        stackView.alignment = .center
+        emptyStateView.addSubview(stackView)
+        stackView.translatesAutoresizingMaskIntoConstraints = false
+
+        let imageView = UIImageView(image: UIImage(systemName: "bubble.left.and.bubble.right"))
+        imageView.tintColor = .systemGray3
+        imageView.contentMode = .scaleAspectFit
+        imageView.translatesAutoresizingMaskIntoConstraints = false
+        imageView.widthAnchor.constraint(equalToConstant: 80).isActive = true
+        imageView.heightAnchor.constraint(equalToConstant: 80).isActive = true
+
+        emptyStateLabel.text = "No conversations yet"
+        emptyStateLabel.font = .systemFont(ofSize: 18, weight: .medium)
+        emptyStateLabel.textColor = .secondaryLabel
+        emptyStateLabel.textAlignment = .center
+
+        emptyStateButton.setTitle("Start a Chat", for: .normal)
+        emptyStateButton.titleLabel?.font = .systemFont(ofSize: 16, weight: .semibold)
+        emptyStateButton.addTarget(self, action: #selector(newChatTapped), for: .touchUpInside)
+
+        stackView.addArrangedSubview(imageView)
+        stackView.addArrangedSubview(emptyStateLabel)
+        stackView.addArrangedSubview(emptyStateButton)
+
+        NSLayoutConstraint.activate([
+            emptyStateView.centerXAnchor.constraint(equalTo: view.centerXAnchor),
+            emptyStateView.centerYAnchor.constraint(equalTo: view.centerYAnchor),
+            stackView.topAnchor.constraint(equalTo: emptyStateView.topAnchor),
+            stackView.leadingAnchor.constraint(equalTo: emptyStateView.leadingAnchor),
+            stackView.trailingAnchor.constraint(equalTo: emptyStateView.trailingAnchor),
+            stackView.bottomAnchor.constraint(equalTo: emptyStateView.bottomAnchor)
+        ])
+    }
+
+    private func updateEmptyState() {
+        emptyStateView.isHidden = !chats.isEmpty
+        tableView.isHidden = chats.isEmpty
+    }
+
     override func viewWillAppear(_ animated: Bool) {
         super.viewWillAppear(animated)
         loadChats()
@@ -48,6 +303,11 @@ class ChatsListViewController: UIViewController {
         let defaults = UserDefaults.standard
         let allKeys = defaults.dictionaryRepresentation().keys
 
+        #if DEBUG
+        let conversationKeys = allKeys.filter { $0.hasPrefix("conversation_") }
+        print("📱 ChatsListVC: Found \(conversationKeys.count) conversation keys in UserDefaults")
+        #endif
+
         for key in allKeys {
             guard key.hasPrefix("conversation_") else { continue }
 
@@ -58,6 +318,9 @@ class ChatsListViewController: UIViewController {
             guard let data = defaults.data(forKey: key),
                   let messages = try? JSONDecoder().decode([Message].self, from: data),
                   !messages.isEmpty else {
+                #if DEBUG
+                print("  ⚠️ Skipping \(key): no data or empty messages")
+                #endif
                 continue
             }
 
@@ -76,11 +339,17 @@ class ChatsListViewController: UIViewController {
                     lastMessageTime: lastMessage.timestamp
                 )
                 loadedChats.append(match)
+                #if DEBUG
+                print("  ✅ Loaded chat with \(savedUser.firstName) (\(messages.count) messages)")
+                #endif
+            } else {
+                #if DEBUG
+                print("  ⚠️ Skipping \(key): no user data found for userId \(userId)")
+                #endif
             }
-            // If no user data found, skip this conversation (no placeholder)
         }
 
-        // Sort by last message time (most recent first), AI bots without messages stay at end
+        // Sort by last message time (most recent first), Muses without messages stay at end
         loadedChats.sort { (match1, match2) -> Bool in
             let time1 = match1.lastMessageTime ?? Date.distantPast
             let time2 = match2.lastMessageTime ?? Date.distantPast
@@ -89,14 +358,19 @@ class ChatsListViewController: UIViewController {
 
         chats = loadedChats
         tableView.reloadData()
+        updateEmptyState()
+
+        #if DEBUG
+        print("📱 ChatsListVC: Displaying \(chats.count) chats")
+        #endif
     }
 
     private func loadSavedUser(userId: String) -> User? {
-        // Check if this is an AI bot
+        // Check if this is a Muse
         if userId.hasPrefix("ai_bot_") {
-            // Load AI bot from factory
-            let aiBots = AIBotFactory.createAIBots()
-            return aiBots.first(where: { $0.id == userId })
+            // Load Muse from factory
+            let muses = AIBotFactory.createAIBots()
+            return muses.first(where: { $0.id == userId })
         }
 
         // Try to load from saved match data for real users
@@ -251,13 +525,47 @@ class ChatTableViewCell: UITableViewCell {
             timeLabel.text = ""
         }
 
-        // Use robot icon for AI bots
-        if match.user.isAI {
-            profileImageView.image = UIImage(systemName: "brain.head.profile")
-            profileImageView.tintColor = .systemPurple
+        // Load profile image
+        loadProfileImage(for: match.user)
+    }
+
+    private func loadProfileImage(for user: User) {
+        // Set appropriate placeholder first
+        if user.isAI {
+            profileImageView.image = UIImage(systemName: "sparkles")
+            profileImageView.tintColor = UIColor(red: 1.0, green: 0.84, blue: 0.0, alpha: 1.0)  // Gold
         } else {
             profileImageView.image = UIImage(systemName: "person.fill")
             profileImageView.tintColor = .systemGray3
+        }
+
+        // Try to load actual profile image
+        guard let profileImagePath = user.profileImageURL, !profileImagePath.isEmpty else {
+            return
+        }
+
+        Task {
+            do {
+                let imageURL: String
+                if !profileImagePath.hasPrefix("http") {
+                    // It's a storage path, generate signed URL
+                    imageURL = try await SupabaseService.shared.getSignedPhotoURL(path: profileImagePath)
+                } else {
+                    imageURL = profileImagePath
+                }
+
+                await MainActor.run {
+                    ImageService.shared.loadImage(
+                        from: imageURL,
+                        into: self.profileImageView,
+                        placeholder: user.isAI
+                            ? UIImage(systemName: "sparkles")
+                            : UIImage(systemName: "person.fill")
+                    )
+                }
+            } catch {
+                print("Failed to load profile image for \(user.firstName): \(error)")
+            }
         }
     }
 }

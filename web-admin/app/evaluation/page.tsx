@@ -16,12 +16,11 @@ import { translateWithGoogle, GOOGLE_LANG_CODES } from '@/lib/googleTranslate'
 import { saveEvaluation, getEvaluationsByCategory } from '@/lib/evaluationStorage'
 import { getModelScore } from '@/lib/modelStorage'
 import {
-  getAllTemplates,
-  getTemplatesByType,
-  saveTemplate,
-  deleteTemplate,
-  type SavedTemplate
-} from '@/lib/templateStorage'
+  getPromptTemplatesByCategory,
+  savePromptTemplate,
+  deletePromptTemplate,
+  type PromptTemplate
+} from '@/lib/promptTemplateStorage'
 import { createAIConfig, getAIConfigs } from '@/lib/supabase'
 
 const LANGUAGES = Object.keys(GOOGLE_LANG_CODES)
@@ -205,8 +204,9 @@ export default function ModelEvaluation() {
   const [evaluationSearchTerm, setEvaluationSearchTerm] = useState('')
   const [sortBy, setSortBy] = useState<'name' | 'cost' | 'score'>('name')
 
-  // Template management
-  const [savedTemplates, setSavedTemplates] = useState<SavedTemplate[]>([])
+  // Template management - now from Supabase
+  const [promptTemplates, setPromptTemplates] = useState<PromptTemplate[]>([])
+  const [templatesLoading, setTemplatesLoading] = useState(false)
   const [showSaveDialog, setShowSaveDialog] = useState<{ type: 'evaluation' | 'master' | 'testinput', content: string } | null>(null)
   const [newTemplateName, setNewTemplateName] = useState('')
   const [isClient, setIsClient] = useState(false)
@@ -218,13 +218,19 @@ export default function ModelEvaluation() {
     loadApiKey()
     loadCustomCategories()
     loadSavedInputs()
-    loadSavedTemplates()
+    loadPromptTemplates()
     loadCategoryConfig() // Load category-specific config from Supabase
   }, [category])
 
-  const loadSavedTemplates = () => {
-    if (typeof window !== 'undefined') {
-      setSavedTemplates(getAllTemplates())
+  const loadPromptTemplates = async () => {
+    setTemplatesLoading(true)
+    try {
+      const templates = await getPromptTemplatesByCategory(category)
+      setPromptTemplates(templates)
+    } catch (error) {
+      console.error('Error loading prompt templates:', error)
+    } finally {
+      setTemplatesLoading(false)
     }
   }
 
@@ -557,7 +563,7 @@ Respond in EXACTLY this JSON format (all text in English):
     setNewTemplateName('')
   }
 
-  const confirmSaveTemplate = () => {
+  const confirmSaveTemplate = async () => {
     if (!newTemplateName.trim()) {
       alert('Please enter a template name')
       return
@@ -565,38 +571,71 @@ Respond in EXACTLY this JSON format (all text in English):
 
     if (!showSaveDialog) return
 
-    saveTemplate({
-      title: newTemplateName.trim(),
-      content: showSaveDialog.content,
-      type: showSaveDialog.type
-    })
+    try {
+      // Map template type to appropriate field
+      // For now, we store master prompts as system_prompt and test inputs as user_prompt
+      const templateData: {
+        name: string
+        category: 'translation' | 'grammar' | 'scoring' | 'chatting'
+        system_prompt?: string | null
+        user_prompt?: string | null
+        description?: string | null
+      } = {
+        name: newTemplateName.trim(),
+        category: category as 'translation' | 'grammar' | 'scoring' | 'chatting',
+        system_prompt: null,
+        user_prompt: null,
+        description: `Type: ${showSaveDialog.type}`,
+      }
 
-    loadSavedTemplates()
-    setShowSaveDialog(null)
-    setNewTemplateName('')
+      // Store the content based on type
+      if (showSaveDialog.type === 'master' || showSaveDialog.type === 'evaluation') {
+        templateData.system_prompt = showSaveDialog.content
+      } else if (showSaveDialog.type === 'testinput') {
+        templateData.user_prompt = showSaveDialog.content
+      }
+
+      await savePromptTemplate(templateData)
+      await loadPromptTemplates()
+      setShowSaveDialog(null)
+      setNewTemplateName('')
+    } catch (error) {
+      console.error('Error saving template:', error)
+      alert('Failed to save template. It may already exist with that name.')
+    }
   }
 
-  const handleLoadTemplate = (templateId: string) => {
-    const template = savedTemplates.find(t => t.id === templateId)
+  const handleLoadTemplate = (templateId: string, targetField: 'master' | 'evaluation' | 'testinput') => {
+    const template = promptTemplates.find(t => t.id === templateId)
     if (!template) return
 
-    switch (template.type) {
+    // Load from system_prompt for master/evaluation, user_prompt for testinput
+    const content = targetField === 'testinput'
+      ? (template.user_prompt || template.system_prompt || '')
+      : (template.system_prompt || '')
+
+    switch (targetField) {
       case 'evaluation':
-        setEvaluationPrompt(template.content)
+        setEvaluationPrompt(content)
         break
       case 'master':
-        setPrompt(template.content)
+        setPrompt(content)
         break
       case 'testinput':
-        setTestInput(template.content)
+        setTestInput(content)
         break
     }
   }
 
-  const handleDeleteTemplate = (templateId: string) => {
+  const handleDeleteTemplate = async (templateId: string) => {
     if (confirm('Are you sure you want to delete this template?')) {
-      deleteTemplate(templateId)
-      loadSavedTemplates()
+      try {
+        await deletePromptTemplate(templateId)
+        await loadPromptTemplates()
+      } catch (error) {
+        console.error('Error deleting template:', error)
+        alert('Failed to delete template.')
+      }
     }
   }
 
@@ -943,7 +982,7 @@ Respond in EXACTLY this JSON format (all text in English):
 
   return (
     <div className="max-w-7xl mx-auto space-y-6">
-      <h1 className="text-3xl font-bold">Round Robin Evaluation</h1>
+      <h1 className="text-3xl font-bold">Model/Prompt Testing</h1>
 
       {/* Category Selector */}
       <div className="bg-white rounded-lg shadow p-6 space-y-4">
@@ -1015,9 +1054,10 @@ Respond in EXACTLY this JSON format (all text in English):
         </div>
       </div>
 
-      {/* Test Parameters */}
+      {/* Prompt to Test */}
       <div className="bg-white rounded-lg shadow p-6 space-y-4">
-        <h2 className="text-xl font-semibold">Test Parameters</h2>
+        <h2 className="text-xl font-semibold">Prompt to Test</h2>
+        <p className="text-sm text-gray-600">This is the prompt you are using to test the &apos;Models to Test&apos; below, evaluated against a good known model &apos;Gold Standard&apos; by an &apos;Evaluation Model&apos; also selected below which is prompted to be a good evaluator.</p>
 
         <div className="grid grid-cols-2 gap-4">
           <div>
@@ -1053,17 +1093,18 @@ Respond in EXACTLY this JSON format (all text in English):
               <select
                 onChange={(e) => {
                   if (e.target.value) {
-                    handleLoadTemplate(e.target.value)
+                    handleLoadTemplate(e.target.value, 'master')
                     e.target.value = ''
                   }
                 }}
                 className="px-3 py-1 text-sm border rounded-lg"
                 defaultValue=""
+                disabled={templatesLoading}
               >
-                <option value="">📂 Load Template...</option>
-                {getTemplatesByType('master').map(template => (
+                <option value="">{templatesLoading ? 'Loading...' : '📂 Load Template...'}</option>
+                {promptTemplates.map(template => (
                   <option key={template.id} value={template.id}>
-                    {template.title}
+                    {template.name}
                   </option>
                 ))}
               </select>
@@ -1084,16 +1125,16 @@ Respond in EXACTLY this JSON format (all text in English):
             className="w-full h-24 px-3 py-2 border rounded-lg font-mono text-sm"
             placeholder="Use {source} and {target} as placeholders"
           />
-          {getTemplatesByType('master').length > 0 && (
+          {promptTemplates.length > 0 && (
             <div className="mt-2 flex flex-wrap gap-2">
               <span className="text-xs text-gray-500">Saved templates:</span>
-              {getTemplatesByType('master').map(template => (
+              {promptTemplates.map(template => (
                 <div key={template.id} className="flex items-center gap-1 bg-gray-100 px-2 py-1 rounded text-xs">
                   <button
-                    onClick={() => handleLoadTemplate(template.id)}
+                    onClick={() => handleLoadTemplate(template.id, 'master')}
                     className="hover:text-blue-600"
                   >
-                    {template.title}
+                    {template.name}
                   </button>
                   <button
                     onClick={() => handleDeleteTemplate(template.id)}
@@ -1114,17 +1155,18 @@ Respond in EXACTLY this JSON format (all text in English):
               <select
                 onChange={(e) => {
                   if (e.target.value) {
-                    handleLoadTemplate(e.target.value)
+                    handleLoadTemplate(e.target.value, 'testinput')
                     e.target.value = ''
                   }
                 }}
                 className="px-3 py-1 text-sm border rounded-lg"
                 defaultValue=""
+                disabled={templatesLoading}
               >
-                <option value="">📂 Load Template...</option>
-                {getTemplatesByType('testinput').map(template => (
+                <option value="">{templatesLoading ? 'Loading...' : '📂 Load Template...'}</option>
+                {promptTemplates.map(template => (
                   <option key={template.id} value={template.id}>
-                    {template.title}
+                    {template.name}
                   </option>
                 ))}
               </select>
@@ -1141,16 +1183,16 @@ Respond in EXACTLY this JSON format (all text in English):
             onChange={(e) => setTestInput(e.target.value)}
             className="w-full h-24 px-3 py-2 border rounded-lg"
           />
-          {getTemplatesByType('testinput').length > 0 && (
+          {promptTemplates.length > 0 && (
             <div className="mt-2 flex flex-wrap gap-2">
               <span className="text-xs text-gray-500">Saved templates:</span>
-              {getTemplatesByType('testinput').map(template => (
+              {promptTemplates.map(template => (
                 <div key={template.id} className="flex items-center gap-1 bg-gray-100 px-2 py-1 rounded text-xs">
                   <button
-                    onClick={() => handleLoadTemplate(template.id)}
+                    onClick={() => handleLoadTemplate(template.id, 'testinput')}
                     className="hover:text-blue-600"
                   >
-                    {template.title}
+                    {template.name}
                   </button>
                   <button
                     onClick={() => handleDeleteTemplate(template.id)}
@@ -1167,7 +1209,7 @@ Respond in EXACTLY this JSON format (all text in English):
 
       {/* Baseline Selection */}
       <div className="bg-white rounded-lg shadow p-6 space-y-4">
-        <h2 className="text-xl font-semibold">Baseline Model (Gold Standard)</h2>
+        <h2 className="text-xl font-semibold">Gold Standard Model</h2>
         <p className="text-sm text-gray-600">
           Select the OpenRouter model to use as the baseline for comparison
         </p>
@@ -1307,9 +1349,9 @@ Respond in EXACTLY this JSON format (all text in English):
             </div>
       </div>
 
-      {/* Evaluation Model Selection */}
+      {/* Evaluation Model & Prompts */}
       <div className="bg-white rounded-lg shadow p-6 space-y-4">
-        <h2 className="text-xl font-semibold">Evaluation Model</h2>
+        <h2 className="text-xl font-semibold">Evaluation Model & Prompts</h2>
         <p className="text-sm text-gray-600">
           This model will judge and score each model's output against the baseline
         </p>
@@ -1447,11 +1489,11 @@ Respond in EXACTLY this JSON format (all text in English):
             </select>
           </div>
         </div>
-      </div>
 
-      {/* Evaluation Prompts */}
-      <div className="bg-white rounded-lg shadow p-6 space-y-4">
-        <h2 className="text-xl font-semibold">Evaluation Model Prompts</h2>
+        {/* Evaluation Prompts */}
+        <div className="border-t pt-4">
+          <h3 className="text-lg font-semibold mb-4">Prompts</h3>
+        </div>
 
         {/* Evaluation System Prompt */}
         <div>
@@ -1475,17 +1517,18 @@ Respond in EXACTLY this JSON format (all text in English):
             <select
               onChange={(e) => {
                 if (e.target.value) {
-                  handleLoadTemplate(e.target.value)
+                  handleLoadTemplate(e.target.value, 'evaluation')
                   e.target.value = ''
                 }
               }}
               className="px-3 py-1 text-sm border rounded-lg"
               defaultValue=""
+              disabled={templatesLoading}
             >
-              <option value="">📂 Load Template...</option>
-              {getTemplatesByType('evaluation').map(template => (
+              <option value="">{templatesLoading ? 'Loading...' : '📂 Load Template...'}</option>
+              {promptTemplates.map(template => (
                 <option key={template.id} value={template.id}>
-                  {template.title}
+                  {template.name}
                 </option>
               ))}
             </select>
@@ -1500,14 +1543,8 @@ Respond in EXACTLY this JSON format (all text in English):
           <p className="text-sm text-gray-600 mb-2">
           The prompt given to the evaluation model. Available variables:
         </p>
-        <div className="bg-blue-50 p-3 rounded text-xs font-mono space-y-1 mb-3">
-          <div><span className="font-semibold">{'{learning_language}'}</span> - Source language</div>
-          <div><span className="font-semibold">{'{native_language}'}</span> - Target language</div>
-          <div><span className="font-semibold">{'{user_message}'}</span> - Original test input</div>
-          <div><span className="font-semibold">{'{google_translate_output}'}</span> - Baseline output</div>
-          <div><span className="font-semibold">{'{model_name}'}</span> - Name of model being evaluated</div>
-          <div><span className="font-semibold">{'{model_output}'}</span> - Model's response</div>
-          <div><span className="font-semibold">{'{response_time_seconds}'}</span> - Response time in seconds</div>
+        <div className="bg-blue-50 p-3 rounded text-xs font-mono mb-3">
+          <span className="font-semibold">{'{learning_language}'}</span> - Source language, <span className="font-semibold">{'{native_language}'}</span> - Target language, <span className="font-semibold">{'{user_message}'}</span> - Original test input, <span className="font-semibold">{'{google_translate_output}'}</span> - Baseline output, <span className="font-semibold">{'{model_name}'}</span> - Name of model being evaluated, <span className="font-semibold">{'{model_output}'}</span> - Model&apos;s response, <span className="font-semibold">{'{response_time_seconds}'}</span> - Response time in seconds
         </div>
         <textarea
           value={evaluationPrompt}
@@ -1515,16 +1552,16 @@ Respond in EXACTLY this JSON format (all text in English):
           className="w-full h-64 px-3 py-2 border rounded-lg font-mono text-sm"
           placeholder="Enter the evaluation prompt..."
         />
-        {getTemplatesByType('evaluation').length > 0 && (
+        {promptTemplates.length > 0 && (
           <div className="mt-2 flex flex-wrap gap-2">
             <span className="text-xs text-gray-500">Saved templates:</span>
-            {getTemplatesByType('evaluation').map(template => (
+            {promptTemplates.map(template => (
               <div key={template.id} className="flex items-center gap-1 bg-gray-100 px-2 py-1 rounded text-xs">
                 <button
-                  onClick={() => handleLoadTemplate(template.id)}
+                  onClick={() => handleLoadTemplate(template.id, 'evaluation')}
                   className="hover:text-blue-600"
                 >
-                  {template.title}
+                  {template.name}
                 </button>
                 <button
                   onClick={() => handleDeleteTemplate(template.id)}

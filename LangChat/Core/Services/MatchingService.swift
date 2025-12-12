@@ -499,7 +499,12 @@ class MatchingService {
     }
 
     /// 8. Regional/Cultural Preference Score (0-5 points)
+    /// TODO: Implement this feature when regionalLanguagePreferences is added to MatchingPreferences
     private func calculateRegionalScore(_ user1: User, _ user2: User, reasons: inout [String]) -> Int {
+        // Feature not yet implemented - regionalLanguagePreferences doesn't exist in MatchingPreferences
+        return 0
+
+        /* Commented out until regionalLanguagePreferences is added to MatchingPreferences model
         let prefs1 = user1.matchingPreferences
         let prefs2 = user2.matchingPreferences
 
@@ -542,6 +547,7 @@ class MatchingService {
         }
 
         return min(score, 5)
+        */
     }
 
     // MARK: - Helper Methods

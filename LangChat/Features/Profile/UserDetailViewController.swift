@@ -6,6 +6,7 @@ class UserDetailViewController: UIViewController, PhotoGridViewDelegate {
     var match: Match? // Store the actual match object
     var isMatched: Bool = false
     var allUsers: [User] = []
+    var allMatches: [Match] = [] // Store all matches for navigation (only used when isMatched)
     var currentUserIndex: Int = 0
     var isFromDiscover: Bool = false // Track if opened from Discover to hide back button
 
@@ -34,6 +35,9 @@ class UserDetailViewController: UIViewController, PhotoGridViewDelegate {
     private let pinButton = UIButton(type: .system)
     private let likeButton = UIButton(type: .system)
     private let forwardButton = UIButton(type: .system)
+
+    // Delete/unmatch button (for matched users)
+    private let deleteButton = UIButton(type: .system)
 
     // Open to match
     private let openToMatchLabel = UILabel()
@@ -162,28 +166,44 @@ class UserDetailViewController: UIViewController, PhotoGridViewDelegate {
         actionButtonsContainer.backgroundColor = .clear
         contentView.addSubview(actionButtonsContainer)
 
-        // Setup action buttons with exact colors from design
-        setupActionButton(backButton, systemName: "chevron.left",
-                         borderColor: UIColor(hex: "#999999"),
-                         iconColor: UIColor(hex: "#666666"))
-        setupActionButton(rejectButton, systemName: "xmark",
-                         borderColor: UIColor(hex: "#ff6b6b"),
-                         iconColor: UIColor(hex: "#ff6b6b"))
-        setupActionButton(pinButton, systemName: "star.fill",
-                         borderColor: UIColor(hex: "#ffc837"),
-                         iconColor: UIColor(hex: "#ff8008"))
-        setupActionButton(likeButton, systemName: "checkmark",
-                         borderColor: UIColor(hex: "#00c896"),
-                         iconColor: UIColor(hex: "#00c896"))
-        setupActionButton(forwardButton, systemName: "chevron.right",
-                         borderColor: UIColor(hex: "#999999"),
-                         iconColor: UIColor(hex: "#666666"))
+        if isMatched {
+            // For matched users: show only prev/next navigation and delete button
+            setupActionButton(backButton, systemName: "chevron.left",
+                             borderColor: UIColor(hex: "#999999"),
+                             iconColor: UIColor(hex: "#666666"))
+            setupActionButton(deleteButton, systemName: "trash",
+                             borderColor: UIColor(hex: "#ff6b6b"),
+                             iconColor: UIColor(hex: "#ff6b6b"))
+            setupActionButton(forwardButton, systemName: "chevron.right",
+                             borderColor: UIColor(hex: "#999999"),
+                             iconColor: UIColor(hex: "#666666"))
 
-        actionButtonsContainer.addSubview(backButton)
-        actionButtonsContainer.addSubview(rejectButton)
-        actionButtonsContainer.addSubview(pinButton)
-        actionButtonsContainer.addSubview(likeButton)
-        actionButtonsContainer.addSubview(forwardButton)
+            actionButtonsContainer.addSubview(backButton)
+            actionButtonsContainer.addSubview(deleteButton)
+            actionButtonsContainer.addSubview(forwardButton)
+
+            deleteButton.addTarget(self, action: #selector(deleteButtonTapped), for: .touchUpInside)
+        } else {
+            // For non-matched users: show full action buttons
+            setupActionButton(backButton, systemName: "chevron.left",
+                             borderColor: UIColor(hex: "#999999"),
+                             iconColor: UIColor(hex: "#666666"))
+
+            // Use custom image buttons for reject, star, and like
+            setupImageButton(rejectButton, imageName: "RejectButton")
+            setupImageButton(pinButton, imageName: "StarButton")
+            setupImageButton(likeButton, imageName: "MatchButton")
+
+            setupActionButton(forwardButton, systemName: "chevron.right",
+                             borderColor: UIColor(hex: "#999999"),
+                             iconColor: UIColor(hex: "#666666"))
+
+            actionButtonsContainer.addSubview(backButton)
+            actionButtonsContainer.addSubview(rejectButton)
+            actionButtonsContainer.addSubview(pinButton)
+            actionButtonsContainer.addSubview(likeButton)
+            actionButtonsContainer.addSubview(forwardButton)
+        }
 
         // Open to match
         openToMatchLabel.font = .systemFont(ofSize: 16, weight: .medium)
@@ -206,7 +226,7 @@ class UserDetailViewController: UIViewController, PhotoGridViewDelegate {
 
         // Location
         locationLabel.font = .systemFont(ofSize: 14, weight: .regular)
-        locationLabel.textColor = .tertiaryLabel
+        locationLabel.textColor = .label
         locationLabel.textAlignment = .left
         contentView.addSubview(locationLabel)
 
@@ -266,6 +286,38 @@ class UserDetailViewController: UIViewController, PhotoGridViewDelegate {
         button.addTarget(self, action: #selector(buttonTouchUp(_:)), for: [.touchUpInside, .touchUpOutside, .touchCancel])
     }
 
+    private func setupImageButton(_ button: UIButton, imageName: String) {
+        // Use .alwaysOriginal to prevent system tinting (blue color)
+        let image = UIImage(named: imageName)?.withRenderingMode(.alwaysOriginal)
+        button.setImage(image, for: .normal)
+        button.imageView?.contentMode = .scaleAspectFit
+        button.contentHorizontalAlignment = .fill
+        button.contentVerticalAlignment = .fill
+        button.adjustsImageWhenHighlighted = false
+
+        // Add subtle shadow for depth
+        button.layer.shadowColor = UIColor.black.cgColor
+        button.layer.shadowOffset = CGSize(width: 0, height: 4)
+        button.layer.shadowRadius = 8
+        button.layer.shadowOpacity = 0.15
+
+        // Add spring animation on tap
+        button.addTarget(self, action: #selector(imageButtonTouchDown(_:)), for: .touchDown)
+        button.addTarget(self, action: #selector(imageButtonTouchUp(_:)), for: [.touchUpInside, .touchUpOutside, .touchCancel])
+    }
+
+    @objc private func imageButtonTouchDown(_ sender: UIButton) {
+        UIView.animate(withDuration: 0.1, delay: 0, options: .curveEaseInOut) {
+            sender.transform = CGAffineTransform(scaleX: 0.9, y: 0.9)
+        }
+    }
+
+    @objc private func imageButtonTouchUp(_ sender: UIButton) {
+        UIView.animate(withDuration: 0.2, delay: 0, usingSpringWithDamping: 0.5, initialSpringVelocity: 0.5, options: .allowUserInteraction) {
+            sender.transform = .identity
+        }
+    }
+
     @objc private func buttonTouchDown(_ sender: UIButton) {
         // Active state: scale(1.05) - slightly pressed
         UIView.animate(withDuration: 0.1, delay: 0, options: .curveEaseInOut) {
@@ -306,6 +358,7 @@ class UserDetailViewController: UIViewController, PhotoGridViewDelegate {
         pinButton.translatesAutoresizingMaskIntoConstraints = false
         likeButton.translatesAutoresizingMaskIntoConstraints = false
         forwardButton.translatesAutoresizingMaskIntoConstraints = false
+        deleteButton.translatesAutoresizingMaskIntoConstraints = false
         openToMatchLabel.translatesAutoresizingMaskIntoConstraints = false
         aboutLabel.translatesAutoresizingMaskIntoConstraints = false
         bioLabel.translatesAutoresizingMaskIntoConstraints = false
@@ -356,32 +409,48 @@ class UserDetailViewController: UIViewController, PhotoGridViewDelegate {
             actionButtonsContainer.trailingAnchor.constraint(equalTo: contentView.trailingAnchor, constant: -20),
             actionButtonsContainer.heightAnchor.constraint(equalToConstant: 70),
 
-            // Action buttons - 5 buttons evenly spaced (70x70 per design)
+            // Action buttons layout depends on isMatched
             backButton.leadingAnchor.constraint(equalTo: actionButtonsContainer.leadingAnchor, constant: 5),
             backButton.centerYAnchor.constraint(equalTo: actionButtonsContainer.centerYAnchor),
             backButton.widthAnchor.constraint(equalToConstant: 70),
             backButton.heightAnchor.constraint(equalToConstant: 70),
 
-            rejectButton.centerXAnchor.constraint(equalTo: actionButtonsContainer.centerXAnchor, constant: -80),
-            rejectButton.centerYAnchor.constraint(equalTo: actionButtonsContainer.centerYAnchor),
-            rejectButton.widthAnchor.constraint(equalToConstant: 70),
-            rejectButton.heightAnchor.constraint(equalToConstant: 70),
-
-            pinButton.centerXAnchor.constraint(equalTo: actionButtonsContainer.centerXAnchor),
-            pinButton.centerYAnchor.constraint(equalTo: actionButtonsContainer.centerYAnchor),
-            pinButton.widthAnchor.constraint(equalToConstant: 70),
-            pinButton.heightAnchor.constraint(equalToConstant: 70),
-
-            likeButton.centerXAnchor.constraint(equalTo: actionButtonsContainer.centerXAnchor, constant: 80),
-            likeButton.centerYAnchor.constraint(equalTo: actionButtonsContainer.centerYAnchor),
-            likeButton.widthAnchor.constraint(equalToConstant: 70),
-            likeButton.heightAnchor.constraint(equalToConstant: 70),
-
             forwardButton.trailingAnchor.constraint(equalTo: actionButtonsContainer.trailingAnchor, constant: -5),
             forwardButton.centerYAnchor.constraint(equalTo: actionButtonsContainer.centerYAnchor),
             forwardButton.widthAnchor.constraint(equalToConstant: 70),
             forwardButton.heightAnchor.constraint(equalToConstant: 70),
+        ])
 
+        // Add middle button constraints based on isMatched
+        if isMatched {
+            // Single delete button in center for matched users
+            NSLayoutConstraint.activate([
+                deleteButton.centerXAnchor.constraint(equalTo: actionButtonsContainer.centerXAnchor),
+                deleteButton.centerYAnchor.constraint(equalTo: actionButtonsContainer.centerYAnchor),
+                deleteButton.widthAnchor.constraint(equalToConstant: 70),
+                deleteButton.heightAnchor.constraint(equalToConstant: 70),
+            ])
+        } else {
+            // Three middle buttons for non-matched users
+            NSLayoutConstraint.activate([
+                rejectButton.centerXAnchor.constraint(equalTo: actionButtonsContainer.centerXAnchor, constant: -80),
+                rejectButton.centerYAnchor.constraint(equalTo: actionButtonsContainer.centerYAnchor),
+                rejectButton.widthAnchor.constraint(equalToConstant: 70),
+                rejectButton.heightAnchor.constraint(equalToConstant: 70),
+
+                pinButton.centerXAnchor.constraint(equalTo: actionButtonsContainer.centerXAnchor),
+                pinButton.centerYAnchor.constraint(equalTo: actionButtonsContainer.centerYAnchor),
+                pinButton.widthAnchor.constraint(equalToConstant: 45),
+                pinButton.heightAnchor.constraint(equalToConstant: 45),
+
+                likeButton.centerXAnchor.constraint(equalTo: actionButtonsContainer.centerXAnchor, constant: 80),
+                likeButton.centerYAnchor.constraint(equalTo: actionButtonsContainer.centerYAnchor),
+                likeButton.widthAnchor.constraint(equalToConstant: 70),
+                likeButton.heightAnchor.constraint(equalToConstant: 70),
+            ])
+        }
+
+        NSLayoutConstraint.activate([
             // Open to match
             openToMatchLabel.topAnchor.constraint(equalTo: actionButtonsContainer.bottomAnchor, constant: 12),
             openToMatchLabel.leadingAnchor.constraint(equalTo: contentView.leadingAnchor, constant: 24),
@@ -447,7 +516,7 @@ class UserDetailViewController: UIViewController, PhotoGridViewDelegate {
         if !user.openToLanguages.isEmpty {
             // Show languages they're open to match in
             let languageNames = user.openToLanguages.map { $0.name }.joined(separator: ", ")
-            openToMatchText = "⭐ Open to Match: \(languageNames)"
+            openToMatchText = "🤝 Open to Match: \(languageNames)"
 
             // Show learning languages (that are NOT in open_to_languages)
             let openLanguageCodes = Set(user.openToLanguages.map { $0.code })
@@ -489,6 +558,24 @@ class UserDetailViewController: UIViewController, PhotoGridViewDelegate {
 
         // Update navigation button states
         updateNavigationButtons()
+
+        // Update pin button state to show if already pinned
+        updatePinButtonState()
+    }
+
+    private func updatePinButtonState() {
+        guard let user = user else { return }
+
+        let pinnedProfiles = UserDefaults.standard.stringArray(forKey: "pinnedProfileIds") ?? []
+        let isPinned = pinnedProfiles.contains(user.id)
+
+        if isPinned {
+            // Show pinned state with slight transparency change
+            pinButton.alpha = 0.6
+        } else {
+            // Default state
+            pinButton.alpha = 1.0
+        }
     }
 
     private func updateNavigationButtons() {
@@ -506,6 +593,10 @@ class UserDetailViewController: UIViewController, PhotoGridViewDelegate {
         if currentUserIndex > 0 {
             currentUserIndex -= 1
             user = allUsers[currentUserIndex]
+            // Update match object if we have allMatches (for matched users)
+            if isMatched && currentUserIndex < allMatches.count {
+                match = allMatches[currentUserIndex]
+            }
             updateUI()
 
             // Animate transition
@@ -513,6 +604,72 @@ class UserDetailViewController: UIViewController, PhotoGridViewDelegate {
         } else {
             // No more profiles to go back
             showActionFeedback("First Profile", color: .systemOrange)
+        }
+    }
+
+    @objc private func deleteButtonTapped() {
+        // Delete/unmatch this person - show confirmation first
+        guard let user = user, let match = match else { return }
+
+        let alert = UIAlertController(
+            title: "Unmatch \(user.firstName)?",
+            message: "Are you sure you want to unmatch? This will remove \(user.firstName) from your matches and delete your conversation history.",
+            preferredStyle: .alert
+        )
+
+        alert.addAction(UIAlertAction(title: "Cancel", style: .cancel))
+        alert.addAction(UIAlertAction(title: "Unmatch", style: .destructive) { [weak self] _ in
+            self?.performUnmatch(matchId: match.id, user: user)
+        })
+
+        present(alert, animated: true)
+    }
+
+    private func performUnmatch(matchId: String, user: User) {
+        Task {
+            do {
+                // Delete the match from Supabase
+                try await SupabaseService.shared.deleteMatch(matchId: matchId)
+
+                await MainActor.run {
+                    print("✅ Unmatched with \(user.firstName)")
+                    self.showActionFeedback("Unmatched", color: .systemRed)
+
+                    // Remove from current user and match lists
+                    self.allUsers.removeAll { $0.id == user.id }
+                    self.allMatches.removeAll { $0.user.id == user.id }
+
+                    // Navigate after showing feedback
+                    DispatchQueue.main.asyncAfter(deadline: .now() + 0.8) {
+                        if self.allUsers.isEmpty {
+                            // No more matches, go back to matches list
+                            self.navigationController?.popViewController(animated: true)
+                        } else if self.currentUserIndex >= self.allUsers.count {
+                            // Was at the end, go to previous
+                            self.currentUserIndex = self.allUsers.count - 1
+                            self.user = self.allUsers[self.currentUserIndex]
+                            if self.currentUserIndex < self.allMatches.count {
+                                self.match = self.allMatches[self.currentUserIndex]
+                            }
+                            self.updateUI()
+                            UIView.transition(with: self.view, duration: 0.3, options: .transitionCrossDissolve, animations: nil)
+                        } else {
+                            // Show the next user (index stays same since we removed current)
+                            self.user = self.allUsers[self.currentUserIndex]
+                            if self.currentUserIndex < self.allMatches.count {
+                                self.match = self.allMatches[self.currentUserIndex]
+                            }
+                            self.updateUI()
+                            UIView.transition(with: self.view, duration: 0.3, options: .transitionCrossDissolve, animations: nil)
+                        }
+                    }
+                }
+            } catch {
+                await MainActor.run {
+                    print("❌ Failed to unmatch: \(error)")
+                    self.showActionFeedback("Error - Try Again", color: .systemRed)
+                }
+            }
         }
     }
 
@@ -555,24 +712,26 @@ class UserDetailViewController: UIViewController, PhotoGridViewDelegate {
     }
 
     @objc private func pinButtonTapped() {
-        // Save/pin profile for later without committing to match
+        // Toggle save/pin profile for later
         guard let user = user else { return }
 
-        print("Pinned profile: \(user.firstName)")
-
-        // Save to pinned profiles list
         var pinnedProfiles = UserDefaults.standard.stringArray(forKey: "pinnedProfileIds") ?? []
-        if !pinnedProfiles.contains(user.id) {
+
+        if pinnedProfiles.contains(user.id) {
+            // Already pinned - remove it (unsave)
+            pinnedProfiles.removeAll { $0 == user.id }
+            UserDefaults.standard.set(pinnedProfiles, forKey: "pinnedProfileIds")
+            showActionFeedback("Unsaved", color: .systemGray)
+            print("Unpinned profile: \(user.firstName)")
+        } else {
+            // Not pinned - add it (save)
             pinnedProfiles.append(user.id)
             UserDefaults.standard.set(pinnedProfiles, forKey: "pinnedProfileIds")
-            showActionFeedback("Saved for Later 📌", color: .systemOrange)
-        } else {
-            // Already pinned, show different message
-            showActionFeedback("Already Saved", color: .systemGray)
+            showActionFeedback("Saved for Later", color: .systemOrange)
+            print("Pinned profile: \(user.firstName)")
         }
 
-        // In real app, would save to backend
-        // Pinned profiles can be viewed in Your Matches or a separate Saved tab
+        updatePinButtonState()
     }
 
     @objc private func likeButtonTapped() {
@@ -639,6 +798,10 @@ class UserDetailViewController: UIViewController, PhotoGridViewDelegate {
         if currentUserIndex < allUsers.count - 1 {
             currentUserIndex += 1
             user = allUsers[currentUserIndex]
+            // Update match object if we have allMatches (for matched users)
+            if isMatched && currentUserIndex < allMatches.count {
+                match = allMatches[currentUserIndex]
+            }
             updateUI()
 
             // Animate transition

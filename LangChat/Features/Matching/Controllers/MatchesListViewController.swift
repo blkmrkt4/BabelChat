@@ -1,5 +1,6 @@
 import UIKit
 import Supabase
+import AVFoundation
 
 class MatchesListViewController: UIViewController {
 
@@ -7,7 +8,7 @@ class MatchesListViewController: UIViewController {
         let layout = UICollectionViewFlowLayout()
         layout.minimumLineSpacing = 16
         layout.minimumInteritemSpacing = 16
-        layout.sectionInset = UIEdgeInsets(top: 16, left: 16, bottom: 16, right: 16)
+        // Section insets are set per-section in insetForSectionAt delegate method
         return UICollectionView(frame: .zero, collectionViewLayout: layout)
     }()
 
@@ -21,8 +22,9 @@ class MatchesListViewController: UIViewController {
     }
 
     private func setupNavigationBar() {
-        title = "Your Matches"
-        navigationController?.navigationBar.prefersLargeTitles = true
+        // Hide navigation title - we'll use a custom header instead
+        navigationItem.title = ""
+        navigationController?.navigationBar.prefersLargeTitles = false
 
         let notificationButton = UIBarButtonItem(
             image: UIImage(systemName: "bell"),
@@ -40,7 +42,7 @@ class MatchesListViewController: UIViewController {
         collectionView.delegate = self
         collectionView.dataSource = self
         collectionView.register(MatchCollectionViewCell.self, forCellWithReuseIdentifier: "MatchCell")
-        collectionView.register(BotPracticeCardCell.self, forCellWithReuseIdentifier: "BotPracticeCard")
+        collectionView.register(MuseHeaderView.self, forSupplementaryViewOfKind: UICollectionView.elementKindSectionHeader, withReuseIdentifier: "MuseHeader")
 
         view.addSubview(collectionView)
         collectionView.translatesAutoresizingMaskIntoConstraints = false
@@ -172,11 +174,23 @@ class MatchesListViewController: UIViewController {
             location: profile.location,
             showCityInProfile: true,
             matchedDate: Date(),
-            isOnline: false, // TODO: Implement online status
+            isOnline: isUserRecentlyActive(profile.lastActive),
             allowNonNativeMatches: allowNonNativeMatches,
             minProficiencyLevel: minProficiencyLevel,
             maxProficiencyLevel: maxProficiencyLevel
         )
+    }
+
+    /// Check if user has been active recently (within 15 minutes = "Active now")
+    private func isUserRecentlyActive(_ lastActive: String?) -> Bool {
+        guard let lastActiveString = lastActive else { return false }
+
+        let formatter = ISO8601DateFormatter()
+        guard let lastActiveDate = formatter.date(from: lastActiveString) else { return false }
+
+        // Consider "online" if active within last 15 minutes
+        let minutesSinceActive = Date().timeIntervalSince(lastActiveDate) / 60
+        return minutesSinceActive < 15
     }
 
     // Helper to parse proficiency level from database string to enum
@@ -198,63 +212,60 @@ class MatchesListViewController: UIViewController {
 
 extension MatchesListViewController: UICollectionViewDataSource {
     func numberOfSections(in collectionView: UICollectionView) -> Int {
-        return 2 // Section 0: Bot practice card, Section 1: Matches
+        return 1
     }
 
     func collectionView(_ collectionView: UICollectionView, numberOfItemsInSection section: Int) -> Int {
-        if section == 0 {
-            return 1 // Bot practice card
-        } else {
-            return matches.count
-        }
+        return matches.count
     }
 
     func collectionView(_ collectionView: UICollectionView, cellForItemAt indexPath: IndexPath) -> UICollectionViewCell {
-        if indexPath.section == 0 {
-            let cell = collectionView.dequeueReusableCell(withReuseIdentifier: "BotPracticeCard", for: indexPath) as! BotPracticeCardCell
-            return cell
-        } else {
-            let cell = collectionView.dequeueReusableCell(withReuseIdentifier: "MatchCell", for: indexPath) as! MatchCollectionViewCell
-            cell.configure(with: matches[indexPath.row])
-            return cell
+        let cell = collectionView.dequeueReusableCell(withReuseIdentifier: "MatchCell", for: indexPath) as! MatchCollectionViewCell
+        cell.configure(with: matches[indexPath.item])
+        return cell
+    }
+
+    func collectionView(_ collectionView: UICollectionView, viewForSupplementaryElementOfKind kind: String, at indexPath: IndexPath) -> UICollectionReusableView {
+        if kind == UICollectionView.elementKindSectionHeader {
+            let header = collectionView.dequeueReusableSupplementaryView(ofKind: kind, withReuseIdentifier: "MuseHeader", for: indexPath) as! MuseHeaderView
+            header.onMuseTapped = { [weak self] in
+                self?.showBotSelection()
+            }
+            return header
         }
+        return UICollectionReusableView()
     }
 }
 
 extension MatchesListViewController: UICollectionViewDelegate {
     func collectionView(_ collectionView: UICollectionView, didSelectItemAt indexPath: IndexPath) {
-        if indexPath.section == 0 {
-            // Bot practice card tapped - show bot selection
-            showBotSelection()
-        } else {
-            let match = matches[indexPath.row]
-            let detailVC = UserDetailViewController()
-            detailVC.user = match.user
-            detailVC.match = match // Pass the actual match object with real database ID
-            detailVC.isMatched = true // Already matched
+        let match = matches[indexPath.item]
+        let detailVC = UserDetailViewController()
+        detailVC.user = match.user
+        detailVC.match = match
+        detailVC.isMatched = true
 
-            // Pass the full list of matched users and current index for navigation
-            detailVC.allUsers = matches.map { $0.user }
-            detailVC.currentUserIndex = indexPath.row
+        detailVC.allUsers = matches.map { $0.user }
+        detailVC.allMatches = matches
+        detailVC.currentUserIndex = indexPath.item
 
-            navigationController?.pushViewController(detailVC, animated: true)
-        }
+        navigationController?.pushViewController(detailVC, animated: true)
     }
 
     private func showBotSelection() {
         let alert = UIAlertController(
-            title: "Practice with a Bot",
+            title: "Meet your Muse",
             message: "Choose a language to practice",
             preferredStyle: .actionSheet
         )
 
-        let aiBots = AIBotFactory.createAIBots()
-        for bot in aiBots {
+        let muses = AIBotFactory.createAIBots()
+        for muse in muses {
             let action = UIAlertAction(
-                title: "\(bot.firstName) - \(bot.nativeLanguage.language.name)",
+                title: "\(muse.firstName) - \(muse.nativeLanguage.language.name)",
                 style: .default
             ) { [weak self] _ in
-                self?.startChatWithBot(bot)
+                self?.startChatWithBot(muse)
             }
             alert.addAction(action)
         }
@@ -285,15 +296,30 @@ extension MatchesListViewController: UICollectionViewDelegate {
 
 extension MatchesListViewController: UICollectionViewDelegateFlowLayout {
     func collectionView(_ collectionView: UICollectionView, layout collectionViewLayout: UICollectionViewLayout, sizeForItemAt indexPath: IndexPath) -> CGSize {
-        if indexPath.section == 0 {
-            // Bot practice card - full width, thin height
-            let width = view.frame.width - 32 // 16pt padding on each side
-            return CGSize(width: width, height: 60)
-        } else {
-            // Match cards - 2 columns
-            let width = (view.frame.width - 48) / 2
-            return CGSize(width: width, height: width * 1.3)
-        }
+        let horizontalPadding: CGFloat = 16
+        let interItemSpacing: CGFloat = 16
+        // Match cards - 2 columns
+        let totalWidth = view.frame.width - (horizontalPadding * 2) - interItemSpacing
+        let width = totalWidth / 2
+        return CGSize(width: width, height: width * 1.3)
+    }
+
+    func collectionView(_ collectionView: UICollectionView, layout collectionViewLayout: UICollectionViewLayout, referenceSizeForHeaderInSection section: Int) -> CGSize {
+        // Header with title + Muse button
+        // Title: ~40pt, Muse button: 120pt, spacing: 20pt
+        return CGSize(width: view.frame.width, height: 200)
+    }
+
+    func collectionView(_ collectionView: UICollectionView, layout collectionViewLayout: UICollectionViewLayout, insetForSectionAt section: Int) -> UIEdgeInsets {
+        return UIEdgeInsets(top: 16, left: 16, bottom: 16, right: 16)
+    }
+
+    func collectionView(_ collectionView: UICollectionView, layout collectionViewLayout: UICollectionViewLayout, minimumLineSpacingForSectionAt section: Int) -> CGFloat {
+        return 16
+    }
+
+    func collectionView(_ collectionView: UICollectionView, layout collectionViewLayout: UICollectionViewLayout, minimumInteritemSpacingForSectionAt section: Int) -> CGFloat {
+        return 16
     }
 }
 
@@ -433,64 +459,123 @@ class MatchCollectionViewCell: UICollectionViewCell {
     }
 }
 
-// MARK: - Bot Practice Card Cell
+// MARK: - Muse Header View with Looping Video
 
-class BotPracticeCardCell: UICollectionViewCell {
+class MuseHeaderView: UICollectionReusableView {
 
-    private let iconImageView = UIImageView()
+    var onMuseTapped: (() -> Void)?
+
     private let titleLabel = UILabel()
-    private let chevronImageView = UIImageView()
+    private let videoContainerView = UIView()
+    private var player: AVPlayer?
+    private var playerLayer: AVPlayerLayer?
+    private var playerLooper: AVPlayerLooper?
+    private var queuePlayer: AVQueuePlayer?
 
     override init(frame: CGRect) {
         super.init(frame: frame)
         setupViews()
+        setupVideo()
     }
 
     required init?(coder: NSCoder) {
         super.init(coder: coder)
         setupViews()
+        setupVideo()
     }
 
     private func setupViews() {
-        contentView.backgroundColor = .systemPurple.withAlphaComponent(0.1)
-        contentView.layer.cornerRadius = 12
-        contentView.layer.borderWidth = 1
-        contentView.layer.borderColor = UIColor.systemPurple.withAlphaComponent(0.3).cgColor
+        backgroundColor = .systemBackground
 
-        // Robot icon
-        iconImageView.image = UIImage(systemName: "brain.head.profile")
-        iconImageView.tintColor = .systemPurple
-        iconImageView.contentMode = .scaleAspectFit
-        contentView.addSubview(iconImageView)
-        iconImageView.translatesAutoresizingMaskIntoConstraints = false
-
-        // Title label
-        titleLabel.text = "Practice with a Bot"
-        titleLabel.font = .systemFont(ofSize: 17, weight: .semibold)
-        titleLabel.textColor = .systemPurple
-        contentView.addSubview(titleLabel)
+        // Centered title
+        titleLabel.text = "Your Matches"
+        titleLabel.font = .systemFont(ofSize: 34, weight: .bold)
+        titleLabel.textColor = .label
+        titleLabel.textAlignment = .center
+        titleLabel.setContentHuggingPriority(.required, for: .vertical)
+        titleLabel.setContentCompressionResistancePriority(.required, for: .vertical)
+        addSubview(titleLabel)
         titleLabel.translatesAutoresizingMaskIntoConstraints = false
 
-        // Chevron
-        chevronImageView.image = UIImage(systemName: "chevron.right")
-        chevronImageView.tintColor = .systemPurple
-        chevronImageView.contentMode = .scaleAspectFit
-        contentView.addSubview(chevronImageView)
-        chevronImageView.translatesAutoresizingMaskIntoConstraints = false
+        // Video container (tappable)
+        videoContainerView.backgroundColor = .clear
+        videoContainerView.layer.cornerRadius = 60
+        videoContainerView.clipsToBounds = true
+        addSubview(videoContainerView)
+        videoContainerView.translatesAutoresizingMaskIntoConstraints = false
+
+        let tapGesture = UITapGestureRecognizer(target: self, action: #selector(museTapped))
+        videoContainerView.addGestureRecognizer(tapGesture)
+        videoContainerView.isUserInteractionEnabled = true
 
         NSLayoutConstraint.activate([
-            iconImageView.leadingAnchor.constraint(equalTo: contentView.leadingAnchor, constant: 16),
-            iconImageView.centerYAnchor.constraint(equalTo: contentView.centerYAnchor),
-            iconImageView.widthAnchor.constraint(equalToConstant: 32),
-            iconImageView.heightAnchor.constraint(equalToConstant: 32),
+            titleLabel.topAnchor.constraint(equalTo: topAnchor, constant: 16),
+            titleLabel.leadingAnchor.constraint(equalTo: leadingAnchor, constant: 16),
+            titleLabel.trailingAnchor.constraint(equalTo: trailingAnchor, constant: -16),
+            titleLabel.heightAnchor.constraint(greaterThanOrEqualToConstant: 40),
 
-            titleLabel.leadingAnchor.constraint(equalTo: iconImageView.trailingAnchor, constant: 12),
-            titleLabel.centerYAnchor.constraint(equalTo: contentView.centerYAnchor),
-
-            chevronImageView.trailingAnchor.constraint(equalTo: contentView.trailingAnchor, constant: -16),
-            chevronImageView.centerYAnchor.constraint(equalTo: contentView.centerYAnchor),
-            chevronImageView.widthAnchor.constraint(equalToConstant: 16),
-            chevronImageView.heightAnchor.constraint(equalToConstant: 16)
+            videoContainerView.topAnchor.constraint(equalTo: titleLabel.bottomAnchor, constant: 16),
+            videoContainerView.centerXAnchor.constraint(equalTo: centerXAnchor),
+            videoContainerView.widthAnchor.constraint(equalToConstant: 120),
+            videoContainerView.heightAnchor.constraint(equalToConstant: 120)
         ])
+    }
+
+    private func setupVideo() {
+        guard let videoURL = Bundle.main.url(forResource: "MusePulse", withExtension: "mp4") else {
+            print("❌ MusePulse.mp4 not found in bundle - showing fallback image")
+            showFallbackImage()
+            return
+        }
+
+        let playerItem = AVPlayerItem(url: videoURL)
+        queuePlayer = AVQueuePlayer(playerItem: playerItem)
+        queuePlayer?.isMuted = true
+
+        // Create looper for seamless looping
+        if let player = queuePlayer {
+            playerLooper = AVPlayerLooper(player: player, templateItem: playerItem)
+        }
+
+        playerLayer = AVPlayerLayer(player: queuePlayer)
+        playerLayer?.videoGravity = .resizeAspectFill
+        playerLayer?.frame = CGRect(x: 0, y: 0, width: 120, height: 120)
+
+        if let layer = playerLayer {
+            videoContainerView.layer.addSublayer(layer)
+        }
+
+        queuePlayer?.play()
+    }
+
+    private func showFallbackImage() {
+        // Show MuseButton image as fallback if video not available
+        let imageView = UIImageView(image: UIImage(named: "MuseButton"))
+        imageView.contentMode = .scaleAspectFill
+        imageView.clipsToBounds = true
+        imageView.layer.cornerRadius = 60
+        imageView.translatesAutoresizingMaskIntoConstraints = false
+        videoContainerView.addSubview(imageView)
+
+        NSLayoutConstraint.activate([
+            imageView.topAnchor.constraint(equalTo: videoContainerView.topAnchor),
+            imageView.leadingAnchor.constraint(equalTo: videoContainerView.leadingAnchor),
+            imageView.trailingAnchor.constraint(equalTo: videoContainerView.trailingAnchor),
+            imageView.bottomAnchor.constraint(equalTo: videoContainerView.bottomAnchor)
+        ])
+    }
+
+    override func layoutSubviews() {
+        super.layoutSubviews()
+        playerLayer?.frame = videoContainerView.bounds
+    }
+
+    @objc private func museTapped() {
+        onMuseTapped?()
+    }
+
+    override func prepareForReuse() {
+        super.prepareForReuse()
+        queuePlayer?.play()
     }
 }

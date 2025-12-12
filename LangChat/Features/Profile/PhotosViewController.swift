@@ -138,17 +138,85 @@ extension PhotosViewController: PHPickerViewControllerDelegate {
     func picker(_ picker: PHPickerViewController, didFinishPicking results: [PHPickerResult]) {
         dismiss(animated: true)
 
-        for result in results {
-            result.itemProvider.loadObject(ofClass: UIImage.self) { [weak self] object, error in
-                if let image = object as? UIImage {
-                    DispatchQueue.main.async {
-                        // For demo, use placeholder URLs
-                        // In production, upload image and get URL
-                        let placeholderURL = "https://picsum.photos/seed/\(UUID().uuidString)/400/400"
-                        self?.photos.append(placeholderURL)
-                        self?.savePhotos()
-                        self?.collectionView.reloadData()
+        guard !results.isEmpty else { return }
+
+        // Show loading indicator
+        let loadingAlert = UIAlertController(title: "Uploading Photos", message: "Please wait...", preferredStyle: .alert)
+        present(loadingAlert, animated: true)
+
+        Task {
+            var uploadedCount = 0
+            var failedCount = 0
+
+            for result in results {
+                do {
+                    // Load the image
+                    let image = try await loadImage(from: result)
+
+                    // Compress to JPEG
+                    guard let imageData = image.jpegData(compressionQuality: 0.8) else {
+                        failedCount += 1
+                        continue
                     }
+
+                    // Get user ID
+                    guard let userId = SupabaseService.shared.currentUserId?.uuidString else {
+                        failedCount += 1
+                        continue
+                    }
+
+                    // Upload to Supabase
+                    let photoIndex = self.photos.count
+                    let storagePath = try await SupabaseService.shared.uploadPhoto(
+                        imageData,
+                        userId: userId,
+                        photoIndex: photoIndex
+                    )
+
+                    // Add to array
+                    await MainActor.run {
+                        self.photos.append(storagePath)
+                        self.savePhotos()
+                        self.collectionView.reloadData()
+                    }
+
+                    uploadedCount += 1
+                    print("✅ Photo uploaded: \(storagePath)")
+
+                } catch {
+                    print("❌ Failed to upload photo: \(error)")
+                    failedCount += 1
+                }
+            }
+
+            // Dismiss loading
+            await MainActor.run {
+                loadingAlert.dismiss(animated: true) {
+                    if failedCount > 0 {
+                        let alert = UIAlertController(
+                            title: "Upload Complete",
+                            message: "\(uploadedCount) photo(s) uploaded. \(failedCount) failed.",
+                            preferredStyle: .alert
+                        )
+                        alert.addAction(UIAlertAction(title: "OK", style: .default))
+                        self.present(alert, animated: true)
+                    }
+                }
+            }
+        }
+    }
+
+    /// Helper to load UIImage from PHPickerResult asynchronously
+    private func loadImage(from result: PHPickerResult) async throws -> UIImage {
+        return try await withCheckedThrowingContinuation { continuation in
+            result.itemProvider.loadObject(ofClass: UIImage.self) { object, error in
+                if let error = error {
+                    continuation.resume(throwing: error)
+                } else if let image = object as? UIImage {
+                    continuation.resume(returning: image)
+                } else {
+                    continuation.resume(throwing: NSError(domain: "PhotoPicker", code: -1,
+                        userInfo: [NSLocalizedDescriptionKey: "Could not load image"]))
                 }
             }
         }
@@ -202,14 +270,42 @@ class PhotoCollectionCell: UICollectionViewCell {
         ])
     }
 
-    func configure(with urlString: String) {
+    func configure(with pathOrUrl: String) {
         imageView.isHidden = false
         addButton.isHidden = true
-        ImageService.shared.loadImage(
-            from: urlString,
-            into: imageView,
-            placeholder: UIImage(systemName: "photo")
-        )
+
+        // Check if it's a storage path (not a URL) - needs signed URL
+        if !pathOrUrl.isEmpty && !pathOrUrl.hasPrefix("http") {
+            // It's a storage path, get signed URL
+            Task {
+                do {
+                    let signedURL = try await SupabaseService.shared.getSignedPhotoURL(path: pathOrUrl)
+                    await MainActor.run {
+                        ImageService.shared.loadImage(
+                            from: signedURL,
+                            into: self.imageView,
+                            placeholder: UIImage(systemName: "photo")
+                        )
+                    }
+                } catch {
+                    print("❌ Failed to get signed URL: \(error)")
+                    await MainActor.run {
+                        self.imageView.image = UIImage(systemName: "photo")
+                        self.imageView.tintColor = .systemGray3
+                    }
+                }
+            }
+        } else if pathOrUrl.hasPrefix("http") {
+            // It's already a URL
+            ImageService.shared.loadImage(
+                from: pathOrUrl,
+                into: imageView,
+                placeholder: UIImage(systemName: "photo")
+            )
+        } else {
+            imageView.image = UIImage(systemName: "photo")
+            imageView.tintColor = .systemGray3
+        }
     }
 
     func configureAsAddButton() {

@@ -10,18 +10,24 @@ const supabase = createClient(
 const OPENROUTER_API_KEY = process.env.OPENROUTER_API_KEY!
 
 export async function GET(request: Request) {
-  // Verify the request is authorized (simple API key check)
+  // Verify the request is authorized
   const authHeader = request.headers.get('authorization')
-  const expectedKey = process.env.HEALTH_CHECK_SECRET || 'your-secret-key'
+  const referer = request.headers.get('referer') || ''
+  const expectedKey = process.env.HEALTH_CHECK_SECRET || 'dev-secret'
 
-  if (authHeader !== `Bearer ${expectedKey}`) {
+  // Allow if: valid bearer token OR same-origin request (for web admin UI)
+  const isSameOrigin = referer.includes('localhost') ||
+                       referer.includes(process.env.NEXT_PUBLIC_BASE_URL || '')
+  const hasValidToken = authHeader === `Bearer ${expectedKey}`
+
+  if (!hasValidToken && !isSameOrigin) {
     return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
   }
 
   try {
     // Get all active AI model configs
     const { data: configs, error: configError } = await supabase
-      .from('ai_model_config')
+      .from('ai_config')
       .select('*')
       .eq('is_active', true)
 

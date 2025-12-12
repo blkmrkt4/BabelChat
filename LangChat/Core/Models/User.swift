@@ -9,6 +9,7 @@ struct User: Codable {
     let bio: String?
     let profileImageURL: String?
     let photoURLs: [String]
+    let photoCaptions: [String?]? // Optional captions for photos
     let nativeLanguage: UserLanguage
     let learningLanguages: [UserLanguage]
     let openToLanguages: [Language]
@@ -48,6 +49,7 @@ struct User: Codable {
          bio: String? = nil,
          profileImageURL: String? = nil,
          photoURLs: [String] = [],
+         photoCaptions: [String?]? = nil,
          nativeLanguage: UserLanguage,
          learningLanguages: [UserLanguage],
          openToLanguages: [Language],
@@ -70,6 +72,7 @@ struct User: Codable {
         self.bio = bio
         self.profileImageURL = profileImageURL
         self.photoURLs = photoURLs
+        self.photoCaptions = photoCaptions
         self.nativeLanguage = nativeLanguage
         self.learningLanguages = learningLanguages
         self.openToLanguages = openToLanguages

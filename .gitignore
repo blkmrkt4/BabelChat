@@ -36,6 +36,8 @@ fastlane/test_output
 *.key
 *.pem
 secrets.json
+Secrets.xcconfig
+**/Secrets.xcconfig
 
 # MCP Configuration (contains sensitive keys)
 .mcp.json
@@ -82,3 +84,27 @@ LangChat/Core/Services/SupabaseConfig.swift
 # Xcode schemes (contain environment variables with API keys)
 *.xcscheme
 xcshareddata/xcschemes/
+
+# Internal documentation (keep CLAUDE.md, PRD.md, DBApproach.md)
+SECURITY*.md
+PRODUCTION*.md
+PUSH_NOTIFICATIONS*.md
+SIGN_IN_WITH_APPLE*.md
+MONITORING*.md
+IMPLEMENTATION*.md
+ADVANCED_MATCHING*.md
+SUPABASE*.md
+USAGE_EXAMPLE.md
+TaskList.md
+FIlters.md
+OnboardingQuestions.md
+README_LANDING_PAGE.md
+test-file.md
+USER_JOURNEY_FLOWS.md
+
+# Utility scripts with database access
+update_*.js
+*.af
+
+# Debug configuration with test credentials
+LangChat/Core/Config/DebugConfig.swift

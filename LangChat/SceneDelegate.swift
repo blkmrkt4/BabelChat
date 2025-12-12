@@ -17,6 +17,60 @@ class SceneDelegate: UIResponder, UIWindowSceneDelegate {
 
         window = UIWindow(windowScene: windowScene)
 
+        // Start network monitoring
+        NetworkMonitor.shared.startMonitoring()
+
+        // Show loading screen while checking connectivity
+        showLoadingScreen()
+        window?.makeKeyAndVisible()
+
+        // Check connectivity before proceeding
+        checkConnectivityAndProceed()
+    }
+
+    private func showLoadingScreen() {
+        let loadingVC = UIViewController()
+        loadingVC.view.backgroundColor = UIColor(red: 0.1, green: 0.1, blue: 0.1, alpha: 1.0)
+
+        let activityIndicator = UIActivityIndicatorView(style: .large)
+        activityIndicator.color = .white
+        activityIndicator.translatesAutoresizingMaskIntoConstraints = false
+        loadingVC.view.addSubview(activityIndicator)
+        NSLayoutConstraint.activate([
+            activityIndicator.centerXAnchor.constraint(equalTo: loadingVC.view.centerXAnchor),
+            activityIndicator.centerYAnchor.constraint(equalTo: loadingVC.view.centerYAnchor)
+        ])
+        activityIndicator.startAnimating()
+
+        window?.rootViewController = loadingVC
+    }
+
+    private func checkConnectivityAndProceed() {
+        Task {
+            // Give network monitor a moment to initialize
+            try? await Task.sleep(nanoseconds: 500_000_000) // 0.5 seconds
+
+            let isConnected = await NetworkMonitor.shared.checkSupabaseConnectivity()
+
+            await MainActor.run {
+                if isConnected {
+                    self.proceedWithAppFlow()
+                } else {
+                    self.showOfflineScreen()
+                }
+            }
+        }
+    }
+
+    private func showOfflineScreen() {
+        let offlineVC = OfflineViewController()
+        offlineVC.onConnected = { [weak self] in
+            self?.proceedWithAppFlow()
+        }
+        window?.rootViewController = offlineVC
+    }
+
+    private func proceedWithAppFlow() {
         // Check if user has an active Supabase session
         let hasActiveSession = SupabaseService.shared.isAuthenticated
 
@@ -24,22 +78,7 @@ class SceneDelegate: UIResponder, UIWindowSceneDelegate {
 
         if hasActiveSession {
             // User has active session - check if they have completed profile in Supabase
-            // Show a loading state first
-            let loadingVC = UIViewController()
-            loadingVC.view.backgroundColor = UIColor(red: 0.1, green: 0.1, blue: 0.1, alpha: 1.0)
-
-            let activityIndicator = UIActivityIndicatorView(style: .large)
-            activityIndicator.color = .white
-            activityIndicator.translatesAutoresizingMaskIntoConstraints = false
-            loadingVC.view.addSubview(activityIndicator)
-            NSLayoutConstraint.activate([
-                activityIndicator.centerXAnchor.constraint(equalTo: loadingVC.view.centerXAnchor),
-                activityIndicator.centerYAnchor.constraint(equalTo: loadingVC.view.centerYAnchor)
-            ])
-            activityIndicator.startAnimating()
-
-            window?.rootViewController = loadingVC
-            window?.makeKeyAndVisible()
+            showLoadingScreen()
 
             Task {
                 do {
@@ -61,17 +100,18 @@ class SceneDelegate: UIResponder, UIWindowSceneDelegate {
                         }
                     }
                 } catch {
-                    // Error checking profile - show auth flow
+                    // Error checking profile - likely network issue
                     print("❌ Error checking profile: \(error)")
                     await MainActor.run {
-                        self.showAuthenticationFlow()
+                        // User has a valid session but we can't reach the server
+                        // Show offline screen instead of kicking them to onboarding
+                        self.showOfflineScreen()
                     }
                 }
             }
         } else {
             // No active session - show authentication flow
             showAuthenticationFlow()
-            window?.makeKeyAndVisible()
         }
     }
 
@@ -80,8 +120,9 @@ class SceneDelegate: UIResponder, UIWindowSceneDelegate {
 
         let rootVC: UIViewController
         if shouldShowWelcome {
-            rootVC = WelcomeViewController()
-            print("📱 Showing Welcome screen (first time experience)")
+            // Show the carousel for first-time users
+            rootVC = OnboardingCarouselViewController()
+            print("📱 Showing Onboarding Carousel (first time experience)")
         } else {
             rootVC = AuthenticationViewController()
             print("📱 Showing Authentication screen (returning user)")
@@ -100,7 +141,10 @@ class SceneDelegate: UIResponder, UIWindowSceneDelegate {
 
     func sceneDidBecomeActive(_ scene: UIScene) {
         // Called when the scene has moved from an inactive state to an active state.
-        // Use this method to restart any tasks that were paused (or not yet started) when the scene was inactive.
+        // Update user's last_active timestamp to mark them as online
+        Task {
+            await SupabaseService.shared.updateLastActive()
+        }
     }
 
     func sceneWillResignActive(_ scene: UIScene) {

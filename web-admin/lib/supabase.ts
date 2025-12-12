@@ -112,3 +112,57 @@ export async function createAIConfig(
   if (error) throw error
   return data
 }
+
+// Report types for moderation
+export type ReportWithProfiles = {
+  id: string
+  reporter_id: string
+  reported_id: string
+  reason: string
+  description: string | null
+  photo_url: string | null
+  status: 'pending' | 'reviewed' | 'resolved'
+  created_at: string
+  reviewed_at: string | null
+  reporter: {
+    id: string
+    first_name: string
+    last_name: string
+    profile_photos: string[] | null
+  }
+  reported: {
+    id: string
+    first_name: string
+    last_name: string
+    profile_photos: string[] | null
+  }
+}
+
+export async function getReports(): Promise<ReportWithProfiles[]> {
+  const { data, error } = await supabase
+    .from('reported_users')
+    .select(`
+      *,
+      reporter:profiles!reported_users_reporter_id_fkey(id, first_name, last_name, profile_photos),
+      reported:profiles!reported_users_reported_id_fkey(id, first_name, last_name, profile_photos)
+    `)
+    .order('created_at', { ascending: false })
+
+  if (error) throw error
+  return data || []
+}
+
+export async function updateReportStatus(
+  reportId: string,
+  status: 'pending' | 'reviewed' | 'resolved'
+): Promise<void> {
+  const { error } = await supabase
+    .from('reported_users')
+    .update({
+      status,
+      reviewed_at: status !== 'pending' ? new Date().toISOString() : null
+    })
+    .eq('id', reportId)
+
+  if (error) throw error
+}

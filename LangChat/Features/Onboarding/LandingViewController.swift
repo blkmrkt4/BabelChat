@@ -1,15 +1,24 @@
 import UIKit
 import ImageIO
+import AuthenticationServices
 
 class LandingViewController: UIViewController {
+
+    // MARK: - Properties
+    /// When true, shows only close button (for viewing from profile)
+    var isViewingFromProfile = false
 
     private let backgroundImageView = UIImageView()
     private let overlayView = UIView()
     private let logoLabel = UILabel()
     private let taglineLabel = UILabel()
     private let buttonsStackView = UIStackView()
+    private let signInWithAppleButton = ASAuthorizationAppleIDButton(type: .signIn, style: .white)
     private let createAccountButton = UIButton(type: .system)
     private let signInButton = UIButton(type: .system)
+    private let closeButton = UIButton(type: .system)
+    private let dividerView = UIView()
+    private let dividerLabel = UILabel()
     private var onboardingCoordinator: OnboardingCoordinator?
 
     override func viewDidLoad() {
@@ -76,25 +85,67 @@ class LandingViewController: UIViewController {
         buttonsStackView.distribution = .fillEqually
         view.addSubview(buttonsStackView)
 
-        // Create Account button
-        createAccountButton.setTitle("Create Account", for: .normal)
-        createAccountButton.titleLabel?.font = .systemFont(ofSize: 18, weight: .semibold)
-        createAccountButton.backgroundColor = .white
-        createAccountButton.setTitleColor(.systemIndigo, for: .normal)
-        createAccountButton.layer.cornerRadius = 25
-        createAccountButton.addTarget(self, action: #selector(createAccountTapped), for: .touchUpInside)
-        buttonsStackView.addArrangedSubview(createAccountButton)
+        if isViewingFromProfile {
+            // View-only mode: just show close button
+            closeButton.setTitle("Close", for: .normal)
+            closeButton.titleLabel?.font = .systemFont(ofSize: 18, weight: .semibold)
+            closeButton.backgroundColor = .white
+            closeButton.setTitleColor(.black, for: .normal)
+            closeButton.layer.cornerRadius = 25
+            closeButton.addTarget(self, action: #selector(closeTapped), for: .touchUpInside)
+            buttonsStackView.addArrangedSubview(closeButton)
 
-        // Sign In button
-        signInButton.setTitle("Sign In", for: .normal)
-        signInButton.titleLabel?.font = .systemFont(ofSize: 18, weight: .semibold)
-        signInButton.backgroundColor = .clear
-        signInButton.setTitleColor(.white, for: .normal)
-        signInButton.layer.cornerRadius = 25
-        signInButton.layer.borderWidth = 2
-        signInButton.layer.borderColor = UIColor.white.cgColor
-        signInButton.addTarget(self, action: #selector(signInTapped), for: .touchUpInside)
-        buttonsStackView.addArrangedSubview(signInButton)
+            // Also add X button in top-right corner
+            let xButton = UIButton(type: .system)
+            xButton.setImage(UIImage(systemName: "xmark.circle.fill"), for: .normal)
+            xButton.tintColor = UIColor.white.withAlphaComponent(0.8)
+            xButton.addTarget(self, action: #selector(closeTapped), for: .touchUpInside)
+            xButton.translatesAutoresizingMaskIntoConstraints = false
+            view.addSubview(xButton)
+
+            NSLayoutConstraint.activate([
+                xButton.topAnchor.constraint(equalTo: view.safeAreaLayoutGuide.topAnchor, constant: 16),
+                xButton.trailingAnchor.constraint(equalTo: view.trailingAnchor, constant: -16),
+                xButton.widthAnchor.constraint(equalToConstant: 32),
+                xButton.heightAnchor.constraint(equalToConstant: 32)
+            ])
+        } else {
+            // Normal sign-in mode
+            // Sign in with Apple button (Apple requires this to be prominent)
+            signInWithAppleButton.cornerRadius = 25
+            signInWithAppleButton.addTarget(self, action: #selector(signInWithAppleTapped), for: .touchUpInside)
+            buttonsStackView.addArrangedSubview(signInWithAppleButton)
+
+            // Divider with "or" label
+            dividerView.backgroundColor = .clear
+            buttonsStackView.addArrangedSubview(dividerView)
+
+            dividerLabel.text = "or"
+            dividerLabel.font = .systemFont(ofSize: 14, weight: .medium)
+            dividerLabel.textColor = .white.withAlphaComponent(0.8)
+            dividerLabel.textAlignment = .center
+            dividerView.addSubview(dividerLabel)
+
+            // Create Account button
+            createAccountButton.setTitle("Create Account", for: .normal)
+            createAccountButton.titleLabel?.font = .systemFont(ofSize: 18, weight: .semibold)
+            createAccountButton.backgroundColor = .white
+            createAccountButton.setTitleColor(.systemIndigo, for: .normal)
+            createAccountButton.layer.cornerRadius = 25
+            createAccountButton.addTarget(self, action: #selector(createAccountTapped), for: .touchUpInside)
+            buttonsStackView.addArrangedSubview(createAccountButton)
+
+            // Sign In button
+            signInButton.setTitle("Sign In", for: .normal)
+            signInButton.titleLabel?.font = .systemFont(ofSize: 18, weight: .semibold)
+            signInButton.backgroundColor = .clear
+            signInButton.setTitleColor(.white, for: .normal)
+            signInButton.layer.cornerRadius = 25
+            signInButton.layer.borderWidth = 2
+            signInButton.layer.borderColor = UIColor.white.cgColor
+            signInButton.addTarget(self, action: #selector(signInTapped), for: .touchUpInside)
+            buttonsStackView.addArrangedSubview(signInButton)
+        }
     }
 
     private func setupConstraints() {
@@ -103,6 +154,10 @@ class LandingViewController: UIViewController {
         logoLabel.translatesAutoresizingMaskIntoConstraints = false
         taglineLabel.translatesAutoresizingMaskIntoConstraints = false
         buttonsStackView.translatesAutoresizingMaskIntoConstraints = false
+        closeButton.translatesAutoresizingMaskIntoConstraints = false
+        signInWithAppleButton.translatesAutoresizingMaskIntoConstraints = false
+        dividerView.translatesAutoresizingMaskIntoConstraints = false
+        dividerLabel.translatesAutoresizingMaskIntoConstraints = false
         createAccountButton.translatesAutoresizingMaskIntoConstraints = false
         signInButton.translatesAutoresizingMaskIntoConstraints = false
 
@@ -131,12 +186,27 @@ class LandingViewController: UIViewController {
             // Buttons at bottom
             buttonsStackView.leadingAnchor.constraint(equalTo: view.leadingAnchor, constant: 40),
             buttonsStackView.trailingAnchor.constraint(equalTo: view.trailingAnchor, constant: -40),
-            buttonsStackView.bottomAnchor.constraint(equalTo: view.safeAreaLayoutGuide.bottomAnchor, constant: -40),
-
-            // Button heights
-            createAccountButton.heightAnchor.constraint(equalToConstant: 50),
-            signInButton.heightAnchor.constraint(equalToConstant: 50)
+            buttonsStackView.bottomAnchor.constraint(equalTo: view.safeAreaLayoutGuide.bottomAnchor, constant: -40)
         ])
+
+        if isViewingFromProfile {
+            // Close button height
+            NSLayoutConstraint.activate([
+                closeButton.heightAnchor.constraint(equalToConstant: 50)
+            ])
+        } else {
+            // Sign-in button heights
+            NSLayoutConstraint.activate([
+                signInWithAppleButton.heightAnchor.constraint(equalToConstant: 50),
+                dividerView.heightAnchor.constraint(equalToConstant: 30),
+                createAccountButton.heightAnchor.constraint(equalToConstant: 50),
+                signInButton.heightAnchor.constraint(equalToConstant: 50),
+
+                // Divider label (centered in divider view)
+                dividerLabel.centerXAnchor.constraint(equalTo: dividerView.centerXAnchor),
+                dividerLabel.centerYAnchor.constraint(equalTo: dividerView.centerYAnchor)
+            ])
+        }
     }
 
     override func viewDidLayoutSubviews() {
@@ -231,6 +301,65 @@ class LandingViewController: UIViewController {
         }
     }
 
+    @objc private func closeTapped() {
+        dismiss(animated: true)
+    }
+
+    @objc private func signInWithAppleTapped() {
+        print("Sign in with Apple tapped")
+
+        // Disable button to prevent double-tap
+        signInWithAppleButton.isEnabled = false
+
+        Task {
+            do {
+                // Authenticate with Apple
+                try await SupabaseService.shared.signInWithApple(from: self)
+                print("✅ Signed in with Apple successfully!")
+
+                // Get the authenticated user's ID from Supabase
+                guard let userId = SupabaseService.shared.currentUserId else {
+                    throw NSError(domain: "LandingViewController", code: -1,
+                                userInfo: [NSLocalizedDescriptionKey: "Failed to get user ID after Apple sign in"])
+                }
+
+                // Save user ID and mark as signed in
+                UserDefaults.standard.set(userId.uuidString, forKey: "userId")
+                UserDefaults.standard.set(true, forKey: "isUserSignedIn")
+
+                print("✅ User ID saved: \(userId.uuidString)")
+
+                // Check if user profile exists
+                do {
+                    let profile = try await SupabaseService.shared.getCurrentProfile()
+                    print("✅ User profile found, navigating to main app")
+                    await navigateToMainApp()
+                } catch {
+                    // Profile doesn't exist - user needs to complete onboarding
+                    print("⚠️ No profile found, starting onboarding")
+                    await MainActor.run {
+                        onboardingCoordinator = OnboardingCoordinator(navigationController: navigationController)
+                        onboardingCoordinator?.start()
+                    }
+                }
+
+            } catch {
+                await MainActor.run {
+                    signInWithAppleButton.isEnabled = true
+
+                    // Show error alert
+                    let alert = UIAlertController(
+                        title: "Sign In Failed",
+                        message: error.localizedDescription,
+                        preferredStyle: .alert
+                    )
+                    alert.addAction(UIAlertAction(title: "OK", style: .default))
+                    present(alert, animated: true)
+                }
+            }
+        }
+    }
+
     @objc private func createAccountTapped() {
         print("Create Account tapped")
         // Start onboarding flow
@@ -250,14 +379,11 @@ class LandingViewController: UIViewController {
             do {
                 #if DEBUG
                 // DEVELOPMENT ONLY: Auto-login with test credentials
-                // TODO: Remove this before production release
-                let testEmail = "test@langchat.com"
-                let testPassword = "testpassword123"
-
-                print("🔐 [DEBUG] Attempting to sign in with: \(testEmail)")
+                // Credentials are in DebugConfig.swift
+                print("🔐 [DEBUG] Attempting to sign in with: \(DebugConfig.testEmail)")
 
                 // Just try to sign in - don't attempt sign up
-                try await SupabaseService.shared.signIn(email: testEmail, password: testPassword)
+                try await SupabaseService.shared.signIn(email: DebugConfig.testEmail, password: DebugConfig.testPassword)
                 print("✅ [DEBUG] Signed in successfully!")
                 #else
                 // PRODUCTION: User must sign in manually
@@ -327,6 +453,48 @@ class LandingViewController: UIViewController {
                     present(alert, animated: true)
                 }
             }
+        }
+    }
+
+    // MARK: - Helper Methods
+
+    /// Navigate to the main app after successful sign in
+    private func navigateToMainApp() async {
+        await MainActor.run {
+            guard let windowScene = UIApplication.shared.connectedScenes.first as? UIWindowScene,
+                  let window = windowScene.windows.first else {
+                print("❌ Could not find window for navigation")
+                return
+            }
+
+            // Create Language Lab in navigation controller
+            let languageLabVC = LanguageLabViewController()
+            let navController = UINavigationController(rootViewController: languageLabVC)
+
+            // Create tab bar with Language Lab as first tab
+            let tabBarController = MainTabBarController()
+
+            // Insert Language Lab as first tab
+            var viewControllers = tabBarController.viewControllers ?? []
+            viewControllers.insert(navController, at: 0)
+            tabBarController.viewControllers = viewControllers
+            tabBarController.selectedIndex = 0
+
+            // Update tab bar item for Language Lab
+            navController.tabBarItem = UITabBarItem(
+                title: "Lab",
+                image: UIImage(systemName: "flask"),
+                selectedImage: UIImage(systemName: "flask.fill")
+            )
+
+            // Set as root with animation
+            window.rootViewController = tabBarController
+
+            UIView.transition(with: window,
+                            duration: 0.5,
+                            options: .transitionCrossDissolve,
+                            animations: nil,
+                            completion: nil)
         }
     }
 }
