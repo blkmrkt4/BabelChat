@@ -49,6 +49,80 @@ class UserDetailViewController: UIViewController, PhotoGridViewDelegate {
     // Location
     private let locationLabel = UILabel()
 
+    // Blur overlay for blur mode (profile image)
+    private let profileBlurEffectView: UIVisualEffectView = {
+        let blurEffect = UIBlurEffect(style: .regular)
+        let view = UIVisualEffectView(effect: blurEffect)
+        view.isHidden = true
+        view.layer.cornerRadius = 60
+        view.clipsToBounds = true
+        return view
+    }()
+
+    // Blur overlay for photo grid
+    private let photoGridBlurEffectView: UIVisualEffectView = {
+        let blurEffect = UIBlurEffect(style: .regular)
+        let view = UIVisualEffectView(effect: blurEffect)
+        view.isHidden = true
+        view.layer.cornerRadius = 12
+        view.clipsToBounds = true
+        return view
+    }()
+
+    private let blurIconView: UIImageView = {
+        let imageView = UIImageView(image: UIImage(systemName: "eye.slash.fill"))
+        imageView.tintColor = .white
+        imageView.contentMode = .scaleAspectFit
+        imageView.isHidden = true
+        return imageView
+    }()
+
+    private let blurLabel: UILabel = {
+        let label = UILabel()
+        label.text = "Photos blurred"
+        label.font = .systemFont(ofSize: 12, weight: .medium)
+        label.textColor = .white
+        label.textAlignment = .center
+        label.isHidden = true
+        return label
+    }()
+
+    // Blur mode - set by parent view controller (legacy, kept for compatibility)
+    var shouldBlurPhotos: Bool = false {
+        didSet {
+            updateBlurState()
+        }
+    }
+
+    // Per-photo blur settings from the user being viewed
+    var viewingUserBlurSettings: [Bool] = [] {
+        didSet {
+            updateBlurState()
+        }
+    }
+
+    // Platonic badge for strictly platonic users
+    private let platonicBadge: UIView = {
+        let view = UIView()
+        view.backgroundColor = UIColor.systemTeal.withAlphaComponent(0.9)
+        view.layer.cornerRadius = 12
+        view.isHidden = true
+        return view
+    }()
+    private let platonicIconView: UIImageView = {
+        let imageView = UIImageView(image: UIImage(systemName: "person.2.fill"))
+        imageView.tintColor = .white
+        imageView.contentMode = .scaleAspectFit
+        return imageView
+    }()
+    private let platonicBadgeLabel: UILabel = {
+        let label = UILabel()
+        label.text = "Platonic"
+        label.font = .systemFont(ofSize: 10, weight: .semibold)
+        label.textColor = .white
+        return label
+    }()
+
     override func viewDidLoad() {
         super.viewDidLoad()
         setupNavigationBar()
@@ -236,6 +310,17 @@ class UserDetailViewController: UIViewController, PhotoGridViewDelegate {
         pinButton.addTarget(self, action: #selector(pinButtonTapped), for: .touchUpInside)
         likeButton.addTarget(self, action: #selector(likeButtonTapped), for: .touchUpInside)
         forwardButton.addTarget(self, action: #selector(forwardButtonTapped), for: .touchUpInside)
+
+        // Add blur overlays (must be added after photo elements)
+        contentView.addSubview(profileBlurEffectView)
+        contentView.addSubview(photoGridBlurEffectView)
+        contentView.addSubview(blurIconView)
+        contentView.addSubview(blurLabel)
+
+        // Add platonic badge
+        contentView.addSubview(platonicBadge)
+        platonicBadge.addSubview(platonicIconView)
+        platonicBadge.addSubview(platonicBadgeLabel)
     }
 
     private func setupActionButton(_ button: UIButton, systemName: String, borderColor: UIColor, iconColor: UIColor) {
@@ -363,6 +448,10 @@ class UserDetailViewController: UIViewController, PhotoGridViewDelegate {
         aboutLabel.translatesAutoresizingMaskIntoConstraints = false
         bioLabel.translatesAutoresizingMaskIntoConstraints = false
         locationLabel.translatesAutoresizingMaskIntoConstraints = false
+        profileBlurEffectView.translatesAutoresizingMaskIntoConstraints = false
+        photoGridBlurEffectView.translatesAutoresizingMaskIntoConstraints = false
+        blurIconView.translatesAutoresizingMaskIntoConstraints = false
+        blurLabel.translatesAutoresizingMaskIntoConstraints = false
 
         NSLayoutConstraint.activate([
             scrollView.topAnchor.constraint(equalTo: view.safeAreaLayoutGuide.topAnchor),
@@ -463,8 +552,45 @@ class UserDetailViewController: UIViewController, PhotoGridViewDelegate {
             bioLabel.topAnchor.constraint(equalTo: aboutLabel.bottomAnchor, constant: 6),
             bioLabel.leadingAnchor.constraint(equalTo: contentView.leadingAnchor, constant: 20),
             bioLabel.trailingAnchor.constraint(equalTo: contentView.trailingAnchor, constant: -20),
-            bioLabel.bottomAnchor.constraint(equalTo: contentView.bottomAnchor, constant: -40)
+            bioLabel.bottomAnchor.constraint(equalTo: contentView.bottomAnchor, constant: -40),
+
+            // Blur overlay constraints
+            profileBlurEffectView.topAnchor.constraint(equalTo: profileImageView.topAnchor),
+            profileBlurEffectView.leadingAnchor.constraint(equalTo: profileImageView.leadingAnchor),
+            profileBlurEffectView.trailingAnchor.constraint(equalTo: profileImageView.trailingAnchor),
+            profileBlurEffectView.bottomAnchor.constraint(equalTo: profileImageView.bottomAnchor),
+
+            photoGridBlurEffectView.topAnchor.constraint(equalTo: photoGridView.topAnchor),
+            photoGridBlurEffectView.leadingAnchor.constraint(equalTo: photoGridView.leadingAnchor),
+            photoGridBlurEffectView.trailingAnchor.constraint(equalTo: photoGridView.trailingAnchor),
+            photoGridBlurEffectView.bottomAnchor.constraint(equalTo: photoGridView.bottomAnchor),
+
+            blurIconView.centerXAnchor.constraint(equalTo: photoGridView.centerXAnchor),
+            blurIconView.centerYAnchor.constraint(equalTo: photoGridView.centerYAnchor, constant: -10),
+            blurIconView.widthAnchor.constraint(equalToConstant: 30),
+            blurIconView.heightAnchor.constraint(equalToConstant: 30),
+
+            blurLabel.topAnchor.constraint(equalTo: blurIconView.bottomAnchor, constant: 4),
+            blurLabel.centerXAnchor.constraint(equalTo: photoGridView.centerXAnchor),
+
+            // Platonic badge constraints (next to name)
+            platonicBadge.leadingAnchor.constraint(equalTo: nameLabel.trailingAnchor, constant: 8),
+            platonicBadge.centerYAnchor.constraint(equalTo: nameLabel.centerYAnchor),
+            platonicBadge.heightAnchor.constraint(equalToConstant: 24),
+
+            platonicIconView.leadingAnchor.constraint(equalTo: platonicBadge.leadingAnchor, constant: 6),
+            platonicIconView.centerYAnchor.constraint(equalTo: platonicBadge.centerYAnchor),
+            platonicIconView.widthAnchor.constraint(equalToConstant: 14),
+            platonicIconView.heightAnchor.constraint(equalToConstant: 14),
+
+            platonicBadgeLabel.leadingAnchor.constraint(equalTo: platonicIconView.trailingAnchor, constant: 4),
+            platonicBadgeLabel.trailingAnchor.constraint(equalTo: platonicBadge.trailingAnchor, constant: -8),
+            platonicBadgeLabel.centerYAnchor.constraint(equalTo: platonicBadge.centerYAnchor)
         ])
+
+        platonicBadge.translatesAutoresizingMaskIntoConstraints = false
+        platonicIconView.translatesAutoresizingMaskIntoConstraints = false
+        platonicBadgeLabel.translatesAutoresizingMaskIntoConstraints = false
     }
 
     private func updateUI() {
@@ -561,6 +687,66 @@ class UserDetailViewController: UIViewController, PhotoGridViewDelegate {
 
         // Update pin button state to show if already pinned
         updatePinButtonState()
+
+        // Update blur state
+        updateBlurState()
+
+        // Update platonic badge
+        updatePlatonicBadge()
+    }
+
+    private func updateBlurState() {
+        // Only blur in discovery mode (not matched yet)
+        guard !isMatched, let profileUser = user else {
+            // Don't blur if already matched or no user
+            profileBlurEffectView.isHidden = true
+            photoGridBlurEffectView.isHidden = true  // Legacy full-grid blur (hidden)
+            blurIconView.isHidden = true
+            blurLabel.isHidden = true
+            photoGridView.applyBlurForViewing = false
+            photoGridView.setBlurSettings([])
+            return
+        }
+
+        // Never blur AI muses
+        if profileUser.isAI {
+            profileBlurEffectView.isHidden = true
+            photoGridBlurEffectView.isHidden = true
+            blurIconView.isHidden = true
+            blurLabel.isHidden = true
+            photoGridView.applyBlurForViewing = false
+            photoGridView.setBlurSettings([])
+            return
+        }
+
+        // Get per-photo blur settings from the user being viewed
+        // Use viewingUserBlurSettings if set, otherwise use user's photoBlurSettings
+        let blurSettings = viewingUserBlurSettings.isEmpty ? profileUser.photoBlurSettings : viewingUserBlurSettings
+
+        // Apply per-photo blur to the grid (first 6 photos)
+        let gridBlurSettings = Array(blurSettings.prefix(6))
+        photoGridView.setBlurSettings(gridBlurSettings)
+        photoGridView.applyBlurForViewing = true
+
+        // Handle profile photo blur (index 6)
+        let profilePhotoBlurred = blurSettings.count > 6 ? blurSettings[6] : false
+        profileBlurEffectView.isHidden = !profilePhotoBlurred
+
+        // Hide legacy full-grid blur overlay (we're using per-photo now)
+        photoGridBlurEffectView.isHidden = true
+
+        // Show blur indicator label only if any photo is blurred
+        let hasAnyBlur = blurSettings.contains(true)
+        blurIconView.isHidden = !hasAnyBlur
+        blurLabel.isHidden = !hasAnyBlur
+    }
+
+    private func updatePlatonicBadge() {
+        guard let user = user else {
+            platonicBadge.isHidden = true
+            return
+        }
+        platonicBadge.isHidden = !user.strictlyPlatonic
     }
 
     private func updatePinButtonState() {

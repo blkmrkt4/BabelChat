@@ -6,20 +6,13 @@ class MatchingPreferencesViewController: UIViewController {
     private let scrollView = UIScrollView()
     private let contentView = UIView()
     private let stackView = UIStackView()
-    private let toggleSwitch = UISwitch()
-    private let proficiencyPicker = UISegmentedControl(items: [
-        "All Levels",
-        "Beginner-Int",
-        "Int-Advanced",
-        "Advanced Only",
-        "Intermediate Only",
-        "Beginner Only"
-    ])
+    private let proficiencyLevelSelector = ProficiencyLevelSelector()
+    private let selectionDisplayLabel = UILabel()
+    private let strictlyPlatonicSwitch = UISwitch()
 
     // MARK: - Properties
-    private var allowNonNativeMatches: Bool = false
-    private var minProficiency: LanguageProficiency = .beginner
-    private var maxProficiency: LanguageProficiency = .advanced
+    private var selectedLevels: ProficiencySelection = .all
+    private var isStrictlyPlatonic: Bool = false
 
     // MARK: - Lifecycle
     override func viewDidLoad() {
@@ -36,46 +29,11 @@ class MatchingPreferencesViewController: UIViewController {
     }
 
     private func loadSavedPreferences() {
-        // Load saved preferences from UserDefaults or use defaults
-        allowNonNativeMatches = UserDefaults.standard.object(forKey: "allowNonNativeMatches") as? Bool ?? false
+        // Load proficiency selection
+        selectedLevels = ProficiencySelection.fromDefaults()
 
-        if let minLevel = UserDefaults.standard.string(forKey: "minProficiencyLevel"),
-           let parsedMin = parseProficiency(minLevel) {
-            minProficiency = parsedMin
-        }
-
-        if let maxLevel = UserDefaults.standard.string(forKey: "maxProficiencyLevel"),
-           let parsedMax = parseProficiency(maxLevel) {
-            maxProficiency = parsedMax
-        }
-
-        // Set picker based on saved values
-        updatePickerSelection()
-    }
-
-    private func parseProficiency(_ level: String) -> LanguageProficiency? {
-        switch level.lowercased() {
-        case "beginner": return .beginner
-        case "intermediate": return .intermediate
-        case "advanced": return .advanced
-        default: return nil
-        }
-    }
-
-    private func updatePickerSelection() {
-        if minProficiency == .beginner && maxProficiency == .advanced {
-            proficiencyPicker.selectedSegmentIndex = 0 // All Levels
-        } else if minProficiency == .beginner && maxProficiency == .intermediate {
-            proficiencyPicker.selectedSegmentIndex = 1 // Beginner-Int
-        } else if minProficiency == .intermediate && maxProficiency == .advanced {
-            proficiencyPicker.selectedSegmentIndex = 2 // Int-Advanced
-        } else if minProficiency == .advanced && maxProficiency == .advanced {
-            proficiencyPicker.selectedSegmentIndex = 3 // Advanced Only
-        } else if minProficiency == .intermediate && maxProficiency == .intermediate {
-            proficiencyPicker.selectedSegmentIndex = 4 // Intermediate Only
-        } else if minProficiency == .beginner && maxProficiency == .beginner {
-            proficiencyPicker.selectedSegmentIndex = 5 // Beginner Only
-        }
+        // Load strictly platonic setting
+        isStrictlyPlatonic = UserDefaults.standard.bool(forKey: "strictlyPlatonic")
     }
 
     // MARK: - Setup
@@ -90,24 +48,17 @@ class MatchingPreferencesViewController: UIViewController {
         stackView.spacing = 24
         stackView.alignment = .fill
 
-        // Non-native matches section
-        let nonNativeSection = createSectionView(
-            title: "Match with Non-Native Speakers",
-            subtitle: "Allow matches with users who are also learning your target language",
-            control: toggleSwitch
-        )
-        stackView.addArrangedSubview(nonNativeSection)
+        // Strictly Platonic section
+        let platonicSection = createPlatonicSection()
+        stackView.addArrangedSubview(platonicSection)
 
-        toggleSwitch.isOn = allowNonNativeMatches
-        toggleSwitch.addTarget(self, action: #selector(toggleChanged), for: .valueChanged)
-
-        // Proficiency level section
+        // Proficiency level section with level selector
         let proficiencySection = createProficiencySection()
         stackView.addArrangedSubview(proficiencySection)
-        proficiencySection.alpha = allowNonNativeMatches ? 1.0 : 0.4
 
-        proficiencyPicker.isEnabled = allowNonNativeMatches
-        proficiencyPicker.addTarget(self, action: #selector(proficiencyChanged), for: .valueChanged)
+        proficiencyLevelSelector.delegate = self
+        proficiencyLevelSelector.setSelection(selectedLevels, animated: false)
+        updateSelectionDisplayLabel()
 
         // Layout
         scrollView.translatesAutoresizingMaskIntoConstraints = false
@@ -133,39 +84,43 @@ class MatchingPreferencesViewController: UIViewController {
         ])
     }
 
-    private func createSectionView(title: String, subtitle: String, control: UIView) -> UIView {
+    private func createPlatonicSection() -> UIView {
         let container = UIView()
         container.backgroundColor = .secondarySystemBackground
         container.layer.cornerRadius = 12
 
         let titleLabel = UILabel()
-        titleLabel.text = title
+        titleLabel.text = "Strictly Platonic"
         titleLabel.font = .systemFont(ofSize: 17, weight: .semibold)
         titleLabel.textColor = .label
         container.addSubview(titleLabel)
 
         let subtitleLabel = UILabel()
-        subtitleLabel.text = subtitle
+        subtitleLabel.text = "Only match with others seeking platonic language exchange. You won't see or be shown to users looking for dating."
         subtitleLabel.font = .systemFont(ofSize: 14, weight: .regular)
         subtitleLabel.textColor = .secondaryLabel
         subtitleLabel.numberOfLines = 0
         container.addSubview(subtitleLabel)
 
-        container.addSubview(control)
+        strictlyPlatonicSwitch.isOn = isStrictlyPlatonic
+        strictlyPlatonicSwitch.onTintColor = UIColor(red: 0.83, green: 0.69, blue: 0.22, alpha: 1.0) // Gold
+        strictlyPlatonicSwitch.addTarget(self, action: #selector(platonicSwitchChanged), for: .valueChanged)
+        container.addSubview(strictlyPlatonicSwitch)
 
         titleLabel.translatesAutoresizingMaskIntoConstraints = false
         subtitleLabel.translatesAutoresizingMaskIntoConstraints = false
-        control.translatesAutoresizingMaskIntoConstraints = false
+        strictlyPlatonicSwitch.translatesAutoresizingMaskIntoConstraints = false
 
         NSLayoutConstraint.activate([
             titleLabel.topAnchor.constraint(equalTo: container.topAnchor, constant: 16),
             titleLabel.leadingAnchor.constraint(equalTo: container.leadingAnchor, constant: 16),
-            titleLabel.trailingAnchor.constraint(equalTo: control.leadingAnchor, constant: -12),
 
-            control.centerYAnchor.constraint(equalTo: titleLabel.centerYAnchor),
-            control.trailingAnchor.constraint(equalTo: container.trailingAnchor, constant: -16),
+            strictlyPlatonicSwitch.centerYAnchor.constraint(equalTo: titleLabel.centerYAnchor),
+            strictlyPlatonicSwitch.trailingAnchor.constraint(equalTo: container.trailingAnchor, constant: -16),
 
-            subtitleLabel.topAnchor.constraint(equalTo: titleLabel.bottomAnchor, constant: 4),
+            titleLabel.trailingAnchor.constraint(lessThanOrEqualTo: strictlyPlatonicSwitch.leadingAnchor, constant: -12),
+
+            subtitleLabel.topAnchor.constraint(equalTo: titleLabel.bottomAnchor, constant: 8),
             subtitleLabel.leadingAnchor.constraint(equalTo: titleLabel.leadingAnchor),
             subtitleLabel.trailingAnchor.constraint(equalTo: container.trailingAnchor, constant: -16),
             subtitleLabel.bottomAnchor.constraint(equalTo: container.bottomAnchor, constant: -16)
@@ -174,29 +129,87 @@ class MatchingPreferencesViewController: UIViewController {
         return container
     }
 
+    @objc private func platonicSwitchChanged() {
+        isStrictlyPlatonic = strictlyPlatonicSwitch.isOn
+        savePlatonicPreference()
+    }
+
+    private func savePlatonicPreference() {
+        // Save to UserDefaults immediately for local state
+        UserDefaults.standard.set(isStrictlyPlatonic, forKey: "strictlyPlatonic")
+
+        // Save to Supabase
+        Task {
+            do {
+                guard SupabaseService.shared.currentUserId != nil else { return }
+
+                try await SupabaseService.shared.updateProfile(ProfileUpdate(strictlyPlatonic: isStrictlyPlatonic))
+                print("✅ Saved strictly platonic preference: \(isStrictlyPlatonic)")
+
+                // Haptic feedback
+                await MainActor.run {
+                    let feedback = UIImpactFeedbackGenerator(style: .light)
+                    feedback.impactOccurred()
+                }
+            } catch {
+                print("❌ Failed to save strictly platonic preference: \(error)")
+                await MainActor.run {
+                    // Revert on error
+                    self.isStrictlyPlatonic = !self.isStrictlyPlatonic
+                    self.strictlyPlatonicSwitch.isOn = self.isStrictlyPlatonic
+                    UserDefaults.standard.set(self.isStrictlyPlatonic, forKey: "strictlyPlatonic")
+
+                    let alert = UIAlertController(
+                        title: "Update Failed",
+                        message: "Could not save your preference. Please try again.",
+                        preferredStyle: .alert
+                    )
+                    alert.addAction(UIAlertAction(title: "OK", style: .default))
+                    self.present(alert, animated: true)
+                }
+            }
+        }
+    }
+
     private func createProficiencySection() -> UIView {
         let container = UIView()
         container.backgroundColor = .secondarySystemBackground
         container.layer.cornerRadius = 12
 
         let titleLabel = UILabel()
-        titleLabel.text = "Proficiency Level Range"
+        titleLabel.text = "Proficiency Levels"
         titleLabel.font = .systemFont(ofSize: 17, weight: .semibold)
         titleLabel.textColor = .label
         container.addSubview(titleLabel)
 
         let subtitleLabel = UILabel()
-        subtitleLabel.text = "Select the proficiency levels you're comfortable matching with"
+        subtitleLabel.text = "Tap to toggle levels on/off. You can select any combination of levels to match with."
         subtitleLabel.font = .systemFont(ofSize: 14, weight: .regular)
         subtitleLabel.textColor = .secondaryLabel
         subtitleLabel.numberOfLines = 0
         container.addSubview(subtitleLabel)
 
-        container.addSubview(proficiencyPicker)
+        // Selection display label
+        selectionDisplayLabel.font = .systemFont(ofSize: 15, weight: .medium)
+        selectionDisplayLabel.textColor = UIColor(red: 0.83, green: 0.69, blue: 0.22, alpha: 1.0) // Gold
+        selectionDisplayLabel.textAlignment = .center
+        container.addSubview(selectionDisplayLabel)
+
+        container.addSubview(proficiencyLevelSelector)
+
+        // Hint label
+        let hintLabel = UILabel()
+        hintLabel.text = "Long press for full level names"
+        hintLabel.font = .systemFont(ofSize: 12, weight: .regular)
+        hintLabel.textColor = .tertiaryLabel
+        hintLabel.textAlignment = .center
+        container.addSubview(hintLabel)
 
         titleLabel.translatesAutoresizingMaskIntoConstraints = false
         subtitleLabel.translatesAutoresizingMaskIntoConstraints = false
-        proficiencyPicker.translatesAutoresizingMaskIntoConstraints = false
+        selectionDisplayLabel.translatesAutoresizingMaskIntoConstraints = false
+        proficiencyLevelSelector.translatesAutoresizingMaskIntoConstraints = false
+        hintLabel.translatesAutoresizingMaskIntoConstraints = false
 
         NSLayoutConstraint.activate([
             titleLabel.topAnchor.constraint(equalTo: container.topAnchor, constant: 16),
@@ -207,68 +220,68 @@ class MatchingPreferencesViewController: UIViewController {
             subtitleLabel.leadingAnchor.constraint(equalTo: titleLabel.leadingAnchor),
             subtitleLabel.trailingAnchor.constraint(equalTo: titleLabel.trailingAnchor),
 
-            proficiencyPicker.topAnchor.constraint(equalTo: subtitleLabel.bottomAnchor, constant: 12),
-            proficiencyPicker.leadingAnchor.constraint(equalTo: container.leadingAnchor, constant: 16),
-            proficiencyPicker.trailingAnchor.constraint(equalTo: container.trailingAnchor, constant: -16),
-            proficiencyPicker.bottomAnchor.constraint(equalTo: container.bottomAnchor, constant: -16)
+            selectionDisplayLabel.topAnchor.constraint(equalTo: subtitleLabel.bottomAnchor, constant: 16),
+            selectionDisplayLabel.leadingAnchor.constraint(equalTo: container.leadingAnchor, constant: 16),
+            selectionDisplayLabel.trailingAnchor.constraint(equalTo: container.trailingAnchor, constant: -16),
+
+            proficiencyLevelSelector.topAnchor.constraint(equalTo: selectionDisplayLabel.bottomAnchor, constant: 12),
+            proficiencyLevelSelector.leadingAnchor.constraint(equalTo: container.leadingAnchor, constant: 16),
+            proficiencyLevelSelector.trailingAnchor.constraint(equalTo: container.trailingAnchor, constant: -16),
+            proficiencyLevelSelector.heightAnchor.constraint(equalToConstant: 48),
+
+            hintLabel.topAnchor.constraint(equalTo: proficiencyLevelSelector.bottomAnchor, constant: 8),
+            hintLabel.leadingAnchor.constraint(equalTo: container.leadingAnchor, constant: 16),
+            hintLabel.trailingAnchor.constraint(equalTo: container.trailingAnchor, constant: -16),
+            hintLabel.bottomAnchor.constraint(equalTo: container.bottomAnchor, constant: -16)
         ])
 
         return container
     }
 
-    @objc private func toggleChanged() {
-        allowNonNativeMatches = toggleSwitch.isOn
-
-        // Save to UserDefaults
-        UserDefaults.standard.set(allowNonNativeMatches, forKey: "allowNonNativeMatches")
-
-        // Animate proficiency picker visibility
-        UIView.animate(withDuration: 0.3) {
-            self.stackView.arrangedSubviews.last?.alpha = self.allowNonNativeMatches ? 1.0 : 0.4
-        }
-
-        proficiencyPicker.isEnabled = allowNonNativeMatches
-
-        // Show confirmation
-        showSavedConfirmation()
+    private func updateSelectionDisplayLabel() {
+        selectionDisplayLabel.text = selectedLevels.displayString
     }
 
-    @objc private func proficiencyChanged() {
-        // Map selection to proficiency levels
-        switch proficiencyPicker.selectedSegmentIndex {
-        case 0: // All Levels
-            minProficiency = .beginner
-            maxProficiency = .advanced
-        case 1: // Beginner-Int
-            minProficiency = .beginner
-            maxProficiency = .intermediate
-        case 2: // Int-Advanced
-            minProficiency = .intermediate
-            maxProficiency = .advanced
-        case 3: // Advanced Only
-            minProficiency = .advanced
-            maxProficiency = .advanced
-        case 4: // Intermediate Only
-            minProficiency = .intermediate
-            maxProficiency = .intermediate
-        case 5: // Beginner Only
-            minProficiency = .beginner
-            maxProficiency = .beginner
-        default:
-            break
+    private func savePreferences() {
+        // Save to UserDefaults
+        selectedLevels.saveToDefaults()
+
+        // Also save to Supabase
+        Task {
+            do {
+                guard SupabaseService.shared.currentUserId != nil else { return }
+
+                // For Supabase, we still use min/max for backward compatibility
+                // Get the range that covers all selected levels
+                let orderedSelected = selectedLevels.levels
+                guard let first = orderedSelected.first, let last = orderedSelected.last else { return }
+
+                let update = ProfileUpdate(
+                    minProficiencyLevel: first.rawValue,
+                    maxProficiencyLevel: last.rawValue
+                )
+
+                try await SupabaseService.shared.updateProfile(update)
+                print("✅ Saved proficiency levels to Supabase: \(selectedLevels.displayString)")
+            } catch {
+                print("❌ Failed to save proficiency levels to Supabase: \(error)")
+            }
         }
 
-        // Save to UserDefaults
-        UserDefaults.standard.set(minProficiency.rawValue, forKey: "minProficiencyLevel")
-        UserDefaults.standard.set(maxProficiency.rawValue, forKey: "maxProficiencyLevel")
-
-        // Show confirmation
         showSavedConfirmation()
     }
 
     private func showSavedConfirmation() {
-        // Simple visual feedback
         let feedbackGenerator = UIImpactFeedbackGenerator(style: .light)
         feedbackGenerator.impactOccurred()
+    }
+}
+
+// MARK: - ProficiencyLevelSelectorDelegate
+extension MatchingPreferencesViewController: ProficiencyLevelSelectorDelegate {
+    func proficiencyLevelSelector(_ selector: ProficiencyLevelSelector, didSelectLevels selection: ProficiencySelection) {
+        selectedLevels = selection
+        updateSelectionDisplayLabel()
+        savePreferences()
     }
 }

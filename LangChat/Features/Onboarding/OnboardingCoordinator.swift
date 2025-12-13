@@ -7,6 +7,7 @@ enum OnboardingStep: Int, CaseIterable {
     case nativeLanguage
     case learningLanguages
     case languageProficiency
+    case proficiencyRange  // NEW: Match proficiency preference
     case learningGoals
     case bio
     case gender
@@ -15,6 +16,7 @@ enum OnboardingStep: Int, CaseIterable {
     case locationPreference
     case travelPlans
     case relationshipIntent
+    case privacyPreferences
     case profilePhoto
     case notifications
 
@@ -26,6 +28,7 @@ enum OnboardingStep: Int, CaseIterable {
         case .nativeLanguage: return "Native Language"
         case .learningLanguages: return "Languages to Learn"
         case .languageProficiency: return "Language Skills"
+        case .proficiencyRange: return "Match Preferences"
         case .learningGoals: return "Learning Goals"
         case .profilePhoto: return "Add Photos"
         case .bio: return "About You"
@@ -35,6 +38,7 @@ enum OnboardingStep: Int, CaseIterable {
         case .locationPreference: return "Location Range"
         case .travelPlans: return "Travel Plans"
         case .relationshipIntent: return "What You're Looking For"
+        case .privacyPreferences: return "Privacy Settings"
         case .notifications: return "Stay Connected"
         }
     }
@@ -97,6 +101,11 @@ class OnboardingCoordinator {
             vc.delegate = self
             viewController = vc
 
+        case .proficiencyRange:
+            let vc = ProficiencyRangeViewController()
+            vc.delegate = self
+            viewController = vc
+
         case .learningGoals:
             let vc = LearningGoalsViewController()
             vc.delegate = self
@@ -139,6 +148,11 @@ class OnboardingCoordinator {
 
         case .relationshipIntent:
             let vc = RelationshipIntentViewController()
+            vc.delegate = self
+            viewController = vc
+
+        case .privacyPreferences:
+            let vc = PrivacyPreferencesViewController()
             vc.delegate = self
             viewController = vc
 
@@ -257,6 +271,16 @@ class OnboardingCoordinator {
         let intentRawValues = userData.relationshipIntents.map { $0.rawValue }
         UserDefaults.standard.set(intentRawValues, forKey: "relationshipIntents")
 
+        // Save proficiency range preference
+        userData.matchProficiencyRange.saveToDefaults(
+            minKey: "minProficiencyLevel",
+            maxKey: "maxProficiencyLevel"
+        )
+
+        // Save privacy preferences
+        UserDefaults.standard.set(userData.strictlyPlatonic, forKey: "strictlyPlatonic")
+        UserDefaults.standard.set(userData.blurPhotosUntilMatch, forKey: "blurPhotosUntilMatch")
+
         // Generate a temporary user ID
         let userId = UUID().uuidString
         UserDefaults.standard.set(userId, forKey: "userId")
@@ -293,6 +317,10 @@ extension OnboardingCoordinator: OnboardingStepDelegate {
         case .languageProficiency:
             if let proficiencies = data as? [(Language, LanguageProficiency)] {
                 userData.languageProficiencies = proficiencies
+            }
+        case .proficiencyRange:
+            if let range = data as? ProficiencyRange {
+                userData.matchProficiencyRange = range
             }
         case .learningGoals:
             if let goals = data as? [String] {
@@ -332,6 +360,11 @@ extension OnboardingCoordinator: OnboardingStepDelegate {
             if let intents = data as? [RelationshipIntent] {
                 userData.relationshipIntents = intents
             }
+        case .privacyPreferences:
+            if let prefs = data as? (strictlyPlatonic: Bool, blurPhotosUntilMatch: Bool) {
+                userData.strictlyPlatonic = prefs.strictlyPlatonic
+                userData.blurPhotosUntilMatch = prefs.blurPhotosUntilMatch
+            }
         case .notifications:
             // Permission handled
             break
@@ -368,6 +401,11 @@ struct OnboardingUserData {
     var preferredCountries: [String]?
     var travelDestination: TravelDestination?
     var relationshipIntents: [RelationshipIntent] = [.languagePracticeOnly]
+    var matchProficiencyRange: ProficiencyRange = .all
+
+    // Privacy preferences
+    var strictlyPlatonic: Bool = false
+    var blurPhotosUntilMatch: Bool = false
 
     func toUserLanguageData() -> UserLanguageData {
         let native = UserLanguage(

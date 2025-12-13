@@ -84,6 +84,11 @@ class SceneDelegate: UIResponder, UIWindowSceneDelegate {
                 do {
                     let hasCompletedProfile = try await SupabaseService.shared.hasCompletedProfile()
 
+                    if hasCompletedProfile {
+                        // Sync profile from Supabase to UserDefaults
+                        try await SupabaseService.shared.syncProfileToUserDefaults()
+                    }
+
                     await MainActor.run {
                         if hasCompletedProfile {
                             // User has completed profile - go to main app

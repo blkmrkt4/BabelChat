@@ -26,6 +26,54 @@ class SwipeCardView: UIView {
     private let nopeLabel = UILabel()
     private let superLikeLabel = UILabel()
 
+    // Platonic badge for strictly platonic users
+    private let platonicBadge: UIView = {
+        let view = UIView()
+        view.backgroundColor = UIColor.systemTeal.withAlphaComponent(0.9)
+        view.layer.cornerRadius = 12
+        view.isHidden = true
+        return view
+    }()
+    private let platonicIconView: UIImageView = {
+        let imageView = UIImageView(image: UIImage(systemName: "person.2.fill"))
+        imageView.tintColor = .white
+        imageView.contentMode = .scaleAspectFit
+        return imageView
+    }()
+    private let platonicBadgeLabel: UILabel = {
+        let label = UILabel()
+        label.text = "Platonic"
+        label.font = .systemFont(ofSize: 10, weight: .semibold)
+        label.textColor = .white
+        return label
+    }()
+
+    // Blur overlay for blur mode
+    private let blurEffectView: UIVisualEffectView = {
+        let blurEffect = UIBlurEffect(style: .regular)
+        let view = UIVisualEffectView(effect: blurEffect)
+        view.isHidden = true
+        view.layer.cornerRadius = 20
+        view.clipsToBounds = true
+        return view
+    }()
+    private let blurLabel: UILabel = {
+        let label = UILabel()
+        label.text = "Photos blurred"
+        label.font = .systemFont(ofSize: 14, weight: .medium)
+        label.textColor = .white
+        label.textAlignment = .center
+        label.isHidden = true
+        return label
+    }()
+    private let blurIconView: UIImageView = {
+        let imageView = UIImageView(image: UIImage(systemName: "eye.slash.fill"))
+        imageView.tintColor = .white
+        imageView.contentMode = .scaleAspectFit
+        imageView.isHidden = true
+        return imageView
+    }()
+
     private var panGestureRecognizer: UIPanGestureRecognizer!
     private var tapGestureRecognizer: UITapGestureRecognizer!
     private var initialCenter: CGPoint = .zero
@@ -33,6 +81,20 @@ class SwipeCardView: UIView {
     // Store match info
     var matchScore: Int?
     var matchReasons: [String]?
+
+    // Blur mode - set by parent view controller (legacy)
+    var shouldBlurPhotos: Bool = false {
+        didSet {
+            updateBlurState()
+        }
+    }
+
+    // Per-photo blur settings from the user
+    var photoBlurSettings: [Bool] = [] {
+        didSet {
+            updateBlurState()
+        }
+    }
 
     override init(frame: CGRect) {
         super.init(frame: frame)
@@ -104,6 +166,8 @@ class SwipeCardView: UIView {
         matchScoreLabel.translatesAutoresizingMaskIntoConstraints = false
 
         setupSwipeLabels()
+        setupBlurOverlay()
+        setupPlatonicBadge()
 
         NSLayoutConstraint.activate([
             imageView.topAnchor.constraint(equalTo: topAnchor),
@@ -187,6 +251,79 @@ class SwipeCardView: UIView {
         ])
     }
 
+    private func setupBlurOverlay() {
+        // Add blur effect view over the image
+        addSubview(blurEffectView)
+        blurEffectView.translatesAutoresizingMaskIntoConstraints = false
+
+        // Add blur indicator (icon + label) centered on the card
+        addSubview(blurIconView)
+        blurIconView.translatesAutoresizingMaskIntoConstraints = false
+
+        addSubview(blurLabel)
+        blurLabel.translatesAutoresizingMaskIntoConstraints = false
+
+        NSLayoutConstraint.activate([
+            blurEffectView.topAnchor.constraint(equalTo: imageView.topAnchor),
+            blurEffectView.leadingAnchor.constraint(equalTo: imageView.leadingAnchor),
+            blurEffectView.trailingAnchor.constraint(equalTo: imageView.trailingAnchor),
+            blurEffectView.bottomAnchor.constraint(equalTo: imageView.bottomAnchor),
+
+            blurIconView.centerXAnchor.constraint(equalTo: centerXAnchor),
+            blurIconView.centerYAnchor.constraint(equalTo: centerYAnchor, constant: -15),
+            blurIconView.widthAnchor.constraint(equalToConstant: 40),
+            blurIconView.heightAnchor.constraint(equalToConstant: 40),
+
+            blurLabel.topAnchor.constraint(equalTo: blurIconView.bottomAnchor, constant: 8),
+            blurLabel.centerXAnchor.constraint(equalTo: centerXAnchor)
+        ])
+    }
+
+    private func updateBlurState() {
+        // Check per-photo blur settings first (profile image is at index 6)
+        // If per-photo settings exist, use them. Otherwise fall back to legacy boolean.
+        let profilePhotoBlurred = photoBlurSettings.count > 6 ? photoBlurSettings[6] : false
+        let shouldShow = !photoBlurSettings.isEmpty ? profilePhotoBlurred : shouldBlurPhotos
+
+        blurEffectView.isHidden = !shouldShow
+        blurIconView.isHidden = !shouldShow
+        blurLabel.isHidden = !shouldShow
+    }
+
+    private func setupPlatonicBadge() {
+        // Add platonic badge to the view
+        addSubview(platonicBadge)
+        platonicBadge.addSubview(platonicIconView)
+        platonicBadge.addSubview(platonicBadgeLabel)
+
+        platonicBadge.translatesAutoresizingMaskIntoConstraints = false
+        platonicIconView.translatesAutoresizingMaskIntoConstraints = false
+        platonicBadgeLabel.translatesAutoresizingMaskIntoConstraints = false
+
+        NSLayoutConstraint.activate([
+            platonicBadge.topAnchor.constraint(equalTo: topAnchor, constant: 20),
+            platonicBadge.leadingAnchor.constraint(equalTo: leadingAnchor, constant: 20),
+            platonicBadge.heightAnchor.constraint(equalToConstant: 24),
+
+            platonicIconView.leadingAnchor.constraint(equalTo: platonicBadge.leadingAnchor, constant: 6),
+            platonicIconView.centerYAnchor.constraint(equalTo: platonicBadge.centerYAnchor),
+            platonicIconView.widthAnchor.constraint(equalToConstant: 14),
+            platonicIconView.heightAnchor.constraint(equalToConstant: 14),
+
+            platonicBadgeLabel.leadingAnchor.constraint(equalTo: platonicIconView.trailingAnchor, constant: 4),
+            platonicBadgeLabel.trailingAnchor.constraint(equalTo: platonicBadge.trailingAnchor, constant: -8),
+            platonicBadgeLabel.centerYAnchor.constraint(equalTo: platonicBadge.centerYAnchor)
+        ])
+    }
+
+    private func updatePlatonicBadge() {
+        guard let user = user else {
+            platonicBadge.isHidden = true
+            return
+        }
+        platonicBadge.isHidden = !user.strictlyPlatonic
+    }
+
     override func layoutSubviews() {
         super.layoutSubviews()
         gradientLayer.frame = imageView.bounds
@@ -255,6 +392,9 @@ class SwipeCardView: UIView {
             imageView.image = UIImage(systemName: "person.fill")
             imageView.tintColor = .systemGray3
         }
+
+        // Update platonic badge visibility
+        updatePlatonicBadge()
     }
 
     @objc private func handlePan(_ gesture: UIPanGestureRecognizer) {

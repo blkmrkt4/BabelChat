@@ -111,22 +111,8 @@ class ChatViewController: UIViewController {
         titleView.frame = CGRect(x: 0, y: 0, width: 200, height: 44)
         navigationItem.titleView = titleView
 
-        // Add right bar button items
-        let videoCallButton = UIBarButtonItem(
-            image: UIImage(systemName: "video"),
-            style: .plain,
-            target: self,
-            action: #selector(videoCallTapped)
-        )
-
-        let moreButton = UIBarButtonItem(
-            image: UIImage(systemName: "ellipsis"),
-            style: .plain,
-            target: self,
-            action: #selector(moreOptionsTapped)
-        )
-
-        navigationItem.rightBarButtonItems = [moreButton, videoCallButton]
+        // Right bar buttons removed as video chat is not being implemented
+        // and the more options menu (three dots) had no functional actions.
     }
 
     private func setupViews() {
@@ -939,44 +925,6 @@ class ChatViewController: UIViewController {
         } else {
             return .secondaryLabel
         }
-    }
-
-    @objc private func videoCallTapped() {
-        let alert = UIAlertController(
-            title: "Video Call",
-            message: "Video calling will be available in a future update",
-            preferredStyle: .alert
-        )
-        alert.addAction(UIAlertAction(title: "OK", style: .default))
-        present(alert, animated: true)
-    }
-
-    @objc private func moreOptionsTapped() {
-        let actionSheet = UIAlertController(title: nil, message: nil, preferredStyle: .actionSheet)
-
-        actionSheet.addAction(UIAlertAction(title: "View Profile", style: .default) { _ in
-            // Navigate to user profile
-        })
-
-        actionSheet.addAction(UIAlertAction(title: "Search in Conversation", style: .default) { _ in
-            // Implement search
-        })
-
-        actionSheet.addAction(UIAlertAction(title: "Mute Notifications", style: .default) { _ in
-            // Implement mute
-        })
-
-        actionSheet.addAction(UIAlertAction(title: "Block User", style: .destructive) { _ in
-            // Implement block
-        })
-
-        actionSheet.addAction(UIAlertAction(title: "Cancel", style: .cancel))
-
-        if let popover = actionSheet.popoverPresentationController {
-            popover.barButtonItem = navigationItem.rightBarButtonItems?.first
-        }
-
-        present(actionSheet, animated: true)
     }
 }
 

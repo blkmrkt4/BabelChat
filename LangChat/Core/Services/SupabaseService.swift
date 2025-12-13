@@ -195,6 +195,20 @@ extension SupabaseService {
 
         print("✅ Updated photo captions in database")
     }
+
+    func updatePhotoBlurSettings(blurSettings: [Bool]) async throws {
+        guard let userId = currentUserId else {
+            throw NSError(domain: "SupabaseService", code: -1, userInfo: [NSLocalizedDescriptionKey: "Not authenticated"])
+        }
+
+        try await client.database
+            .from("profiles")
+            .update(["photo_blur_settings": blurSettings])
+            .eq("id", value: userId.uuidString)
+            .execute()
+
+        print("✅ Updated photo blur settings in database")
+    }
 }
 
 // MARK: - Profile Methods
@@ -291,6 +305,75 @@ extension SupabaseService {
             #if DEBUG
             print("⚠️ Failed to update last_active: \(error)")
             #endif
+        }
+    }
+
+    /// Sync profile data from Supabase to UserDefaults
+    /// Call this on app startup to ensure local cache is up-to-date
+    func syncProfileToUserDefaults() async throws {
+        let profile = try await getCurrentProfile()
+
+        await MainActor.run {
+            // Basic profile info
+            UserDefaults.standard.set(profile.firstName, forKey: "firstName")
+            UserDefaults.standard.set(profile.lastName, forKey: "lastName")
+            UserDefaults.standard.set(profile.email, forKey: "email")
+            UserDefaults.standard.set(profile.bio, forKey: "bio")
+            UserDefaults.standard.set(profile.location, forKey: "location")
+            UserDefaults.standard.set(profile.birthYear, forKey: "birthYear")
+
+            // Language data
+            UserDefaults.standard.set(profile.nativeLanguage, forKey: "nativeLanguage")
+            if let learningLanguages = profile.learningLanguages {
+                UserDefaults.standard.set(learningLanguages, forKey: "learningLanguages")
+            }
+
+            // Privacy preferences
+            UserDefaults.standard.set(profile.strictlyPlatonic ?? false, forKey: "strictlyPlatonic")
+            UserDefaults.standard.set(profile.blurPhotosUntilMatch ?? false, forKey: "blurPhotosUntilMatch")
+            UserDefaults.standard.set(profile.photoBlurSettings ?? [], forKey: "photoBlurSettings")
+
+            // Matching preferences
+            if let minProf = profile.minProficiencyLevel {
+                UserDefaults.standard.set(minProf, forKey: "minProficiencyLevel")
+            }
+            if let maxProf = profile.maxProficiencyLevel {
+                UserDefaults.standard.set(maxProf, forKey: "maxProficiencyLevel")
+            }
+            UserDefaults.standard.set(profile.allowNonNativeMatches ?? false, forKey: "allowNonNativeMatches")
+
+            // Demographics
+            if let gender = profile.gender {
+                UserDefaults.standard.set(gender, forKey: "gender")
+            }
+            if let genderPref = profile.genderPreference {
+                UserDefaults.standard.set(genderPref, forKey: "genderPreference")
+            }
+            if let minAge = profile.minAge {
+                UserDefaults.standard.set(minAge, forKey: "minAge")
+            }
+            if let maxAge = profile.maxAge {
+                UserDefaults.standard.set(maxAge, forKey: "maxAge")
+            }
+
+            // Location preferences
+            if let locationPref = profile.locationPreference {
+                UserDefaults.standard.set(locationPref, forKey: "locationPreference")
+            }
+            if let latitude = profile.latitude {
+                UserDefaults.standard.set(latitude, forKey: "latitude")
+            }
+            if let longitude = profile.longitude {
+                UserDefaults.standard.set(longitude, forKey: "longitude")
+            }
+
+            // User ID
+            UserDefaults.standard.set(profile.id, forKey: "userId")
+
+            // Mark that profile has been synced
+            UserDefaults.standard.set(true, forKey: "profileSynced")
+
+            print("✅ Synced profile to UserDefaults: \(profile.firstName) (\(profile.email))")
         }
     }
 
@@ -569,6 +652,49 @@ extension SupabaseService {
     }
 }
 
+// MARK: - Feedback Methods
+extension SupabaseService {
+
+    /// Submit user feedback (feature request, bug report, etc.)
+    func submitFeedback(type: String, message: String) async throws {
+        let userId = currentUserId?.uuidString
+
+        // Get app version
+        let version = Bundle.main.infoDictionary?["CFBundleShortVersionString"] as? String ?? "Unknown"
+        let build = Bundle.main.infoDictionary?["CFBundleVersion"] as? String ?? "Unknown"
+        let appVersion = "\(version) (\(build))"
+
+        // Get device info
+        let device = UIDevice.current
+        let deviceInfo = "\(device.model) - iOS \(device.systemVersion)"
+
+        struct FeedbackInsert: Encodable {
+            let user_id: String?
+            let type: String
+            let message: String
+            let app_version: String
+            let device_info: String
+            let status: String
+        }
+
+        let feedback = FeedbackInsert(
+            user_id: userId,
+            type: type,
+            message: message,
+            app_version: appVersion,
+            device_info: deviceInfo,
+            status: "pending"
+        )
+
+        try await client.database
+            .from("feedback")
+            .insert(feedback)
+            .execute()
+
+        print("✅ Feedback submitted: \(type)")
+    }
+}
+
 // MARK: - Messaging Methods
 extension SupabaseService {
 
@@ -819,6 +945,7 @@ struct ProfileResponse: Codable {
     let learningLanguages: [String]?
     let profilePhotos: [String]? // Storage paths, not URLs
     let photoCaptions: [String?]? // Captions for each photo
+    let photoBlurSettings: [Bool]? // Per-photo blur until match settings
     let isPremium: Bool
     let granularityLevel: Int
     let onboardingCompleted: Bool
@@ -841,6 +968,10 @@ struct ProfileResponse: Codable {
     let relationshipIntents: [String]?
     let learningContexts: [String]?
 
+    // Platonic and blur preferences
+    let strictlyPlatonic: Bool?
+    let blurPhotosUntilMatch: Bool?
+
     enum CodingKeys: String, CodingKey {
         case id, email, bio, location, latitude, longitude
         case firstName = "first_name"
@@ -850,6 +981,7 @@ struct ProfileResponse: Codable {
         case learningLanguages = "learning_languages"
         case profilePhotos = "profile_photos"
         case photoCaptions = "photo_captions"
+        case photoBlurSettings = "photo_blur_settings"
         case isPremium = "is_premium"
         case granularityLevel = "granularity_level"
         case onboardingCompleted = "onboarding_completed"
@@ -866,6 +998,8 @@ struct ProfileResponse: Codable {
         case travelDestination = "travel_destination"
         case relationshipIntents = "relationship_intents"
         case learningContexts = "learning_contexts"
+        case strictlyPlatonic = "strictly_platonic"
+        case blurPhotosUntilMatch = "blur_photos_until_match"
     }
 
     /// Convert ProfileResponse to User model
@@ -928,6 +1062,9 @@ struct ProfileResponse: Codable {
             isOnline: isRecentlyActive(),
             isAI: false,
             birthYear: birthYear,
+            strictlyPlatonic: strictlyPlatonic ?? false,
+            blurPhotosUntilMatch: blurPhotosUntilMatch ?? false,
+            photoBlurSettings: photoBlurSettings ?? [],
             matchingPreferences: matchingPrefs
         )
     }
@@ -1012,6 +1149,10 @@ struct ProfileUpdate: Codable {
     var location: String?
     var learningLanguages: [String]?
     var granularityLevel: Int?
+    var strictlyPlatonic: Bool?
+    var blurPhotosUntilMatch: Bool?
+    var minProficiencyLevel: String?
+    var maxProficiencyLevel: String?
 
     enum CodingKeys: String, CodingKey {
         case bio, location
@@ -1019,6 +1160,10 @@ struct ProfileUpdate: Codable {
         case lastName = "last_name"
         case learningLanguages = "learning_languages"
         case granularityLevel = "granularity_level"
+        case strictlyPlatonic = "strictly_platonic"
+        case blurPhotosUntilMatch = "blur_photos_until_match"
+        case minProficiencyLevel = "min_proficiency_level"
+        case maxProficiencyLevel = "max_proficiency_level"
     }
 }
 

@@ -62,6 +62,7 @@ class SettingsViewController: UIViewController {
                 return [
                     ("Subscription", "crown"),
                     ("Help Center", "questionmark.circle"),
+                    ("Request a Feature", "lightbulb"),
                     ("Contact Us", "envelope"),
                     ("Report a Problem", "exclamationmark.bubble")
                 ]
@@ -259,7 +260,7 @@ class SettingsViewController: UIViewController {
             switch row {
             case 0: showBlockedUsers()
             case 1: showDataPrivacy()
-            case 2: showNotificationSettings()
+            case 2: break // Notifications switch cell handled by switch control
             case 3: showAppearanceSettings()
             default: break
             }
@@ -268,8 +269,9 @@ class SettingsViewController: UIViewController {
             switch row {
             case 0: showSubscription()
             case 1: showHelpCenter()
-            case 2: contactSupport()
-            case 3: reportProblem()
+            case 2: requestFeature()
+            case 3: contactSupport()
+            case 4: reportProblem()
             default: break
             }
 
@@ -280,6 +282,71 @@ class SettingsViewController: UIViewController {
             case 2: showOpenSourceLibraries()
             case 3: showVersion()
             default: break
+            }
+        }
+    }
+
+    // MARK: - Privacy Setting Updates
+    private func updateStrictlyPlatonic(_ isOn: Bool) {
+        // Update UserDefaults immediately for local state
+        UserDefaults.standard.set(isOn, forKey: "strictlyPlatonic")
+
+        Task {
+            do {
+                try await SupabaseService.shared.updateProfile(ProfileUpdate(strictlyPlatonic: isOn))
+                print("✅ Strictly platonic preference updated to: \(isOn)")
+
+                // Post notification for UI updates
+                await MainActor.run {
+                    NotificationCenter.default.post(name: .userProfileUpdated, object: nil)
+                }
+            } catch {
+                print("❌ Error updating strictly platonic preference: \(error)")
+                await MainActor.run {
+                    // Revert UserDefaults and switch
+                    UserDefaults.standard.set(!isOn, forKey: "strictlyPlatonic")
+                    self.tableView.reloadData()
+
+                    let alert = UIAlertController(
+                        title: "Update Failed",
+                        message: "Could not update your preference. Please try again.",
+                        preferredStyle: .alert
+                    )
+                    alert.addAction(UIAlertAction(title: "OK", style: .default))
+                    self.present(alert, animated: true)
+                }
+            }
+        }
+    }
+
+    private func updateBlurPhotosUntilMatch(_ isOn: Bool) {
+        // Update UserDefaults immediately for local state
+        UserDefaults.standard.set(isOn, forKey: "blurPhotosUntilMatch")
+
+        Task {
+            do {
+                try await SupabaseService.shared.updateProfile(ProfileUpdate(blurPhotosUntilMatch: isOn))
+                print("✅ Blur photos until match preference updated to: \(isOn)")
+
+                // Post notification for UI updates
+                await MainActor.run {
+                    NotificationCenter.default.post(name: .userProfileUpdated, object: nil)
+                }
+            } catch {
+                print("❌ Error updating blur photos preference: \(error)")
+                await MainActor.run {
+                    // Revert UserDefaults and switch
+                    UserDefaults.standard.set(!isOn, forKey: "blurPhotosUntilMatch")
+                    self.tableView.reloadData()
+
+                    let alert = UIAlertController(
+                        title: "Update Failed",
+                        message: "Could not update your preference. Please try again.",
+                        preferredStyle: .alert
+                    )
+                    alert.addAction(UIAlertAction(title: "OK", style: .default))
+                    self.present(alert, animated: true)
+                }
             }
         }
     }
@@ -404,15 +471,113 @@ class SettingsViewController: UIViewController {
     }
 
     private func showHelpCenter() {
-        print("Show help center")
+        // Show the tutorial/help screen (same as ? icon on Profile)
+        let tutorialVC = TutorialViewController()
+        let navController = UINavigationController(rootViewController: tutorialVC)
+        navController.modalPresentationStyle = .fullScreen
+        present(navController, animated: true)
+    }
+
+    private func requestFeature() {
+        let featureVC = FeatureRequestViewController()
+        let navController = UINavigationController(rootViewController: featureVC)
+        navController.modalPresentationStyle = .pageSheet
+        present(navController, animated: true)
     }
 
     private func contactSupport() {
-        print("Contact support")
+        // Show contact support with email option
+        let alert = UIAlertController(
+            title: "Contact Support",
+            message: "How would you like to contact us?",
+            preferredStyle: .actionSheet
+        )
+
+        alert.addAction(UIAlertAction(title: "Send Email", style: .default) { [weak self] _ in
+            self?.sendSupportEmail(type: "general")
+        })
+
+        alert.addAction(UIAlertAction(title: "Cancel", style: .cancel))
+
+        if let popover = alert.popoverPresentationController {
+            popover.sourceView = tableView
+            popover.sourceRect = tableView.rectForRow(at: IndexPath(row: 3, section: SettingSection.support.rawValue))
+        }
+
+        present(alert, animated: true)
     }
 
     private func reportProblem() {
-        print("Report problem")
+        // Show report problem with text input
+        let alert = UIAlertController(
+            title: "Report a Problem",
+            message: "Please describe the issue you're experiencing",
+            preferredStyle: .alert
+        )
+
+        alert.addTextField { textField in
+            textField.placeholder = "Describe the problem..."
+        }
+
+        alert.addAction(UIAlertAction(title: "Cancel", style: .cancel))
+        alert.addAction(UIAlertAction(title: "Submit", style: .default) { [weak self] _ in
+            guard let message = alert.textFields?.first?.text, !message.isEmpty else {
+                self?.showAlert(title: "Error", message: "Please describe the problem")
+                return
+            }
+            self?.submitFeedback(type: "bug_report", message: message)
+        })
+
+        present(alert, animated: true)
+    }
+
+    private func sendSupportEmail(type: String) {
+        // Submit as contact support feedback
+        let alert = UIAlertController(
+            title: "Contact Support",
+            message: "Please describe how we can help you",
+            preferredStyle: .alert
+        )
+
+        alert.addTextField { textField in
+            textField.placeholder = "How can we help?"
+        }
+
+        alert.addAction(UIAlertAction(title: "Cancel", style: .cancel))
+        alert.addAction(UIAlertAction(title: "Submit", style: .default) { [weak self] _ in
+            guard let message = alert.textFields?.first?.text, !message.isEmpty else {
+                self?.showAlert(title: "Error", message: "Please describe your question")
+                return
+            }
+            self?.submitFeedback(type: "contact_support", message: message)
+        })
+
+        present(alert, animated: true)
+    }
+
+    private func submitFeedback(type: String, message: String) {
+        Task {
+            do {
+                try await SupabaseService.shared.submitFeedback(
+                    type: type,
+                    message: message
+                )
+                await MainActor.run {
+                    self.showAlert(title: "Thank You!", message: "Your feedback has been submitted.")
+                }
+            } catch {
+                print("❌ Error submitting feedback: \(error)")
+                await MainActor.run {
+                    self.showAlert(title: "Error", message: "Failed to submit feedback. Please try again.")
+                }
+            }
+        }
+    }
+
+    private func showAlert(title: String, message: String) {
+        let alert = UIAlertController(title: title, message: message, preferredStyle: .alert)
+        alert.addAction(UIAlertAction(title: "OK", style: .default))
+        present(alert, animated: true)
     }
 
     private func showTermsOfService() {
@@ -465,14 +630,20 @@ extension SettingsViewController: UITableViewDataSource {
         let item = settingSection.items[indexPath.row]
 
         // Use switch cell for specific settings
-        if settingSection == .privacy && indexPath.row == 2 { // Notifications
-            let cell = tableView.dequeueReusableCell(withIdentifier: "SwitchCell", for: indexPath) as! SwitchTableViewCell
-            let isEnabled = UserDefaults.standard.object(forKey: "notificationsEnabled") as? Bool ?? true
-            cell.configure(title: item.title, icon: item.icon, isOn: isEnabled)
-            cell.switchValueChanged = { isOn in
-                UserDefaults.standard.set(isOn, forKey: "notificationsEnabled")
+        if settingSection == .privacy {
+            switch indexPath.row {
+            case 2: // Notifications
+                let cell = tableView.dequeueReusableCell(withIdentifier: "SwitchCell", for: indexPath) as! SwitchTableViewCell
+                let isEnabled = UserDefaults.standard.object(forKey: "notificationsEnabled") as? Bool ?? true
+                cell.configure(title: item.title, icon: item.icon, isOn: isEnabled)
+                cell.switchValueChanged = { isOn in
+                    UserDefaults.standard.set(isOn, forKey: "notificationsEnabled")
+                }
+                return cell
+
+            default:
+                break
             }
-            return cell
         }
 
         let cell = tableView.dequeueReusableCell(withIdentifier: "SettingCell", for: indexPath)

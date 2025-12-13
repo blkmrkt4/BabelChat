@@ -14,6 +14,11 @@ class MatchingService {
     ///   - user2: Second user
     /// - Returns: True if users meet all hard filter requirements
     func canMatch(_ user1: User, _ user2: User) -> Bool {
+        // HARD FILTER 0: Platonic preference match (complete separation)
+        // Platonic users ONLY see other platonic users
+        // Non-platonic users ONLY see other non-platonic users
+        guard isPlatonicPreferenceMatch(user1, user2) else { return false }
+
         // HARD FILTER 1: Language compatibility (existing logic)
         guard areUsersCompatible(user1, user2) else { return false }
 
@@ -30,6 +35,14 @@ class MatchingService {
         guard hasRelationshipIntentOverlap(user1, user2) else { return false }
 
         return true
+    }
+
+    /// Check if platonic preferences match (complete separation)
+    /// Platonic users only see other platonic users
+    /// Non-platonic users only see other non-platonic users
+    private func isPlatonicPreferenceMatch(_ user1: User, _ user2: User) -> Bool {
+        // Complete separation: both must have same platonic preference
+        return user1.strictlyPlatonic == user2.strictlyPlatonic
     }
 
     // MARK: - Hard Filter Functions

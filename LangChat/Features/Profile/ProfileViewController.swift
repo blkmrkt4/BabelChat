@@ -10,10 +10,14 @@ class ProfileViewController: UIViewController, PhotoGridViewDelegate {
     private var currentProfile: ProfileResponse?
     private var currentPhotoURLs: [String] = []
     private var currentPhotoCaptions: [String?] = []
+    private var currentPhotoBlurSettings: [Bool] = []  // Per-photo blur settings
     private var selectedPhotoIndex: Int = 0  // Track which slot we're adding to
 
     // Main profile image (circular, like in MatchCardView)
     private let profileImageView = UIImageView()
+    private let profileImageEditBadge = UIView()  // Edit indicator
+    private let profileImageBlurBadge = UIView()  // Blur until match indicator
+    private let profileImageBlurEffectView = UIVisualEffectView(effect: UIBlurEffect(style: .regular))  // Blur preview
 
     // Name and badges
     private let nameLabel = UILabel()
@@ -124,7 +128,67 @@ class ProfileViewController: UIViewController, PhotoGridViewDelegate {
         profileImageView.backgroundColor = .systemGray5
         profileImageView.image = UIImage(systemName: "person.fill")
         profileImageView.tintColor = .systemGray3
+        profileImageView.isUserInteractionEnabled = true
         contentView.addSubview(profileImageView)
+
+        // Add tap gesture to change profile photo
+        let profileImageTapGesture = UITapGestureRecognizer(target: self, action: #selector(profileImageTapped))
+        profileImageView.addGestureRecognizer(profileImageTapGesture)
+
+        // Add blur effect view for preview (circular, matches profile image)
+        profileImageBlurEffectView.layer.cornerRadius = 60
+        profileImageBlurEffectView.clipsToBounds = true
+        profileImageBlurEffectView.isHidden = true
+        profileImageBlurEffectView.isUserInteractionEnabled = false
+        contentView.addSubview(profileImageBlurEffectView)
+
+        // Edit badge on profile image (small camera icon)
+        profileImageEditBadge.backgroundColor = .systemBlue
+        profileImageEditBadge.layer.cornerRadius = 16
+        profileImageEditBadge.layer.borderWidth = 2
+        profileImageEditBadge.layer.borderColor = UIColor.white.cgColor
+        profileImageEditBadge.clipsToBounds = true
+        contentView.addSubview(profileImageEditBadge)
+
+        let cameraIcon = UIImageView(image: UIImage(systemName: "camera.fill"))
+        cameraIcon.tintColor = .white
+        cameraIcon.contentMode = .scaleAspectFit
+        cameraIcon.translatesAutoresizingMaskIntoConstraints = false
+        profileImageEditBadge.addSubview(cameraIcon)
+
+        NSLayoutConstraint.activate([
+            cameraIcon.centerXAnchor.constraint(equalTo: profileImageEditBadge.centerXAnchor),
+            cameraIcon.centerYAnchor.constraint(equalTo: profileImageEditBadge.centerYAnchor),
+            cameraIcon.widthAnchor.constraint(equalToConstant: 16),
+            cameraIcon.heightAnchor.constraint(equalToConstant: 16)
+        ])
+
+        // Blur badge on profile image (eye.slash icon - shows when photo is set to blur until match)
+        profileImageBlurBadge.backgroundColor = UIColor.black.withAlphaComponent(0.7)
+        profileImageBlurBadge.layer.cornerRadius = 14
+        profileImageBlurBadge.layer.borderWidth = 2
+        profileImageBlurBadge.layer.borderColor = UIColor.white.cgColor
+        profileImageBlurBadge.clipsToBounds = true
+        profileImageBlurBadge.isHidden = true  // Hidden by default
+        profileImageBlurBadge.isUserInteractionEnabled = true
+        contentView.addSubview(profileImageBlurBadge)
+
+        // Add tap gesture to blur badge to preview blur effect
+        let blurBadgeTapGesture = UITapGestureRecognizer(target: self, action: #selector(profileImageBlurBadgeTapped))
+        profileImageBlurBadge.addGestureRecognizer(blurBadgeTapGesture)
+
+        let blurIcon = UIImageView(image: UIImage(systemName: "eye.slash.fill"))
+        blurIcon.tintColor = .white
+        blurIcon.contentMode = .scaleAspectFit
+        blurIcon.translatesAutoresizingMaskIntoConstraints = false
+        profileImageBlurBadge.addSubview(blurIcon)
+
+        NSLayoutConstraint.activate([
+            blurIcon.centerXAnchor.constraint(equalTo: profileImageBlurBadge.centerXAnchor),
+            blurIcon.centerYAnchor.constraint(equalTo: profileImageBlurBadge.centerYAnchor),
+            blurIcon.widthAnchor.constraint(equalToConstant: 14),
+            blurIcon.heightAnchor.constraint(equalToConstant: 14)
+        ])
 
         // Name label
         nameLabel.font = .systemFont(ofSize: 28, weight: .bold)
@@ -208,6 +272,9 @@ class ProfileViewController: UIViewController, PhotoGridViewDelegate {
         scrollView.translatesAutoresizingMaskIntoConstraints = false
         contentView.translatesAutoresizingMaskIntoConstraints = false
         profileImageView.translatesAutoresizingMaskIntoConstraints = false
+        profileImageEditBadge.translatesAutoresizingMaskIntoConstraints = false
+        profileImageBlurBadge.translatesAutoresizingMaskIntoConstraints = false
+        profileImageBlurEffectView.translatesAutoresizingMaskIntoConstraints = false
         nameLabel.translatesAutoresizingMaskIntoConstraints = false
         nativeLanguageBadge.translatesAutoresizingMaskIntoConstraints = false
         aspiringLabel.translatesAutoresizingMaskIntoConstraints = false
@@ -243,6 +310,24 @@ class ProfileViewController: UIViewController, PhotoGridViewDelegate {
             profileImageView.leadingAnchor.constraint(equalTo: contentView.leadingAnchor, constant: 24),
             profileImageView.widthAnchor.constraint(equalToConstant: 120),
             profileImageView.heightAnchor.constraint(equalToConstant: 120),
+
+            // Blur effect view - overlay on profile image
+            profileImageBlurEffectView.topAnchor.constraint(equalTo: profileImageView.topAnchor),
+            profileImageBlurEffectView.leadingAnchor.constraint(equalTo: profileImageView.leadingAnchor),
+            profileImageBlurEffectView.trailingAnchor.constraint(equalTo: profileImageView.trailingAnchor),
+            profileImageBlurEffectView.bottomAnchor.constraint(equalTo: profileImageView.bottomAnchor),
+
+            // Edit badge - bottom right of profile image
+            profileImageEditBadge.bottomAnchor.constraint(equalTo: profileImageView.bottomAnchor, constant: -4),
+            profileImageEditBadge.trailingAnchor.constraint(equalTo: profileImageView.trailingAnchor, constant: -4),
+            profileImageEditBadge.widthAnchor.constraint(equalToConstant: 32),
+            profileImageEditBadge.heightAnchor.constraint(equalToConstant: 32),
+
+            // Blur badge - top left of profile image (opposite corner from edit badge)
+            profileImageBlurBadge.topAnchor.constraint(equalTo: profileImageView.topAnchor, constant: 4),
+            profileImageBlurBadge.leadingAnchor.constraint(equalTo: profileImageView.leadingAnchor, constant: 4),
+            profileImageBlurBadge.widthAnchor.constraint(equalToConstant: 28),
+            profileImageBlurBadge.heightAnchor.constraint(equalToConstant: 28),
 
             // Name - BESIDE profile image
             nameLabel.topAnchor.constraint(equalTo: profileImageView.topAnchor, constant: 8),
@@ -322,6 +407,7 @@ class ProfileViewController: UIViewController, PhotoGridViewDelegate {
         // Store profile for photo handling
         self.currentProfile = profile
         self.currentPhotoCaptions = profile.photoCaptions ?? []
+        self.currentPhotoBlurSettings = profile.photoBlurSettings ?? []
 
         // Name
         let firstName = profile.firstName
@@ -365,13 +451,21 @@ class ProfileViewController: UIViewController, PhotoGridViewDelegate {
             openToMatchLabel.text = ""
         }
 
-        // Load profile image - get signed URL if it's a storage path
-        if let photos = profile.profilePhotos, !photos.isEmpty {
-            // Use the profile photo (index 6) or fall back to first photo
-            let profilePhotoPath = photos.count > 6 ? photos[6] : photos[0]
-            if !profilePhotoPath.isEmpty {
-                loadProfileImage(from: profilePhotoPath)
-            }
+        // Load profile image - specifically use index 6 (the dedicated profile photo)
+        // Do NOT fall back to grid photos - they are independent
+        if let photos = profile.profilePhotos,
+           photos.count > 6,
+           !photos[6].isEmpty {
+            loadProfileImage(from: photos[6])
+            // Show blur badge if profile photo (index 6) is set to blur
+            let isProfilePhotoBlurred = currentPhotoBlurSettings.count > 6 ? currentPhotoBlurSettings[6] : false
+            profileImageBlurBadge.isHidden = !isProfilePhotoBlurred
+        } else {
+            // Show placeholder with "add photo" style
+            profileImageView.image = UIImage(systemName: "person.crop.circle.badge.plus")
+            profileImageView.tintColor = .systemGray3
+            profileImageView.contentMode = .scaleAspectFit
+            profileImageBlurBadge.isHidden = true  // No photo, no blur badge
         }
 
         // Load photo grid with signed URLs
@@ -379,6 +473,9 @@ class ProfileViewController: UIViewController, PhotoGridViewDelegate {
     }
 
     private func loadProfileImage(from path: String) {
+        // Reset contentMode for actual photos (was changed to scaleAspectFit for placeholder)
+        profileImageView.contentMode = .scaleAspectFill
+
         // Check if it's a storage path or already a URL
         if path.hasPrefix("http") {
             // Already a URL
@@ -417,6 +514,9 @@ class ProfileViewController: UIViewController, PhotoGridViewDelegate {
                     // Store signed URLs for photo handling
                     self.currentPhotoURLs = signedURLs
                     self.photoGridView.configure(with: signedURLs)
+                    // Set blur settings for the grid (first 6 photos)
+                    let gridBlurSettings = Array(self.currentPhotoBlurSettings.prefix(6))
+                    self.photoGridView.setBlurSettings(gridBlurSettings)
                 }
             } catch {
                 print("❌ Error getting signed URLs for photo grid: \(error)")
@@ -525,6 +625,92 @@ class ProfileViewController: UIViewController, PhotoGridViewDelegate {
 
     @objc private func profileUpdated(_ notification: Notification) {
         loadProfileData()
+    }
+
+    @objc private func profileImageTapped() {
+        // Show options for the circular profile photo (stored at index 6)
+        let alertController = UIAlertController(
+            title: "Profile Photo",
+            message: "This is your main profile photo that appears in matches",
+            preferredStyle: .actionSheet
+        )
+
+        alertController.addAction(UIAlertAction(title: "Change Photo", style: .default) { [weak self] _ in
+            self?.changeProfilePhoto()
+        })
+
+        // Check if there's already a profile photo at index 6
+        if let profile = currentProfile,
+           let photos = profile.profilePhotos,
+           photos.count > 6,
+           !photos[6].isEmpty {
+
+            // Blur Until Match option for profile photo (index 6)
+            let isBlurred = currentPhotoBlurSettings.count > 6 ? currentPhotoBlurSettings[6] : false
+            let blurTitle = isBlurred ? "✓ Blur Until Match" : "Blur Until Match"
+
+            alertController.addAction(UIAlertAction(title: blurTitle, style: .default) { [weak self] _ in
+                self?.togglePhotoBlur(at: 6)
+            })
+
+            alertController.addAction(UIAlertAction(title: "Remove Photo", style: .destructive) { [weak self] _ in
+                self?.removeProfilePhoto()
+            })
+        }
+
+        alertController.addAction(UIAlertAction(title: "Cancel", style: .cancel))
+
+        // For iPad support
+        if let popoverController = alertController.popoverPresentationController {
+            popoverController.sourceView = profileImageView
+            popoverController.sourceRect = profileImageView.bounds
+        }
+
+        present(alertController, animated: true)
+    }
+
+    private func changeProfilePhoto() {
+        // Set index to 6 for the profile photo slot
+        selectedPhotoIndex = 6
+
+        var configuration = PHPickerConfiguration()
+        configuration.selectionLimit = 1
+        configuration.filter = .images
+
+        let picker = PHPickerViewController(configuration: configuration)
+        picker.delegate = self
+        present(picker, animated: true)
+    }
+
+    private func removeProfilePhoto() {
+        guard let profile = currentProfile,
+              var photos = profile.profilePhotos,
+              photos.count > 6 else { return }
+
+        // Clear the profile photo at index 6
+        photos[6] = ""
+
+        Task {
+            do {
+                try await SupabaseService.shared.updateUserPhotos(photoURLs: photos)
+                await MainActor.run {
+                    self.loadProfileData()
+                    let feedback = UINotificationFeedbackGenerator()
+                    feedback.notificationOccurred(.success)
+                }
+            } catch {
+                print("❌ Error removing profile photo: \(error)")
+                await MainActor.run {
+                    let alert = UIAlertController(
+                        title: "Error",
+                        message: "Failed to remove profile photo. Please try again.",
+                        preferredStyle: .alert
+                    )
+                    alert.addAction(UIAlertAction(title: "OK", style: .default))
+                    self.present(alert, animated: true)
+                }
+            }
+        }
     }
 
     // MARK: - Bio Editing
@@ -705,13 +891,21 @@ class ProfileViewController: UIViewController, PhotoGridViewDelegate {
             self?.changePhoto(at: index)
         })
 
-        // Only show edit caption if there's a photo
+        // Only show additional options if there's a photo
         if !photoURL.isEmpty {
             let currentCaption = index < currentPhotoCaptions.count ? currentPhotoCaptions[index] : nil
             let captionTitle = currentCaption?.isEmpty == false ? "Edit Caption" : "Add Caption"
 
             alertController.addAction(UIAlertAction(title: captionTitle, style: .default) { [weak self] _ in
                 self?.editCaption(at: index, currentCaption: currentCaption)
+            })
+
+            // Blur Until Match option
+            let isBlurred = index < currentPhotoBlurSettings.count ? currentPhotoBlurSettings[index] : false
+            let blurTitle = isBlurred ? "✓ Blur Until Match" : "Blur Until Match"
+
+            alertController.addAction(UIAlertAction(title: blurTitle, style: .default) { [weak self] _ in
+                self?.togglePhotoBlur(at: index)
             })
 
             alertController.addAction(UIAlertAction(title: "Remove Photo", style: .destructive) { [weak self] _ in
@@ -847,6 +1041,133 @@ class ProfileViewController: UIViewController, PhotoGridViewDelegate {
             }
         }
     }
+
+    private func togglePhotoBlur(at index: Int) {
+        // Toggle the blur setting for this photo
+        var blurSettings = currentPhotoBlurSettings
+
+        // Ensure array is large enough
+        while blurSettings.count <= index {
+            blurSettings.append(false)
+        }
+
+        // Toggle the value
+        blurSettings[index] = !blurSettings[index]
+
+        // Save to Supabase
+        Task {
+            do {
+                try await SupabaseService.shared.updatePhotoBlurSettings(blurSettings: blurSettings)
+                await MainActor.run {
+                    self.currentPhotoBlurSettings = blurSettings
+
+                    // Cache to UserDefaults for quick access in discovery screens
+                    UserDefaults.standard.set(blurSettings, forKey: "photoBlurSettings")
+
+                    let feedback = UINotificationFeedbackGenerator()
+                    feedback.notificationOccurred(.success)
+
+                    // Update blur indicators
+                    self.updateBlurIndicators()
+
+                    // Show confirmation
+                    let message = blurSettings[index]
+                        ? "Photo will be blurred until you match"
+                        : "Photo will be visible to everyone"
+                    self.showToast(message: message)
+                }
+            } catch {
+                print("❌ Error updating blur setting: \(error)")
+                await MainActor.run {
+                    let alert = UIAlertController(
+                        title: "Error",
+                        message: "Failed to update blur setting. Please try again.",
+                        preferredStyle: .alert
+                    )
+                    alert.addAction(UIAlertAction(title: "OK", style: .default))
+                    self.present(alert, animated: true)
+                }
+            }
+        }
+    }
+
+    private func updateBlurIndicators() {
+        // Update photo grid blur indicators
+        let gridBlurSettings = Array(currentPhotoBlurSettings.prefix(6))
+        photoGridView.setBlurSettings(gridBlurSettings)
+
+        // Update profile photo blur badge (index 6)
+        let isProfilePhotoBlurred = currentPhotoBlurSettings.count > 6 ? currentPhotoBlurSettings[6] : false
+        let hasProfilePhoto = currentProfile?.profilePhotos?.count ?? 0 > 6 &&
+                              !(currentProfile?.profilePhotos?[6].isEmpty ?? true)
+        profileImageBlurBadge.isHidden = !(isProfilePhotoBlurred && hasProfilePhoto)
+    }
+
+    @objc private func profileImageBlurBadgeTapped() {
+        // Show temporary blur preview on profile photo
+        showProfilePhotoBlurPreview()
+    }
+
+    /// Shows a temporary blur effect on the profile photo
+    private func showProfilePhotoBlurPreview() {
+        // Haptic feedback
+        let feedback = UIImpactFeedbackGenerator(style: .light)
+        feedback.impactOccurred()
+
+        // Show blur with animation
+        profileImageBlurEffectView.alpha = 0
+        profileImageBlurEffectView.isHidden = false
+
+        UIView.animate(withDuration: 0.2) {
+            self.profileImageBlurEffectView.alpha = 1
+        }
+
+        // Auto-hide after 2 seconds
+        DispatchQueue.main.asyncAfter(deadline: .now() + 2.0) { [weak self] in
+            UIView.animate(withDuration: 0.3) {
+                self?.profileImageBlurEffectView.alpha = 0
+            } completion: { _ in
+                self?.profileImageBlurEffectView.isHidden = true
+            }
+        }
+    }
+
+    private func showToast(message: String) {
+        let toastLabel = UILabel()
+        toastLabel.backgroundColor = UIColor.black.withAlphaComponent(0.7)
+        toastLabel.textColor = .white
+        toastLabel.textAlignment = .center
+        toastLabel.font = .systemFont(ofSize: 14, weight: .medium)
+        toastLabel.text = message
+        toastLabel.alpha = 0
+        toastLabel.layer.cornerRadius = 10
+        toastLabel.clipsToBounds = true
+        toastLabel.numberOfLines = 0
+
+        view.addSubview(toastLabel)
+        toastLabel.translatesAutoresizingMaskIntoConstraints = false
+
+        NSLayoutConstraint.activate([
+            toastLabel.centerXAnchor.constraint(equalTo: view.centerXAnchor),
+            toastLabel.bottomAnchor.constraint(equalTo: view.safeAreaLayoutGuide.bottomAnchor, constant: -50),
+            toastLabel.leadingAnchor.constraint(greaterThanOrEqualTo: view.leadingAnchor, constant: 40),
+            toastLabel.trailingAnchor.constraint(lessThanOrEqualTo: view.trailingAnchor, constant: -40),
+            toastLabel.heightAnchor.constraint(greaterThanOrEqualToConstant: 40)
+        ])
+
+        // Add padding
+        toastLabel.layoutMargins = UIEdgeInsets(top: 8, left: 16, bottom: 8, right: 16)
+
+        UIView.animate(withDuration: 0.3, animations: {
+            toastLabel.alpha = 1
+        }) { _ in
+            UIView.animate(withDuration: 0.3, delay: 2.0, options: [], animations: {
+                toastLabel.alpha = 0
+            }) { _ in
+                toastLabel.removeFromSuperview()
+            }
+        }
+    }
 }
 
 // MARK: - PHPickerViewControllerDelegate
@@ -862,7 +1183,7 @@ extension ProfileViewController: PHPickerViewControllerDelegate {
 
         result.itemProvider.loadObject(ofClass: UIImage.self) { [weak self] object, error in
             guard let self = self,
-                  let image = object as? UIImage else {
+                  let originalImage = object as? UIImage else {
                 DispatchQueue.main.async {
                     loadingAlert.dismiss(animated: true)
                 }
@@ -871,8 +1192,12 @@ extension ProfileViewController: PHPickerViewControllerDelegate {
 
             Task {
                 do {
-                    // Compress image to JPEG
-                    guard let imageData = image.jpegData(compressionQuality: 0.8) else {
+                    // Resize image to max 1200px to reduce memory usage and upload size
+                    // This prevents crashes on devices with high-resolution camera photos
+                    let resizedImage = self.resizeImage(originalImage, maxDimension: 1200)
+
+                    // Compress image to JPEG with moderate quality
+                    guard let imageData = resizedImage.jpegData(compressionQuality: 0.7) else {
                         throw NSError(domain: "PhotoUpload", code: -1, userInfo: [NSLocalizedDescriptionKey: "Could not compress image"])
                     }
 
@@ -888,8 +1213,8 @@ extension ProfileViewController: PHPickerViewControllerDelegate {
                         photoIndex: self.selectedPhotoIndex
                     )
 
-                    // Update the photo array
-                    var photos = self.currentPhotoURLs
+                    // Update the photo array using storage paths (not signed URLs)
+                    var photos = self.currentProfile?.profilePhotos ?? []
                     while photos.count <= self.selectedPhotoIndex {
                         photos.append("")
                     }
@@ -926,6 +1251,29 @@ extension ProfileViewController: PHPickerViewControllerDelegate {
                 }
             }
         }
+    }
+
+    /// Resize image to fit within maxDimension while maintaining aspect ratio
+    /// This significantly reduces memory usage for high-resolution photos
+    private func resizeImage(_ image: UIImage, maxDimension: CGFloat) -> UIImage {
+        let size = image.size
+
+        // If image is already small enough, return it
+        if size.width <= maxDimension && size.height <= maxDimension {
+            return image
+        }
+
+        // Calculate new size maintaining aspect ratio
+        let ratio = min(maxDimension / size.width, maxDimension / size.height)
+        let newSize = CGSize(width: size.width * ratio, height: size.height * ratio)
+
+        // Use UIGraphicsImageRenderer for efficient memory handling
+        let renderer = UIGraphicsImageRenderer(size: newSize)
+        let resizedImage = renderer.image { _ in
+            image.draw(in: CGRect(origin: .zero, size: newSize))
+        }
+
+        return resizedImage
     }
 }
 

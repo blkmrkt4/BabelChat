@@ -228,6 +228,9 @@ class DiscoverViewController: UIViewController {
         detailVC.isMatched = false
         detailVC.isFromDiscover = true // Hide back button since we navigated automatically
 
+        // Pass the user's per-photo blur settings for per-photo blur display
+        detailVC.viewingUserBlurSettings = visibleUsers[0].photoBlurSettings
+
         hasShownProfileDetail = true // Track that we showed profiles
         navigationController?.pushViewController(detailVC, animated: true)
     }
@@ -723,6 +726,9 @@ extension DiscoverViewController: SwipeCardDelegate {
             if let userIndex = allUsers.firstIndex(where: { $0.id == user.id }) {
                 detailVC.currentUserIndex = userIndex
             }
+
+            // Pass the user's per-photo blur settings for per-photo blur display
+            detailVC.viewingUserBlurSettings = user.photoBlurSettings
 
             navigationController?.pushViewController(detailVC, animated: true)
         }

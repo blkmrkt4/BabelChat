@@ -21,6 +21,11 @@ struct User: Codable {
     let isAI: Bool // Indicates if this is an AI practice partner
     let birthYear: Int? // Birth year for age calculation
 
+    // Platonic and blur preferences
+    let strictlyPlatonic: Bool // Only wants platonic language exchange (no dating)
+    let blurPhotosUntilMatch: Bool // Photos blurred in discovery until matched (legacy global setting)
+    let photoBlurSettings: [Bool] // Per-photo blur settings (index matches photoURLs)
+
     // Matching preferences (new comprehensive preferences model)
     let matchingPreferences: MatchingPreferences
 
@@ -60,6 +65,9 @@ struct User: Codable {
          isOnline: Bool = false,
          isAI: Bool = false,
          birthYear: Int? = nil,
+         strictlyPlatonic: Bool = false,
+         blurPhotosUntilMatch: Bool = false,
+         photoBlurSettings: [Bool] = [],
          matchingPreferences: MatchingPreferences? = nil,
          // Deprecated parameters (for backwards compatibility)
          allowNonNativeMatches: Bool = false,
@@ -83,6 +91,9 @@ struct User: Codable {
         self.isOnline = isOnline
         self.isAI = isAI
         self.birthYear = birthYear
+        self.strictlyPlatonic = strictlyPlatonic
+        self.blurPhotosUntilMatch = blurPhotosUntilMatch
+        self.photoBlurSettings = photoBlurSettings
 
         // Use provided matchingPreferences or create default from old parameters
         if let matchingPreferences = matchingPreferences {
@@ -141,6 +152,25 @@ struct User: Codable {
         guard let birthYear = birthYear else { return nil }
         let currentYear = Calendar.current.component(.year, from: Date())
         return currentYear - birthYear
+    }
+
+    // Check if any photo has blur enabled (for discovery view)
+    var hasAnyBlurredPhotos: Bool {
+        // Check per-photo settings first
+        if photoBlurSettings.contains(true) {
+            return true
+        }
+        // Fall back to legacy global setting
+        return blurPhotosUntilMatch
+    }
+
+    // Check if a specific photo should be blurred
+    func shouldBlurPhoto(at index: Int) -> Bool {
+        if index < photoBlurSettings.count {
+            return photoBlurSettings[index]
+        }
+        // Fall back to legacy global setting
+        return blurPhotosUntilMatch
     }
 
     // Get age range display string

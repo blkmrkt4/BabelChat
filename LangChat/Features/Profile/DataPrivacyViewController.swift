@@ -37,9 +37,7 @@ class DataPrivacyViewController: UIViewController {
                 ]
             case .yourRights:
                 return [
-                    "Request a copy of your data",
                     "Delete your account and data",
-                    "Opt out of analytics",
                     "Control notification preferences",
                     "Manage blocked users"
                 ]
@@ -70,26 +68,17 @@ class DataPrivacyViewController: UIViewController {
             tableView.bottomAnchor.constraint(equalTo: view.bottomAnchor)
         ])
 
-        // Add footer with action buttons
-        let footerView = UIView(frame: CGRect(x: 0, y: 0, width: view.frame.width, height: 160))
+        // Add footer with delete account button
+        let footerView = UIView(frame: CGRect(x: 0, y: 0, width: view.frame.width, height: 100))
 
-        let downloadButton = createButton(title: "Download My Data", action: #selector(downloadData))
         let deleteButton = createButton(title: "Delete My Account", action: #selector(deleteAccount))
         deleteButton.backgroundColor = .systemRed
 
-        footerView.addSubview(downloadButton)
         footerView.addSubview(deleteButton)
-
-        downloadButton.translatesAutoresizingMaskIntoConstraints = false
         deleteButton.translatesAutoresizingMaskIntoConstraints = false
 
         NSLayoutConstraint.activate([
-            downloadButton.topAnchor.constraint(equalTo: footerView.topAnchor, constant: 20),
-            downloadButton.leadingAnchor.constraint(equalTo: footerView.leadingAnchor, constant: 16),
-            downloadButton.trailingAnchor.constraint(equalTo: footerView.trailingAnchor, constant: -16),
-            downloadButton.heightAnchor.constraint(equalToConstant: 50),
-
-            deleteButton.topAnchor.constraint(equalTo: downloadButton.bottomAnchor, constant: 12),
+            deleteButton.topAnchor.constraint(equalTo: footerView.topAnchor, constant: 20),
             deleteButton.leadingAnchor.constraint(equalTo: footerView.leadingAnchor, constant: 16),
             deleteButton.trailingAnchor.constraint(equalTo: footerView.trailingAnchor, constant: -16),
             deleteButton.heightAnchor.constraint(equalToConstant: 50)
@@ -107,27 +96,6 @@ class DataPrivacyViewController: UIViewController {
         button.titleLabel?.font = .systemFont(ofSize: 17, weight: .semibold)
         button.addTarget(self, action: action, for: .touchUpInside)
         return button
-    }
-
-    @objc private func downloadData() {
-        let alert = UIAlertController(
-            title: "Download Your Data",
-            message: "We'll prepare a copy of your data and send it to your email address within 48 hours.",
-            preferredStyle: .alert
-        )
-
-        alert.addAction(UIAlertAction(title: "Cancel", style: .cancel))
-        alert.addAction(UIAlertAction(title: "Request Data", style: .default) { _ in
-            let confirmAlert = UIAlertController(
-                title: "Request Sent",
-                message: "You'll receive an email with your data within 48 hours.",
-                preferredStyle: .alert
-            )
-            confirmAlert.addAction(UIAlertAction(title: "OK", style: .default))
-            self.present(confirmAlert, animated: true)
-        })
-
-        present(alert, animated: true)
     }
 
     @objc private func deleteAccount() {

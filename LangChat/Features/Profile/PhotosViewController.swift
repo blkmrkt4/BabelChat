@@ -208,7 +208,7 @@ extension PhotosViewController: PHPickerViewControllerDelegate {
 
     /// Helper to load UIImage from PHPickerResult asynchronously
     private func loadImage(from result: PHPickerResult) async throws -> UIImage {
-        return try await withCheckedThrowingContinuation { continuation in
+        let originalImage: UIImage = try await withCheckedThrowingContinuation { continuation in
             result.itemProvider.loadObject(ofClass: UIImage.self) { object, error in
                 if let error = error {
                     continuation.resume(throwing: error)
@@ -220,6 +220,31 @@ extension PhotosViewController: PHPickerViewControllerDelegate {
                 }
             }
         }
+
+        // Resize image to max 1200px to reduce memory usage and prevent crashes
+        return resizeImage(originalImage, maxDimension: 1200)
+    }
+
+    /// Resize image to fit within maxDimension while maintaining aspect ratio
+    private func resizeImage(_ image: UIImage, maxDimension: CGFloat) -> UIImage {
+        let size = image.size
+
+        // If image is already small enough, return it
+        if size.width <= maxDimension && size.height <= maxDimension {
+            return image
+        }
+
+        // Calculate new size maintaining aspect ratio
+        let ratio = min(maxDimension / size.width, maxDimension / size.height)
+        let newSize = CGSize(width: size.width * ratio, height: size.height * ratio)
+
+        // Use UIGraphicsImageRenderer for efficient memory handling
+        let renderer = UIGraphicsImageRenderer(size: newSize)
+        let resizedImage = renderer.image { _ in
+            image.draw(in: CGRect(origin: .zero, size: newSize))
+        }
+
+        return resizedImage
     }
 }
 

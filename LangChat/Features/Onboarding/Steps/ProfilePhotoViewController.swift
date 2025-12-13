@@ -168,10 +168,14 @@ extension ProfilePhotoViewController: PHPickerViewControllerDelegate {
 
         if let result = results.first {
             result.itemProvider.loadObject(ofClass: UIImage.self) { [weak self] object, error in
-                if let image = object as? UIImage {
+                if let originalImage = object as? UIImage {
+                    // Resize image to max 1200px to reduce memory usage
+                    // This prevents crashes on devices with high-resolution camera photos
+                    let resizedImage = self?.resizeImage(originalImage, maxDimension: 1200) ?? originalImage
+
                     DispatchQueue.main.async {
-                        self?.selectedImages[index] = image
-                        self?.photoSlots[index].setImage(image)
+                        self?.selectedImages[index] = resizedImage
+                        self?.photoSlots[index].setImage(resizedImage)
                         self?.updatePhotoCount()
                     }
                 }
@@ -179,6 +183,28 @@ extension ProfilePhotoViewController: PHPickerViewControllerDelegate {
         }
 
         dismiss(animated: true)
+    }
+
+    /// Resize image to fit within maxDimension while maintaining aspect ratio
+    private func resizeImage(_ image: UIImage, maxDimension: CGFloat) -> UIImage {
+        let size = image.size
+
+        // If image is already small enough, return it
+        if size.width <= maxDimension && size.height <= maxDimension {
+            return image
+        }
+
+        // Calculate new size maintaining aspect ratio
+        let ratio = min(maxDimension / size.width, maxDimension / size.height)
+        let newSize = CGSize(width: size.width * ratio, height: size.height * ratio)
+
+        // Use UIGraphicsImageRenderer for efficient memory handling
+        let renderer = UIGraphicsImageRenderer(size: newSize)
+        let resizedImage = renderer.image { _ in
+            image.draw(in: CGRect(origin: .zero, size: newSize))
+        }
+
+        return resizedImage
     }
 }
 

@@ -15,9 +15,61 @@ class MatchCardView: UIView {
     private let scrollView = UIScrollView()
     private let contentView = UIView()
 
+    // Blur overlay for blur mode (profile image)
+    private let profileBlurEffectView: UIVisualEffectView = {
+        let blurEffect = UIBlurEffect(style: .regular)
+        let view = UIVisualEffectView(effect: blurEffect)
+        view.isHidden = true
+        view.layer.cornerRadius = 60
+        view.clipsToBounds = true
+        return view
+    }()
+
+    // Blur overlay for photo grid
+    private let photoGridBlurEffectView: UIVisualEffectView = {
+        let blurEffect = UIBlurEffect(style: .regular)
+        let view = UIVisualEffectView(effect: blurEffect)
+        view.isHidden = true
+        view.layer.cornerRadius = 12
+        view.clipsToBounds = true
+        return view
+    }()
+
+    private let blurIconView: UIImageView = {
+        let imageView = UIImageView(image: UIImage(systemName: "eye.slash.fill"))
+        imageView.tintColor = .white
+        imageView.contentMode = .scaleAspectFit
+        imageView.isHidden = true
+        return imageView
+    }()
+
+    private let blurLabel: UILabel = {
+        let label = UILabel()
+        label.text = "Photos blurred"
+        label.font = .systemFont(ofSize: 12, weight: .medium)
+        label.textColor = .white
+        label.textAlignment = .center
+        label.isHidden = true
+        return label
+    }()
+
     var user: User? {
         didSet {
             updateUI()
+        }
+    }
+
+    // Blur mode - set by parent view controller (legacy)
+    var shouldBlurPhotos: Bool = false {
+        didSet {
+            updateBlurState()
+        }
+    }
+
+    // Per-photo blur settings from the user
+    var photoBlurSettings: [Bool] = [] {
+        didSet {
+            updateBlurState()
         }
     }
 
@@ -94,6 +146,12 @@ class MatchCardView: UIView {
         matchDateLabel.font = .systemFont(ofSize: 14, weight: .regular)
         matchDateLabel.textColor = .tertiaryLabel
         contentView.addSubview(matchDateLabel)
+
+        // Add blur overlays
+        contentView.addSubview(profileBlurEffectView)
+        contentView.addSubview(photoGridBlurEffectView)
+        contentView.addSubview(blurIconView)
+        contentView.addSubview(blurLabel)
     }
 
     private func setupConstraints() {
@@ -109,6 +167,10 @@ class MatchCardView: UIView {
         aboutLabel.translatesAutoresizingMaskIntoConstraints = false
         bioLabel.translatesAutoresizingMaskIntoConstraints = false
         matchDateLabel.translatesAutoresizingMaskIntoConstraints = false
+        profileBlurEffectView.translatesAutoresizingMaskIntoConstraints = false
+        photoGridBlurEffectView.translatesAutoresizingMaskIntoConstraints = false
+        blurIconView.translatesAutoresizingMaskIntoConstraints = false
+        blurLabel.translatesAutoresizingMaskIntoConstraints = false
 
         NSLayoutConstraint.activate([
             scrollView.topAnchor.constraint(equalTo: topAnchor),
@@ -159,7 +221,26 @@ class MatchCardView: UIView {
 
             matchDateLabel.topAnchor.constraint(equalTo: bioLabel.bottomAnchor, constant: 20),
             matchDateLabel.leadingAnchor.constraint(equalTo: contentView.leadingAnchor, constant: 24),
-            matchDateLabel.bottomAnchor.constraint(equalTo: contentView.bottomAnchor, constant: -40)
+            matchDateLabel.bottomAnchor.constraint(equalTo: contentView.bottomAnchor, constant: -40),
+
+            // Blur overlay constraints
+            profileBlurEffectView.topAnchor.constraint(equalTo: profileImageView.topAnchor),
+            profileBlurEffectView.leadingAnchor.constraint(equalTo: profileImageView.leadingAnchor),
+            profileBlurEffectView.trailingAnchor.constraint(equalTo: profileImageView.trailingAnchor),
+            profileBlurEffectView.bottomAnchor.constraint(equalTo: profileImageView.bottomAnchor),
+
+            photoGridBlurEffectView.topAnchor.constraint(equalTo: photoGridView.topAnchor),
+            photoGridBlurEffectView.leadingAnchor.constraint(equalTo: photoGridView.leadingAnchor),
+            photoGridBlurEffectView.trailingAnchor.constraint(equalTo: photoGridView.trailingAnchor),
+            photoGridBlurEffectView.bottomAnchor.constraint(equalTo: photoGridView.bottomAnchor),
+
+            blurIconView.centerXAnchor.constraint(equalTo: photoGridView.centerXAnchor),
+            blurIconView.centerYAnchor.constraint(equalTo: photoGridView.centerYAnchor, constant: -10),
+            blurIconView.widthAnchor.constraint(equalToConstant: 30),
+            blurIconView.heightAnchor.constraint(equalToConstant: 30),
+
+            blurLabel.topAnchor.constraint(equalTo: blurIconView.bottomAnchor, constant: 4),
+            blurLabel.centerXAnchor.constraint(equalTo: photoGridView.centerXAnchor)
         ])
     }
 
@@ -194,6 +275,35 @@ class MatchCardView: UIView {
         matchDateLabel.text = user.formattedMatchDate
 
         aboutLabel.text = "About \(user.firstName)"
+    }
+
+    private func updateBlurState() {
+        // Check per-photo blur settings first
+        if !photoBlurSettings.isEmpty {
+            // Profile image is at index 6
+            let profilePhotoBlurred = photoBlurSettings.count > 6 ? photoBlurSettings[6] : false
+            profileBlurEffectView.isHidden = !profilePhotoBlurred
+
+            // Photo grid blur: apply per-photo to the grid view
+            let gridBlurSettings = Array(photoBlurSettings.prefix(6))
+            photoGridView.setBlurSettings(gridBlurSettings)
+            photoGridView.applyBlurForViewing = true
+
+            // Hide the full-grid blur overlay (using per-photo now)
+            photoGridBlurEffectView.isHidden = true
+
+            // Show blur label only if any photo is blurred
+            let hasAnyBlur = photoBlurSettings.contains(true)
+            blurIconView.isHidden = !hasAnyBlur
+            blurLabel.isHidden = !hasAnyBlur
+        } else {
+            // Legacy: blur everything
+            let shouldShow = shouldBlurPhotos
+            profileBlurEffectView.isHidden = !shouldShow
+            photoGridBlurEffectView.isHidden = !shouldShow
+            blurIconView.isHidden = !shouldShow
+            blurLabel.isHidden = !shouldShow
+        }
     }
 
     private func loadImage(from urlString: String, into imageView: UIImageView) {
