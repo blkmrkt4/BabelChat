@@ -56,6 +56,18 @@ struct Config {
         return infoPlistValue(for: "REVENUECAT_API_KEY")
     }()
 
+    static let googleCloudAPIKey: String? = {
+        let rawValue = Bundle.main.infoDictionary?["GOOGLE_CLOUD_API_KEY"] as? String
+        print("🔑 Config: GOOGLE_CLOUD_API_KEY raw value: '\(rawValue ?? "nil")'")
+
+        if let value = rawValue, !value.isEmpty, !value.hasPrefix("$(") {
+            print("🔑 Config: Google API key loaded successfully (\(value.prefix(10))...)")
+            return value
+        }
+        print("⚠️ Config: Google API key NOT found or not substituted")
+        return nil
+    }()
+
     // MARK: - Helper to read from Info.plist
 
     private static func infoPlistValue(for key: String) -> String? {

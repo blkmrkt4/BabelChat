@@ -36,6 +36,9 @@ class AppDelegate: UIResponder, UIApplicationDelegate {
         // Configure push notifications
         configurePushNotifications()
 
+        // Pre-initialize TTS service to see debug logs
+        _ = TTSService.shared
+
         // Override point for customization after application launch.
         return true
     }

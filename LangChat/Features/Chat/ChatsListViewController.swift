@@ -418,6 +418,7 @@ class ChatTableViewCell: UITableViewCell {
     private let unreadBadge = UIView()
     private let onlineIndicator = UIView()
     private let aiBadge = UILabel()
+    private let languageBadge = UILabel()
 
     override init(style: UITableViewCell.CellStyle, reuseIdentifier: String?) {
         super.init(style: style, reuseIdentifier: reuseIdentifier)
@@ -476,6 +477,16 @@ class ChatTableViewCell: UITableViewCell {
         contentView.addSubview(aiBadge)
         aiBadge.translatesAutoresizingMaskIntoConstraints = false
 
+        // Language badge for Muses (shows flag + language code)
+        languageBadge.font = .systemFont(ofSize: 11, weight: .medium)
+        languageBadge.textColor = .white
+        languageBadge.backgroundColor = UIColor.systemBlue.withAlphaComponent(0.85)
+        languageBadge.textAlignment = .center
+        languageBadge.layer.cornerRadius = 8
+        languageBadge.clipsToBounds = true
+        contentView.addSubview(languageBadge)
+        languageBadge.translatesAutoresizingMaskIntoConstraints = false
+
         NSLayoutConstraint.activate([
             profileImageView.leadingAnchor.constraint(equalTo: contentView.leadingAnchor, constant: 16),
             profileImageView.centerYAnchor.constraint(equalTo: contentView.centerYAnchor),
@@ -506,7 +517,11 @@ class ChatTableViewCell: UITableViewCell {
             aiBadge.leadingAnchor.constraint(equalTo: nameLabel.trailingAnchor, constant: 6),
             aiBadge.centerYAnchor.constraint(equalTo: nameLabel.centerYAnchor),
             aiBadge.widthAnchor.constraint(equalToConstant: 24),
-            aiBadge.heightAnchor.constraint(equalToConstant: 16)
+            aiBadge.heightAnchor.constraint(equalToConstant: 16),
+
+            languageBadge.leadingAnchor.constraint(equalTo: aiBadge.trailingAnchor, constant: 4),
+            languageBadge.centerYAnchor.constraint(equalTo: nameLabel.centerYAnchor),
+            languageBadge.heightAnchor.constraint(equalToConstant: 16)
         ])
     }
 
@@ -516,6 +531,15 @@ class ChatTableViewCell: UITableViewCell {
         unreadBadge.isHidden = !match.hasNewMessage
         onlineIndicator.isHidden = !match.user.isOnline
         aiBadge.isHidden = !match.user.isAI
+
+        // Show language badge for Muses (AI users)
+        if match.user.isAI {
+            let langName = match.user.nativeLanguage.language.name
+            languageBadge.text = " \(langName) "
+            languageBadge.isHidden = false
+        } else {
+            languageBadge.isHidden = true
+        }
 
         if let lastMessageTime = match.lastMessageTime {
             let formatter = RelativeDateTimeFormatter()

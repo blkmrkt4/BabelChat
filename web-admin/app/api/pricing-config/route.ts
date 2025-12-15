@@ -41,6 +41,9 @@ export async function PUT(request: Request) {
         premium_price_usd: body.premium_price_usd,
         premium_banner: body.premium_banner,
         premium_features: body.premium_features,
+        pro_price_usd: body.pro_price_usd,
+        pro_banner: body.pro_banner,
+        pro_features: body.pro_features,
         free_features: body.free_features,
         updated_at: new Date().toISOString()
       })

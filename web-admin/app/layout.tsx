@@ -22,6 +22,7 @@ export default function RootLayout({
     { href: '/monitoring', label: 'Monitoring' },
     { href: '/moderation', label: 'Moderation' },
     { href: '/pricing', label: 'Pricing' },
+    { href: '/voices', label: 'TTS Voices' },
     { href: '/settings', label: 'Settings' },
   ]
 

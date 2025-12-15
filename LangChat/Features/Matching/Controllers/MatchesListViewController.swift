@@ -25,14 +25,6 @@ class MatchesListViewController: UIViewController {
         // Hide navigation title - we'll use a custom header instead
         navigationItem.title = ""
         navigationController?.navigationBar.prefersLargeTitles = false
-
-        let notificationButton = UIBarButtonItem(
-            image: UIImage(systemName: "bell"),
-            style: .plain,
-            target: self,
-            action: #selector(notificationsTapped)
-        )
-        navigationItem.rightBarButtonItem = notificationButton
     }
 
     private func setupViews() {
@@ -205,9 +197,6 @@ class MatchesListViewController: UIViewController {
         }
     }
 
-    @objc private func notificationsTapped() {
-        print("Notifications tapped")
-    }
 }
 
 extension MatchesListViewController: UICollectionViewDataSource {

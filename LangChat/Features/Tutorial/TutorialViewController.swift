@@ -2,6 +2,17 @@ import UIKit
 
 class TutorialViewController: UIViewController {
 
+    // MARK: - Pricing Config
+    private var pricingConfig: PricingConfig = PricingConfig.defaultConfig
+
+    // Pricing UI references for dynamic updates
+    private var freePriceLabel: UILabel?
+    private var premiumPriceLabel: UILabel?
+    private var proPriceLabel: UILabel?
+    private var freeFeaturesLabel: UILabel?
+    private var premiumFeaturesLabel: UILabel?
+    private var proFeaturesLabel: UILabel?
+
     // MARK: - UI Components
     private let scrollView = UIScrollView()
     private let pageControl = UIPageControl()
@@ -15,13 +26,15 @@ class TutorialViewController: UIViewController {
         let description: String
         let tips: [String]
         let isDiscoverPage: Bool  // Special flag for button icons page
+        let isPricingPage: Bool   // Special flag for pricing tiers page
 
-        init(icon: String, title: String, description: String, tips: [String], isDiscoverPage: Bool = false) {
+        init(icon: String, title: String, description: String, tips: [String], isDiscoverPage: Bool = false, isPricingPage: Bool = false) {
             self.icon = icon
             self.title = title
             self.description = description
             self.tips = tips
             self.isDiscoverPage = isDiscoverPage
+            self.isPricingPage = isPricingPage
         }
     }
 
@@ -117,14 +130,10 @@ class TutorialViewController: UIViewController {
         ),
         TutorialPage(
             icon: "star.fill",
-            title: "Premium Features",
-            description: "Unlock the full LangChat experience",
-            tips: [
-                "Unlimited translations and grammar help",
-                "Unlimited profile views per day",
-                "Direct messaging with all matches",
-                "Priority in the matching algorithm"
-            ]
+            title: "Choose Your Plan",
+            description: "Start free, upgrade when you're ready",
+            tips: [], // Uses custom pricing layout
+            isPricingPage: true
         )
     ]
 
@@ -134,6 +143,37 @@ class TutorialViewController: UIViewController {
         setupViews()
         setupConstraints()
         setupPages()
+        loadPricingConfig()
+    }
+
+    private func loadPricingConfig() {
+        Task {
+            let config = await PricingConfigManager.shared.getConfig()
+            await MainActor.run {
+                self.pricingConfig = config
+                self.updatePricingCards(with: config)
+            }
+        }
+    }
+
+    private func updatePricingCards(with config: PricingConfig) {
+        // Update price labels
+        premiumPriceLabel?.text = config.premiumPriceFormatted
+        proPriceLabel?.text = config.proPriceFormatted
+
+        // Update feature labels
+        if let label = freeFeaturesLabel {
+            let features = config.freeFeaturesText.prefix(4).map { "• \($0)" }.joined(separator: "\n")
+            label.text = features
+        }
+        if let label = premiumFeaturesLabel {
+            let features = config.premiumFeaturesText.prefix(4).map { "• \($0)" }.joined(separator: "\n")
+            label.text = features
+        }
+        if let label = proFeaturesLabel {
+            let features = config.proFeaturesText.prefix(4).map { "• \($0)" }.joined(separator: "\n")
+            label.text = features
+        }
     }
 
     override func viewWillAppear(_ animated: Bool) {
@@ -284,7 +324,7 @@ class TutorialViewController: UIViewController {
         // Title
         let titleLabel = UILabel()
         titleLabel.text = page.title
-        titleLabel.font = .systemFont(ofSize: 28, weight: .bold)
+        titleLabel.font = .systemFont(ofSize: 24, weight: .bold)
         titleLabel.textColor = .white
         titleLabel.textAlignment = .center
         titleLabel.translatesAutoresizingMaskIntoConstraints = false
@@ -293,7 +333,7 @@ class TutorialViewController: UIViewController {
         // Description
         let descLabel = UILabel()
         descLabel.text = page.description
-        descLabel.font = .systemFont(ofSize: 17, weight: .regular)
+        descLabel.font = .systemFont(ofSize: 15, weight: .regular)
         descLabel.textColor = UIColor.white.withAlphaComponent(0.9)
         descLabel.textAlignment = .center
         descLabel.numberOfLines = 0
@@ -329,6 +369,27 @@ class TutorialViewController: UIViewController {
                 buttonsStack.trailingAnchor.constraint(equalTo: tipsContainer.trailingAnchor, constant: -16),
                 buttonsStack.bottomAnchor.constraint(equalTo: tipsContainer.bottomAnchor, constant: -20)
             ])
+        } else if page.isPricingPage {
+            // Create pricing tiers display
+            let pricingStack = UIStackView()
+            pricingStack.axis = .vertical
+            pricingStack.spacing = 8
+            pricingStack.translatesAutoresizingMaskIntoConstraints = false
+            tipsContainer.addSubview(pricingStack)
+
+            // Add all 3 tiers
+            let tiers: [SubscriptionTier] = [.free, .premium, .pro]
+            for tier in tiers {
+                let tierView = createPricingTierRow(tier: tier)
+                pricingStack.addArrangedSubview(tierView)
+            }
+
+            NSLayoutConstraint.activate([
+                pricingStack.topAnchor.constraint(equalTo: tipsContainer.topAnchor, constant: 10),
+                pricingStack.leadingAnchor.constraint(equalTo: tipsContainer.leadingAnchor, constant: 10),
+                pricingStack.trailingAnchor.constraint(equalTo: tipsContainer.trailingAnchor, constant: -10),
+                pricingStack.bottomAnchor.constraint(equalTo: tipsContainer.bottomAnchor, constant: -10)
+            ])
         } else {
             // Standard tips stack
             let tipsStack = UIStackView()
@@ -351,26 +412,26 @@ class TutorialViewController: UIViewController {
         }
 
         NSLayoutConstraint.activate([
-            // Icon
-            iconView.topAnchor.constraint(equalTo: pageView.topAnchor, constant: 40),
+            // Icon - moved up
+            iconView.topAnchor.constraint(equalTo: pageView.topAnchor, constant: 8),
             iconView.centerXAnchor.constraint(equalTo: pageView.centerXAnchor),
-            iconView.widthAnchor.constraint(equalToConstant: 60),
-            iconView.heightAnchor.constraint(equalToConstant: 60),
+            iconView.widthAnchor.constraint(equalToConstant: 50),
+            iconView.heightAnchor.constraint(equalToConstant: 50),
 
-            // Title
-            titleLabel.topAnchor.constraint(equalTo: iconView.bottomAnchor, constant: 24),
-            titleLabel.leadingAnchor.constraint(equalTo: pageView.leadingAnchor, constant: 32),
-            titleLabel.trailingAnchor.constraint(equalTo: pageView.trailingAnchor, constant: -32),
+            // Title - tighter spacing
+            titleLabel.topAnchor.constraint(equalTo: iconView.bottomAnchor, constant: 12),
+            titleLabel.leadingAnchor.constraint(equalTo: pageView.leadingAnchor, constant: 24),
+            titleLabel.trailingAnchor.constraint(equalTo: pageView.trailingAnchor, constant: -24),
 
-            // Description
-            descLabel.topAnchor.constraint(equalTo: titleLabel.bottomAnchor, constant: 12),
-            descLabel.leadingAnchor.constraint(equalTo: pageView.leadingAnchor, constant: 32),
-            descLabel.trailingAnchor.constraint(equalTo: pageView.trailingAnchor, constant: -32),
+            // Description - tighter spacing
+            descLabel.topAnchor.constraint(equalTo: titleLabel.bottomAnchor, constant: 6),
+            descLabel.leadingAnchor.constraint(equalTo: pageView.leadingAnchor, constant: 24),
+            descLabel.trailingAnchor.constraint(equalTo: pageView.trailingAnchor, constant: -24),
 
-            // Tips container
-            tipsContainer.topAnchor.constraint(equalTo: descLabel.bottomAnchor, constant: 32),
-            tipsContainer.leadingAnchor.constraint(equalTo: pageView.leadingAnchor, constant: 24),
-            tipsContainer.trailingAnchor.constraint(equalTo: pageView.trailingAnchor, constant: -24)
+            // Tips container - tighter spacing
+            tipsContainer.topAnchor.constraint(equalTo: descLabel.bottomAnchor, constant: 16),
+            tipsContainer.leadingAnchor.constraint(equalTo: pageView.leadingAnchor, constant: 20),
+            tipsContainer.trailingAnchor.constraint(equalTo: pageView.trailingAnchor, constant: -20)
         ])
 
         return pageView
@@ -452,6 +513,114 @@ class TutorialViewController: UIViewController {
             label.topAnchor.constraint(equalTo: container.topAnchor),
             label.trailingAnchor.constraint(equalTo: container.trailingAnchor),
             label.bottomAnchor.constraint(equalTo: container.bottomAnchor)
+        ])
+
+        return container
+    }
+
+    private func createPricingTierRow(tier: SubscriptionTier) -> UIView {
+        let container = UIView()
+        container.translatesAutoresizingMaskIntoConstraints = false
+
+        // Background styling based on tier
+        let isPremium = tier == .premium
+        let isPro = tier == .pro
+        let isFree = tier == .free
+
+        if isPremium {
+            container.backgroundColor = UIColor.systemBlue.withAlphaComponent(0.2)
+            container.layer.borderWidth = 1.5
+            container.layer.borderColor = UIColor.systemBlue.cgColor
+        } else if isPro {
+            container.backgroundColor = goldColor.withAlphaComponent(0.15)
+            container.layer.borderWidth = 1.5
+            container.layer.borderColor = goldColor.cgColor
+        } else {
+            container.backgroundColor = UIColor.white.withAlphaComponent(0.08)
+            container.layer.borderWidth = 1
+            container.layer.borderColor = UIColor.white.withAlphaComponent(0.2).cgColor
+        }
+        container.layer.cornerRadius = 10
+
+        // Header row: tier name + price
+        let headerStack = UIStackView()
+        headerStack.axis = .horizontal
+        headerStack.distribution = .equalSpacing
+        headerStack.alignment = .center
+        headerStack.translatesAutoresizingMaskIntoConstraints = false
+        container.addSubview(headerStack)
+
+        let tierLabel = UILabel()
+        tierLabel.text = tier.displayName
+        tierLabel.font = .systemFont(ofSize: 15, weight: .bold)
+        if isPro {
+            tierLabel.textColor = goldColor
+        } else if isPremium {
+            tierLabel.textColor = .systemBlue
+        } else {
+            tierLabel.textColor = .white
+        }
+        headerStack.addArrangedSubview(tierLabel)
+
+        let priceLabel = UILabel()
+        // Use config for pricing
+        if isPremium {
+            priceLabel.text = pricingConfig.premiumPriceFormatted
+            self.premiumPriceLabel = priceLabel
+        } else if isPro {
+            priceLabel.text = pricingConfig.proPriceFormatted
+            self.proPriceLabel = priceLabel
+        } else {
+            priceLabel.text = tier.price  // Free is always "Free"
+            self.freePriceLabel = priceLabel
+        }
+        priceLabel.font = .systemFont(ofSize: 14, weight: .semibold)
+        priceLabel.textColor = .white
+        headerStack.addArrangedSubview(priceLabel)
+
+        // Short description
+        let descLabel = UILabel()
+        descLabel.text = tier.shortDescription
+        descLabel.font = .systemFont(ofSize: 11, weight: .regular)
+        descLabel.textColor = UIColor.white.withAlphaComponent(0.8)
+        descLabel.numberOfLines = 0
+        descLabel.translatesAutoresizingMaskIntoConstraints = false
+        container.addSubview(descLabel)
+
+        // Key features (show first 4) - use config
+        let featuresLabel = UILabel()
+        let features: [String]
+        if isFree {
+            features = pricingConfig.freeFeaturesText
+            self.freeFeaturesLabel = featuresLabel
+        } else if isPremium {
+            features = pricingConfig.premiumFeaturesText
+            self.premiumFeaturesLabel = featuresLabel
+        } else {
+            features = pricingConfig.proFeaturesText
+            self.proFeaturesLabel = featuresLabel
+        }
+        let topFeatures = features.prefix(4).map { "• \($0)" }.joined(separator: "\n")
+        featuresLabel.text = topFeatures
+        featuresLabel.font = .systemFont(ofSize: 11, weight: .regular)
+        featuresLabel.textColor = UIColor.white.withAlphaComponent(0.7)
+        featuresLabel.numberOfLines = 0
+        featuresLabel.translatesAutoresizingMaskIntoConstraints = false
+        container.addSubview(featuresLabel)
+
+        NSLayoutConstraint.activate([
+            headerStack.topAnchor.constraint(equalTo: container.topAnchor, constant: 8),
+            headerStack.leadingAnchor.constraint(equalTo: container.leadingAnchor, constant: 10),
+            headerStack.trailingAnchor.constraint(equalTo: container.trailingAnchor, constant: -10),
+
+            descLabel.topAnchor.constraint(equalTo: headerStack.bottomAnchor, constant: 2),
+            descLabel.leadingAnchor.constraint(equalTo: container.leadingAnchor, constant: 10),
+            descLabel.trailingAnchor.constraint(equalTo: container.trailingAnchor, constant: -10),
+
+            featuresLabel.topAnchor.constraint(equalTo: descLabel.bottomAnchor, constant: 4),
+            featuresLabel.leadingAnchor.constraint(equalTo: container.leadingAnchor, constant: 10),
+            featuresLabel.trailingAnchor.constraint(equalTo: container.trailingAnchor, constant: -10),
+            featuresLabel.bottomAnchor.constraint(equalTo: container.bottomAnchor, constant: -8)
         ])
 
         return container

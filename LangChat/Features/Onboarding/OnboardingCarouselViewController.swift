@@ -6,12 +6,20 @@ class OnboardingCarouselViewController: UIViewController {
 
     // MARK: - Properties
     var isViewingFromProfile = false
+    private var pricingConfig: PricingConfig = PricingConfig.defaultConfig
 
     // MARK: - UI Components
     private let scrollView = UIScrollView()
     private let pageControl = UIPageControl()
     private let closeButton = UIButton(type: .system)
     private let getStartedButton = UIButton(type: .system)
+
+    // Pricing card references for updating
+    private var freeFeatureStack: UIStackView?
+    private var premiumFeatureStack: UIStackView?
+    private var proFeatureStack: UIStackView?
+    private var premiumPriceLabel: UILabel?
+    private var proPriceLabel: UILabel?
 
     private let numberOfPages = 4
 
@@ -21,6 +29,59 @@ class OnboardingCarouselViewController: UIViewController {
         setupViews()
         setupConstraints()
         setupPages()
+        loadPricingConfig()
+    }
+
+    private func loadPricingConfig() {
+        Task {
+            let config = await PricingConfigManager.shared.getConfig()
+            await MainActor.run {
+                self.pricingConfig = config
+                self.updatePricingCards(with: config)
+            }
+        }
+    }
+
+    private func updatePricingCards(with config: PricingConfig) {
+        // Update price labels
+        premiumPriceLabel?.text = config.premiumPriceFormatted
+        proPriceLabel?.text = config.proPriceFormatted
+
+        // Update free features
+        if let stack = freeFeatureStack {
+            stack.arrangedSubviews.forEach { $0.removeFromSuperview() }
+            for feature in config.freeFeatures {
+                let label = createPricingFeatureLabel(feature.title)
+                stack.addArrangedSubview(label)
+            }
+        }
+
+        // Update premium features
+        if let stack = premiumFeatureStack {
+            stack.arrangedSubviews.forEach { $0.removeFromSuperview() }
+            for feature in config.premiumFeatures {
+                let label = createPricingFeatureLabel(feature.title)
+                stack.addArrangedSubview(label)
+            }
+        }
+
+        // Update pro features
+        if let stack = proFeatureStack {
+            stack.arrangedSubviews.forEach { $0.removeFromSuperview() }
+            for feature in config.proFeatures {
+                let label = createPricingFeatureLabel(feature.title)
+                stack.addArrangedSubview(label)
+            }
+        }
+    }
+
+    private func createPricingFeatureLabel(_ text: String) -> UILabel {
+        let label = UILabel()
+        label.text = "✓ \(text)"
+        label.font = .systemFont(ofSize: 12, weight: .regular)
+        label.textColor = UIColor.white.withAlphaComponent(0.85)
+        label.numberOfLines = 0
+        return label
     }
 
     override func viewWillAppear(_ animated: Bool) {
@@ -514,51 +575,52 @@ class OnboardingCarouselViewController: UIViewController {
         gradientLayer.locations = [0.0, 0.5, 1.0]
         gradientView.layer.insertSublayer(gradientLayer, at: 0)
 
-        // Content
+        // Content - use scroll view to fit 3 tiers
+        let scrollView = UIScrollView()
+        scrollView.showsVerticalScrollIndicator = false
+        scrollView.translatesAutoresizingMaskIntoConstraints = false
+        pageView.addSubview(scrollView)
+
         let contentStack = UIStackView()
         contentStack.axis = .vertical
-        contentStack.spacing = 24
+        contentStack.spacing = 12
         contentStack.alignment = .center
         contentStack.translatesAutoresizingMaskIntoConstraints = false
-        pageView.addSubview(contentStack)
+        scrollView.addSubview(contentStack)
 
         // Title
         let titleLabel = UILabel()
-        titleLabel.text = "Start Free,\nGo Premium"
-        titleLabel.font = .systemFont(ofSize: 32, weight: .bold)
+        titleLabel.text = "Choose Your Plan"
+        titleLabel.font = .systemFont(ofSize: 28, weight: .bold)
         titleLabel.textColor = .white
         titleLabel.textAlignment = .center
         titleLabel.numberOfLines = 0
         contentStack.addArrangedSubview(titleLabel)
 
+        // Subtitle
+        let subtitleLabel = UILabel()
+        subtitleLabel.text = "Start free, upgrade when you're ready"
+        subtitleLabel.font = .systemFont(ofSize: 15, weight: .regular)
+        subtitleLabel.textColor = UIColor.white.withAlphaComponent(0.8)
+        subtitleLabel.textAlignment = .center
+        contentStack.addArrangedSubview(subtitleLabel)
+
+        // Spacer
+        let spacer = UIView()
+        spacer.heightAnchor.constraint(equalToConstant: 8).isActive = true
+        contentStack.addArrangedSubview(spacer)
+
         // Free tier
-        let freeCard = createPricingCard(
-            title: "Free",
-            price: "$0",
-            features: [
-                "Match with language partners",
-                "5 translations per day",
-                "5 grammar checks per day",
-                "Practice with your Muse"
-            ],
-            isPremium: false
-        )
+        let freeCard = createPricingCard(tier: .free)
         contentStack.addArrangedSubview(freeCard)
 
         // Premium tier
-        let premiumCard = createPricingCard(
-            title: "Premium",
-            price: "$9.99/mo",
-            features: [
-                "Unlimited translations",
-                "Unlimited grammar help",
-                "Unlimited profile views",
-                "Priority matching",
-                "See who liked you"
-            ],
-            isPremium: true
-        )
+        let premiumCard = createPricingCard(tier: .premium)
         contentStack.addArrangedSubview(premiumCard)
+
+        // Pro tier
+        let proCard = createPricingCard(tier: .pro)
+        contentStack.addArrangedSubview(proCard)
 
         NSLayoutConstraint.activate([
             gradientView.topAnchor.constraint(equalTo: pageView.topAnchor),
@@ -566,9 +628,16 @@ class OnboardingCarouselViewController: UIViewController {
             gradientView.trailingAnchor.constraint(equalTo: pageView.trailingAnchor),
             gradientView.bottomAnchor.constraint(equalTo: pageView.bottomAnchor),
 
-            contentStack.centerYAnchor.constraint(equalTo: pageView.centerYAnchor),
-            contentStack.leadingAnchor.constraint(equalTo: pageView.leadingAnchor, constant: 24),
-            contentStack.trailingAnchor.constraint(equalTo: pageView.trailingAnchor, constant: -24)
+            scrollView.topAnchor.constraint(equalTo: pageView.topAnchor, constant: 60),
+            scrollView.leadingAnchor.constraint(equalTo: pageView.leadingAnchor),
+            scrollView.trailingAnchor.constraint(equalTo: pageView.trailingAnchor),
+            scrollView.bottomAnchor.constraint(equalTo: pageView.bottomAnchor, constant: -120),
+
+            contentStack.topAnchor.constraint(equalTo: scrollView.topAnchor),
+            contentStack.leadingAnchor.constraint(equalTo: scrollView.leadingAnchor, constant: 24),
+            contentStack.trailingAnchor.constraint(equalTo: scrollView.trailingAnchor, constant: -24),
+            contentStack.bottomAnchor.constraint(equalTo: scrollView.bottomAnchor),
+            contentStack.widthAnchor.constraint(equalTo: scrollView.widthAnchor, constant: -48)
         ])
 
         DispatchQueue.main.async {
@@ -578,21 +647,32 @@ class OnboardingCarouselViewController: UIViewController {
         return pageView
     }
 
-    private func createPricingCard(title: String, price: String, features: [String], isPremium: Bool) -> UIView {
+    private func createPricingCard(tier: SubscriptionTier) -> UIView {
+        let goldColor = UIColor(red: 1.0, green: 0.84, blue: 0.0, alpha: 1.0)
+        let isPremium = tier == .premium
+        let isPro = tier == .pro
+        let isFree = tier == .free
+
         let container = UIView()
-        container.backgroundColor = isPremium
-            ? UIColor(red: 1.0, green: 0.84, blue: 0.0, alpha: 0.15)
-            : UIColor.white.withAlphaComponent(0.1)
-        container.layer.cornerRadius = 16
-        if isPremium {
-            container.layer.borderWidth = 2
-            container.layer.borderColor = UIColor(red: 1.0, green: 0.84, blue: 0.0, alpha: 0.5).cgColor
+        if isPro {
+            container.backgroundColor = goldColor.withAlphaComponent(0.12)
+            container.layer.borderWidth = 1.5
+            container.layer.borderColor = goldColor.cgColor
+        } else if isPremium {
+            container.backgroundColor = UIColor.systemBlue.withAlphaComponent(0.15)
+            container.layer.borderWidth = 1.5
+            container.layer.borderColor = UIColor.systemBlue.cgColor
+        } else {
+            container.backgroundColor = UIColor.white.withAlphaComponent(0.08)
+            container.layer.borderWidth = 1
+            container.layer.borderColor = UIColor.white.withAlphaComponent(0.2).cgColor
         }
+        container.layer.cornerRadius = 14
         container.translatesAutoresizingMaskIntoConstraints = false
 
         let stack = UIStackView()
         stack.axis = .vertical
-        stack.spacing = 12
+        stack.spacing = 8
         stack.translatesAutoresizingMaskIntoConstraints = false
         container.addSubview(stack)
 
@@ -602,33 +682,75 @@ class OnboardingCarouselViewController: UIViewController {
         headerStack.distribution = .equalSpacing
 
         let titleLabel = UILabel()
-        titleLabel.text = title
-        titleLabel.font = .systemFont(ofSize: 20, weight: .bold)
-        titleLabel.textColor = isPremium ? UIColor(red: 1.0, green: 0.84, blue: 0.0, alpha: 1.0) : .white
+        titleLabel.text = tier.displayName
+        titleLabel.font = .systemFont(ofSize: 18, weight: .bold)
+        if isPro {
+            titleLabel.textColor = goldColor
+        } else if isPremium {
+            titleLabel.textColor = .systemBlue
+        } else {
+            titleLabel.textColor = .white
+        }
         headerStack.addArrangedSubview(titleLabel)
 
         let priceLabel = UILabel()
-        priceLabel.text = price
-        priceLabel.font = .systemFont(ofSize: 20, weight: .bold)
+        priceLabel.text = tier.price
+        priceLabel.font = .systemFont(ofSize: 16, weight: .bold)
         priceLabel.textColor = .white
         headerStack.addArrangedSubview(priceLabel)
 
+        // Store price label reference for updating
+        if isPremium {
+            self.premiumPriceLabel = priceLabel
+        } else if isPro {
+            self.proPriceLabel = priceLabel
+        }
+
         stack.addArrangedSubview(headerStack)
 
-        // Features
+        // Short description
+        let descLabel = UILabel()
+        descLabel.text = tier.shortDescription
+        descLabel.font = .systemFont(ofSize: 13, weight: .regular)
+        descLabel.textColor = UIColor.white.withAlphaComponent(0.75)
+        stack.addArrangedSubview(descLabel)
+
+        // Features stack (will be populated by loadPricingConfig)
+        let featureStack = UIStackView()
+        featureStack.axis = .vertical
+        featureStack.spacing = 4
+        featureStack.alignment = .leading
+        stack.addArrangedSubview(featureStack)
+
+        // Store reference for updating
+        if isFree {
+            self.freeFeatureStack = featureStack
+        } else if isPremium {
+            self.premiumFeatureStack = featureStack
+        } else if isPro {
+            self.proFeatureStack = featureStack
+        }
+
+        // Add initial features from default config
+        let features: [String]
+        if isFree {
+            features = pricingConfig.freeFeaturesText
+        } else if isPremium {
+            features = pricingConfig.premiumFeaturesText
+        } else {
+            features = pricingConfig.proFeaturesText
+        }
+
         for feature in features {
-            let featureLabel = UILabel()
-            featureLabel.text = "✓ \(feature)"
-            featureLabel.font = .systemFont(ofSize: 14, weight: .regular)
-            featureLabel.textColor = UIColor.white.withAlphaComponent(0.85)
-            stack.addArrangedSubview(featureLabel)
+            let label = createPricingFeatureLabel(feature)
+            featureStack.addArrangedSubview(label)
         }
 
         NSLayoutConstraint.activate([
-            stack.topAnchor.constraint(equalTo: container.topAnchor, constant: 16),
-            stack.leadingAnchor.constraint(equalTo: container.leadingAnchor, constant: 16),
-            stack.trailingAnchor.constraint(equalTo: container.trailingAnchor, constant: -16),
-            stack.bottomAnchor.constraint(equalTo: container.bottomAnchor, constant: -16),
+            stack.topAnchor.constraint(equalTo: container.topAnchor, constant: 12),
+            stack.leadingAnchor.constraint(equalTo: container.leadingAnchor, constant: 14),
+            stack.trailingAnchor.constraint(equalTo: container.trailingAnchor, constant: -14),
+            stack.bottomAnchor.constraint(equalTo: container.bottomAnchor, constant: -12),
 
             container.widthAnchor.constraint(equalToConstant: UIScreen.main.bounds.width - 48)
         ])

@@ -37,6 +37,8 @@ enum Language: String, CaseIterable, Codable, Equatable {
     case dutch = "NL"
     case polish = "PL"
     case turkish = "TR"
+    case filipino = "TL"  // Tagalog/Filipino
+    case thai = "TH"
 
     var code: String {
         return rawValue
@@ -51,7 +53,7 @@ enum Language: String, CaseIterable, Codable, Equatable {
         case .japanese: return "Japanese"
         case .korean: return "Korean"
         case .chinese: return "Chinese (Mandarin)"
-        case .portuguese: return "Portuguese"
+        case .portuguese: return "Portuguese (BR)"
         case .italian: return "Italian"
         case .russian: return "Russian"
         case .arabic: return "Arabic"
@@ -59,6 +61,8 @@ enum Language: String, CaseIterable, Codable, Equatable {
         case .dutch: return "Dutch"
         case .polish: return "Polish"
         case .turkish: return "Turkish"
+        case .filipino: return "Filipino"
+        case .thai: return "Thai"
         }
     }
 
@@ -79,6 +83,8 @@ enum Language: String, CaseIterable, Codable, Equatable {
         case .dutch: return "Nederlands"
         case .polish: return "Polski"
         case .turkish: return "Türkçe"
+        case .filipino: return "Filipino"
+        case .thai: return "ไทย"
         }
     }
 
@@ -99,6 +105,8 @@ enum Language: String, CaseIterable, Codable, Equatable {
         case .dutch: return "🇳🇱"
         case .polish: return "🇵🇱"
         case .turkish: return "🇹🇷"
+        case .filipino: return "🇵🇭"
+        case .thai: return "🇹🇭"
         }
     }
 
@@ -138,6 +146,8 @@ enum Language: String, CaseIterable, Codable, Equatable {
         case "nl": return .dutch
         case "pl": return .polish
         case "tr": return .turkish
+        case "tl", "fil": return .filipino
+        case "th": return .thai
         default: return nil
         }
     }
@@ -162,6 +172,8 @@ enum Language: String, CaseIterable, Codable, Equatable {
         case "dutch": return .dutch
         case "polish": return .polish
         case "turkish": return .turkish
+        case "filipino", "tagalog": return .filipino
+        case "thai": return .thai
         default: return nil
         }
     }

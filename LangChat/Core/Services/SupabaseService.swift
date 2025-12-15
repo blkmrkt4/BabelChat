@@ -112,14 +112,17 @@ extension SupabaseService {
 // MARK: - Storage Methods
 extension SupabaseService {
 
-    /// Upload a photo to Supabase Storage (PRIVATE bucket)
-    /// Returns the storage path (not a URL) for later retrieval
+    /// Base URL for public storage bucket
+    private static let publicStorageBaseURL = "https://ckhukylfoeofvoxvwwin.supabase.co/storage/v1/object/public/user-photos"
+
+    /// Upload a photo to Supabase Storage (PUBLIC bucket)
+    /// Returns the permanent public URL that never expires
     func uploadPhoto(_ imageData: Data, userId: String, photoIndex: Int) async throws -> String {
         let fileName = "\(userId)/photo_\(photoIndex)_\(Date().timeIntervalSince1970).jpg"
-        let bucketName = "user-photos" // This should be a PRIVATE bucket
+        let bucketName = "user-photos"
 
-        // Upload to private storage
-        let path = try await client.storage
+        // Upload to public storage
+        _ = try await client.storage
             .from(bucketName)
             .upload(
                 path: fileName,
@@ -130,40 +133,45 @@ extension SupabaseService {
                 )
             )
 
-        // Return the storage path (not URL) - we'll generate signed URLs when needed
-        return fileName
+        // Return the permanent public URL (never expires)
+        return "\(Self.publicStorageBaseURL)/\(fileName)"
     }
 
+    /// Convert a storage path to a permanent public URL
+    /// This is a synchronous operation - no network call needed
+    func getPublicPhotoURL(path: String) -> String {
+        // If it's already a full URL, return as-is
+        if path.hasPrefix("http") {
+            return path
+        }
+        // If it's empty, return empty
+        if path.isEmpty {
+            return ""
+        }
+        // Convert storage path to public URL
+        return "\(Self.publicStorageBaseURL)/\(path)"
+    }
+
+    /// Convert multiple storage paths to permanent public URLs
+    /// This is a synchronous operation - no network calls needed
+    func getPublicPhotoURLs(paths: [String]) -> [String] {
+        return paths.map { getPublicPhotoURL(path: $0) }
+    }
+
+    // MARK: - Legacy Support (deprecated, use getPublicPhotoURL instead)
+
     /// Get a signed URL for a private photo (expires in 1 hour)
+    /// @available(*, deprecated, message: "Use getPublicPhotoURL instead - bucket is now public")
     func getSignedPhotoURL(path: String, expiresIn: Int = 3600) async throws -> String {
-        let bucketName = "user-photos"
-
-        let signedURL = try await client.storage
-            .from(bucketName)
-            .createSignedURL(path: path, expiresIn: expiresIn)
-
-        return signedURL.absoluteString
+        // For backwards compatibility, just return the public URL
+        return getPublicPhotoURL(path: path)
     }
 
     /// Get signed URLs for multiple photos
+    /// @available(*, deprecated, message: "Use getPublicPhotoURLs instead - bucket is now public")
     func getSignedPhotoURLs(paths: [String], expiresIn: Int = 3600) async throws -> [String] {
-        var signedURLs: [String] = []
-
-        for path in paths {
-            if !path.isEmpty && !path.hasPrefix("http") {
-                // It's a storage path, get signed URL
-                let signedURL = try await getSignedPhotoURL(path: path, expiresIn: expiresIn)
-                signedURLs.append(signedURL)
-            } else if path.hasPrefix("http") {
-                // Already a URL (legacy), keep it
-                signedURLs.append(path)
-            } else {
-                // Empty path
-                signedURLs.append("")
-            }
-        }
-
-        return signedURLs
+        // For backwards compatibility, just return public URLs
+        return getPublicPhotoURLs(paths: paths)
     }
 
     /// Update user's photo URLs in database
@@ -1496,6 +1504,349 @@ struct ReportResponse: Codable {
         case status
         case createdAt = "created_at"
         case reviewedAt = "reviewed_at"
+    }
+}
+
+// MARK: - TTS Methods
+extension SupabaseService {
+
+    /// Get TTS usage info for current user
+    func getTTSUsageInfo() async throws -> TTSUsageInfo {
+        guard let userId = currentUserId else {
+            // Return default free tier info if not logged in
+            return TTSUsageInfo(
+                playsUsed: 0,
+                playsLimit: 10,
+                billingCycleStart: nil,
+                voiceQuality: .appleNative
+            )
+        }
+
+        struct TTSUsageResponse: Codable {
+            let ttsPlaysUsedThisMonth: Int?
+            let ttsBillingCycleStart: String?
+            let subscriptionTier: String?
+
+            enum CodingKeys: String, CodingKey {
+                case ttsPlaysUsedThisMonth = "tts_plays_used_this_month"
+                case ttsBillingCycleStart = "tts_billing_cycle_start"
+                case subscriptionTier = "subscription_tier"
+            }
+        }
+
+        let response: [TTSUsageResponse] = try await client.database
+            .from("profiles")
+            .select("tts_plays_used_this_month, tts_billing_cycle_start, subscription_tier")
+            .eq("id", value: userId.uuidString)
+            .execute()
+            .value
+
+        guard let usage = response.first else {
+            return TTSUsageInfo(
+                playsUsed: 0,
+                playsLimit: 10,
+                billingCycleStart: nil,
+                voiceQuality: .appleNative
+            )
+        }
+
+        let tier = SubscriptionTier(rawValue: usage.subscriptionTier ?? "free") ?? .free
+
+        // Parse billing cycle start date
+        var billingStart: Date? = nil
+        if let dateString = usage.ttsBillingCycleStart {
+            let formatter = ISO8601DateFormatter()
+            billingStart = formatter.date(from: dateString)
+        }
+
+        return TTSUsageInfo(
+            playsUsed: usage.ttsPlaysUsedThisMonth ?? 0,
+            playsLimit: tier.monthlyTTSLimit,
+            billingCycleStart: billingStart,
+            voiceQuality: tier.ttsVoiceQuality
+        )
+    }
+
+    /// Get current user's subscription tier
+    func getCurrentSubscriptionTier() async throws -> SubscriptionTier {
+        guard let userId = currentUserId else {
+            print("⚠️ getCurrentSubscriptionTier: No userId, returning .free")
+            return .free
+        }
+
+        struct TierResponse: Codable {
+            let subscriptionTier: String?
+
+            enum CodingKeys: String, CodingKey {
+                case subscriptionTier = "subscription_tier"
+            }
+        }
+
+        let response: [TierResponse] = try await client.database
+            .from("profiles")
+            .select("subscription_tier")
+            .eq("id", value: userId.uuidString)
+            .execute()
+            .value
+
+        guard let result = response.first,
+              let tierString = result.subscriptionTier else {
+            print("⚠️ getCurrentSubscriptionTier: No tier found for \(userId), returning .free")
+            return .free
+        }
+
+        let tier = SubscriptionTier(rawValue: tierString) ?? .free
+        print("✅ getCurrentSubscriptionTier: User \(userId) has tier '\(tierString)' -> \(tier)")
+        return tier
+    }
+
+    /// Increment TTS usage count for current user
+    func incrementTTSUsage() async throws {
+        guard let userId = currentUserId else { return }
+
+        // First check if we need to reset the counter (new billing cycle)
+        try await checkAndResetTTSCycle()
+
+        // Fetch current value and increment manually
+        struct CurrentUsage: Codable {
+            let ttsPlaysUsedThisMonth: Int?
+
+            enum CodingKeys: String, CodingKey {
+                case ttsPlaysUsedThisMonth = "tts_plays_used_this_month"
+            }
+        }
+
+        let current: [CurrentUsage] = try await client.database
+            .from("profiles")
+            .select("tts_plays_used_this_month")
+            .eq("id", value: userId.uuidString)
+            .execute()
+            .value
+
+        let currentCount = current.first?.ttsPlaysUsedThisMonth ?? 0
+
+        struct TTSUpdate: Encodable {
+            let tts_plays_used_this_month: Int
+        }
+
+        try await client.database
+            .from("profiles")
+            .update(TTSUpdate(tts_plays_used_this_month: currentCount + 1))
+            .eq("id", value: userId.uuidString)
+            .execute()
+
+        print("✅ TTS usage incremented")
+    }
+
+    /// Check if billing cycle has reset and reset counter if needed
+    private func checkAndResetTTSCycle() async throws {
+        guard let userId = currentUserId else { return }
+
+        struct BillingInfo: Codable {
+            let ttsBillingCycleStart: String?
+
+            enum CodingKeys: String, CodingKey {
+                case ttsBillingCycleStart = "tts_billing_cycle_start"
+            }
+        }
+
+        let response: [BillingInfo] = try await client.database
+            .from("profiles")
+            .select("tts_billing_cycle_start")
+            .eq("id", value: userId.uuidString)
+            .execute()
+            .value
+
+        let formatter = ISO8601DateFormatter()
+        let now = Date()
+        let calendar = Calendar.current
+
+        if let billingStartStr = response.first?.ttsBillingCycleStart,
+           let billingStart = formatter.date(from: billingStartStr) {
+            // Check if we're in a new month
+            let billingMonth = calendar.component(.month, from: billingStart)
+            let billingYear = calendar.component(.year, from: billingStart)
+            let currentMonth = calendar.component(.month, from: now)
+            let currentYear = calendar.component(.year, from: now)
+
+            if currentYear > billingYear || (currentYear == billingYear && currentMonth > billingMonth) {
+                // New billing cycle - reset counter
+                try await resetTTSUsage()
+            }
+        } else {
+            // No billing cycle set - initialize it
+            try await resetTTSUsage()
+        }
+    }
+
+    /// Reset TTS usage for new billing cycle
+    private func resetTTSUsage() async throws {
+        guard let userId = currentUserId else { return }
+
+        struct TTSReset: Encodable {
+            let tts_plays_used_this_month: Int
+            let tts_billing_cycle_start: String
+        }
+
+        let formatter = ISO8601DateFormatter()
+
+        try await client.database
+            .from("profiles")
+            .update(TTSReset(
+                tts_plays_used_this_month: 0,
+                tts_billing_cycle_start: formatter.string(from: Date())
+            ))
+            .eq("id", value: userId.uuidString)
+            .execute()
+
+        print("✅ TTS usage reset for new billing cycle")
+    }
+}
+
+// MARK: - Pricing Config Methods
+extension SupabaseService {
+
+    /// Fetch pricing configuration from Supabase
+    func fetchPricingConfig() async throws -> PricingConfig {
+        let response: [PricingConfig] = try await client.database
+            .from("pricing_config")
+            .select("*")
+            .eq("id", value: "00000000-0000-0000-0000-000000000001")
+            .execute()
+            .value
+
+        guard let config = response.first else {
+            print("⚠️ No pricing config found, using defaults")
+            return PricingConfig.defaultConfig
+        }
+
+        print("✅ Loaded pricing config from Supabase")
+        return config
+    }
+}
+
+// MARK: - TTS Voice Config Methods
+extension SupabaseService {
+
+    /// TTS voice configuration from Supabase
+    struct TTSVoiceConfig: Codable {
+        let languageCode: String
+        let languageName: String
+        let googleLanguageCode: String
+        let googleVoiceName: String
+        let voiceGender: String
+        let speakingRate: Double
+        let pitch: Double
+        let enabled: Bool
+        let maleVoiceName: String?
+        let femaleVoiceName: String?
+
+        enum CodingKeys: String, CodingKey {
+            case languageCode = "language_code"
+            case languageName = "language_name"
+            case googleLanguageCode = "google_language_code"
+            case googleVoiceName = "google_voice_name"
+            case voiceGender = "voice_gender"
+            case speakingRate = "speaking_rate"
+            case pitch = "pitch"
+            case enabled = "enabled"
+            case maleVoiceName = "male_voice_name"
+            case femaleVoiceName = "female_voice_name"
+        }
+
+        /// Get the appropriate voice name based on speaker gender
+        func voiceName(forGender gender: String?) -> String {
+            switch gender?.lowercased() {
+            case "male", "m":
+                return maleVoiceName ?? googleVoiceName
+            case "female", "f":
+                return femaleVoiceName ?? googleVoiceName
+            default:
+                return googleVoiceName
+            }
+        }
+    }
+
+    /// Fetch all TTS voice configurations
+    func fetchTTSVoiceConfigs() async throws -> [TTSVoiceConfig] {
+        let response: [TTSVoiceConfig] = try await client.database
+            .from("tts_voices")
+            .select("*")
+            .eq("enabled", value: true)
+            .execute()
+            .value
+
+        print("✅ Loaded \(response.count) TTS voice configs from Supabase")
+        return response
+    }
+
+    /// Fetch TTS voice config for a specific language
+    func fetchTTSVoiceConfig(forLanguage language: String) async throws -> TTSVoiceConfig? {
+        let languageLower = language.lowercased()
+
+        // Try exact match first
+        let exactMatch: [TTSVoiceConfig] = try await client.database
+            .from("tts_voices")
+            .select("*")
+            .eq("language_code", value: languageLower)
+            .eq("enabled", value: true)
+            .execute()
+            .value
+
+        if let config = exactMatch.first {
+            return config
+        }
+
+        // Try matching by language name
+        let nameMatch: [TTSVoiceConfig] = try await client.database
+            .from("tts_voices")
+            .select("*")
+            .ilike("language_name", value: "%\(languageLower)%")
+            .eq("enabled", value: true)
+            .execute()
+            .value
+
+        return nameMatch.first
+    }
+}
+
+// MARK: - Muse Interaction Tracking
+extension SupabaseService {
+
+    /// Track a Muse interaction (message sent to AI bot)
+    func trackMuseInteraction(museId: String, museName: String, language: String, interactionType: String = "message") async {
+        guard let userId = currentUserId else {
+            print("⚠️ Cannot track Muse interaction: No user logged in")
+            return
+        }
+
+        struct MuseInteraction: Encodable {
+            let user_id: String
+            let muse_id: String
+            let muse_name: String
+            let language: String
+            let interaction_type: String
+        }
+
+        let interaction = MuseInteraction(
+            user_id: userId.uuidString,
+            muse_id: museId,
+            muse_name: museName,
+            language: language,
+            interaction_type: interactionType
+        )
+
+        do {
+            try await client.database
+                .from("muse_interactions")
+                .insert(interaction)
+                .execute()
+
+            print("✅ Tracked Muse interaction: \(museName) (\(language)) - \(interactionType)")
+        } catch {
+            // Don't fail silently but don't crash either - tracking is non-critical
+            print("⚠️ Failed to track Muse interaction: \(error.localizedDescription)")
+        }
     }
 }
 

@@ -26,6 +26,9 @@ class ChatViewController: UIViewController {
     private var expandedIndexPath: IndexPath?
     private var expandedPaneIndex: Int = 1 // 0=grammar, 1=center, 2=translation
 
+    // Subscription tier for TTS voice quality
+    private var currentSubscriptionTier: SubscriptionTier = .free
+
     init(user: User, match: Match) {
         self.user = user
         self.match = match
@@ -53,6 +56,23 @@ class ChatViewController: UIViewController {
         loadMessages()
         saveUserData() // Save user data for chat list
         setupConversation() // Get or create Supabase conversation
+        fetchSubscriptionTier() // Get user's subscription tier for TTS
+    }
+
+    private func fetchSubscriptionTier() {
+        Task {
+            do {
+                let tier = try await SupabaseService.shared.getCurrentSubscriptionTier()
+                await MainActor.run {
+                    self.currentSubscriptionTier = tier
+                    // Reload visible cells to update their tier
+                    self.tableView.reloadData()
+                }
+            } catch {
+                print("Failed to fetch subscription tier: \(error)")
+                // Default to free tier on error
+            }
+        }
     }
 
     private func saveUserData() {
@@ -111,8 +131,17 @@ class ChatViewController: UIViewController {
         titleView.frame = CGRect(x: 0, y: 0, width: 200, height: 44)
         navigationItem.titleView = titleView
 
-        // Right bar buttons removed as video chat is not being implemented
-        // and the more options menu (three dots) had no functional actions.
+        // Add tap gesture to show user profile
+        let tapGesture = UITapGestureRecognizer(target: self, action: #selector(headerTapped))
+        titleView.addGestureRecognizer(tapGesture)
+        titleView.isUserInteractionEnabled = true
+    }
+
+    @objc private func headerTapped() {
+        let detailVC = UserDetailViewController()
+        detailVC.user = user
+        detailVC.isMatched = true  // Show as matched (hides swipe actions)
+        navigationController?.pushViewController(detailVC, animated: true)
     }
 
     private func setupViews() {
@@ -737,6 +766,13 @@ class ChatViewController: UIViewController {
                 // 2. Generate AI response ONLY for AI bots (Muses)
                 // Real users will respond on their own - no auto-response
                 if user.isAI {
+                    // Track Muse interaction for analytics
+                    await SupabaseService.shared.trackMuseInteraction(
+                        museId: user.id,
+                        museName: user.firstName,
+                        language: user.nativeLanguage.language.name
+                    )
+
                     await generateAIResponse(to: text, conversationId: conversationId)
                 } else {
                     print("📤 Message sent to real user - waiting for their response")
@@ -941,6 +977,7 @@ extension ChatViewController: UITableViewDataSource {
         let cell = tableView.dequeueReusableCell(withIdentifier: "SwipeableMessageCell", for: indexPath) as! SwipeableMessageCell
         let granularity = UserDefaults.standard.integer(forKey: "granularityLevel")
         cell.delegate = self
+        cell.setSubscriptionTier(currentSubscriptionTier) // Set tier for TTS voice quality
         cell.configure(
             with: message,
             user: user,

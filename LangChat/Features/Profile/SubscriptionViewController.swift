@@ -51,28 +51,11 @@ class SubscriptionViewController: UIViewController {
         descriptionLabel.translatesAutoresizingMaskIntoConstraints = false
 
         // Tier views
-        setupTierView(freeTierView, title: "Free", price: "$0/month", features: [
-            "5 daily swipes",
-            "3 AI explanations per day",
-            "3 active chats",
-            "Basic grammar feedback"
-        ], buttonTitle: getCurrentTier() == "Free" ? "Current Plan" : "Downgrade", buttonAction: #selector(selectFreeTier))
+        setupTierView(freeTierView, title: SubscriptionTier.free.displayName, price: SubscriptionTier.free.price, features: SubscriptionTier.free.features, buttonTitle: getCurrentTier() == "Free" ? "Current Plan" : "Downgrade", buttonAction: #selector(selectFreeTier))
 
-        setupTierView(premiumTierView, title: "Premium", price: "$9.99/month", features: [
-            "Unlimited swipes",
-            "See who liked you",
-            "Unlimited AI assistance",
-            "Advanced filters",
-            "No ads"
-        ], buttonTitle: getCurrentTier() == "Premium" ? "Current Plan" : "Upgrade", buttonAction: #selector(selectPremiumTier))
+        setupTierView(premiumTierView, title: SubscriptionTier.premium.displayName, price: SubscriptionTier.premium.price, features: SubscriptionTier.premium.features, buttonTitle: getCurrentTier() == "Premium" ? "Current Plan" : "Upgrade", buttonAction: #selector(selectPremiumTier))
 
-        setupTierView(proTierView, title: "Pro", price: "$19.99/month", features: [
-            "Everything in Premium",
-            "Priority matching",
-            "Exclusive features",
-            "Early access to new features",
-            "Priority support"
-        ], buttonTitle: getCurrentTier() == "Pro" ? "Current Plan" : "Upgrade", buttonAction: #selector(selectProTier))
+        setupTierView(proTierView, title: SubscriptionTier.pro.displayName, price: SubscriptionTier.pro.price, features: SubscriptionTier.pro.features, buttonTitle: getCurrentTier() == "Pro" ? "Current Plan" : "Upgrade", buttonAction: #selector(selectProTier))
 
         let stackView = UIStackView(arrangedSubviews: [freeTierView, premiumTierView, proTierView])
         stackView.axis = .vertical

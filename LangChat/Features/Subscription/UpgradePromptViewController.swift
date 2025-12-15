@@ -169,14 +169,8 @@ class UpgradePromptViewController: UIViewController {
             messageLabel.text = "You've viewed 10 profiles today. Upgrade to Premium to browse unlimited profiles and find your perfect language partner!"
         }
 
-        // Add premium features
-        let features = [
-            "✓ Unlimited AI chat messages",
-            "✓ Unlimited profile views",
-            "✓ Direct messaging with matches",
-            "✓ Full conversation history",
-            "✓ Grammar tips & cultural context"
-        ]
+        // Add premium features with TTS benefits
+        let features = SubscriptionTier.premium.features.map { "✓ \($0)" }
 
         for feature in features {
             let label = UILabel()

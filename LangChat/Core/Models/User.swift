@@ -20,6 +20,7 @@ struct User: Codable {
     let isOnline: Bool
     let isAI: Bool // Indicates if this is an AI practice partner
     let birthYear: Int? // Birth year for age calculation
+    let gender: String? // Gender for TTS voice selection (male, female, or nil)
 
     // Platonic and blur preferences
     let strictlyPlatonic: Bool // Only wants platonic language exchange (no dating)
@@ -65,6 +66,7 @@ struct User: Codable {
          isOnline: Bool = false,
          isAI: Bool = false,
          birthYear: Int? = nil,
+         gender: String? = nil,
          strictlyPlatonic: Bool = false,
          blurPhotosUntilMatch: Bool = false,
          photoBlurSettings: [Bool] = [],
@@ -91,6 +93,7 @@ struct User: Codable {
         self.isOnline = isOnline
         self.isAI = isAI
         self.birthYear = birthYear
+        self.gender = gender
         self.strictlyPlatonic = strictlyPlatonic
         self.blurPhotosUntilMatch = blurPhotosUntilMatch
         self.photoBlurSettings = photoBlurSettings

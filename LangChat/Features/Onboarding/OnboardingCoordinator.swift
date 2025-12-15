@@ -448,6 +448,13 @@ extension OnboardingCoordinator: PricingViewControllerDelegate {
         }
     }
 
+    func didSelectProTier() {
+        print("✅ User purchased Pro tier")
+        navigationController?.dismiss(animated: true) { [weak self] in
+            self?.transitionToMainApp()
+        }
+    }
+
     func didSkipPricing() {
         print("✅ User skipped pricing (continuing with Free tier)")
         navigationController?.dismiss(animated: true) { [weak self] in

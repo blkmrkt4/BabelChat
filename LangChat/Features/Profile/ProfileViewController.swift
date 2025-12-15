@@ -690,10 +690,27 @@ class ProfileViewController: UIViewController, PhotoGridViewDelegate {
         // Clear the profile photo at index 6
         photos[6] = ""
 
+        // Also clear the caption at index 6
+        var captions = currentPhotoCaptions
+        if captions.count > 6 {
+            captions[6] = nil
+        }
+
+        // Also clear the blur setting at index 6
+        var blurSettings = currentPhotoBlurSettings
+        if blurSettings.count > 6 {
+            blurSettings[6] = false
+        }
+
         Task {
             do {
                 try await SupabaseService.shared.updateUserPhotos(photoURLs: photos)
+                try await SupabaseService.shared.updatePhotoCaptions(captions: captions)
+                try await SupabaseService.shared.updatePhotoBlurSettings(blurSettings: blurSettings)
                 await MainActor.run {
+                    // Update local state
+                    self.currentPhotoCaptions = captions
+                    self.currentPhotoBlurSettings = blurSettings
                     self.loadProfileData()
                     let feedback = UINotificationFeedbackGenerator()
                     feedback.notificationOccurred(.success)
@@ -1017,11 +1034,28 @@ class ProfileViewController: UIViewController, PhotoGridViewDelegate {
             photos[index] = ""
         }
 
+        // Also clear the caption at this index
+        var captions = currentPhotoCaptions
+        if index < captions.count {
+            captions[index] = nil
+        }
+
+        // Also clear the blur setting at this index
+        var blurSettings = currentPhotoBlurSettings
+        if index < blurSettings.count {
+            blurSettings[index] = false
+        }
+
         // Save to Supabase
         Task {
             do {
                 try await SupabaseService.shared.updateUserPhotos(photoURLs: photos)
+                try await SupabaseService.shared.updatePhotoCaptions(captions: captions)
+                try await SupabaseService.shared.updatePhotoBlurSettings(blurSettings: blurSettings)
                 await MainActor.run {
+                    // Update local state
+                    self.currentPhotoCaptions = captions
+                    self.currentPhotoBlurSettings = blurSettings
                     // Reload profile to reflect changes
                     self.loadProfileData()
                     let feedback = UINotificationFeedbackGenerator()

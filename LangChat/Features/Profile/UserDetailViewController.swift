@@ -596,14 +596,27 @@ class UserDetailViewController: UIViewController, PhotoGridViewDelegate {
     private func updateUI() {
         guard let user = user else { return }
 
+        // Hide action buttons and photo grid for AI Muses
+        actionButtonsContainer.isHidden = user.isAI
+        photoGridView.isHidden = user.isAI
+
         // Update navigation title
         title = user.firstName
 
-        // Name
-        nameLabel.text = "\(user.firstName) \(user.lastName ?? "")"
+        // Name - for AI Muses, just show first name without "Muse" surname
+        if user.isAI {
+            nameLabel.text = user.firstName
+        } else {
+            nameLabel.text = "\(user.firstName) \(user.lastName ?? "")"
+        }
 
         // Load profile image with signed URL if needed
-        if let profileImagePath = user.profileImageURL {
+        if user.isAI {
+            // AI Muses get a sparkle icon
+            profileImageView.image = UIImage(systemName: "sparkles")
+            profileImageView.tintColor = .systemPurple
+            profileImageView.contentMode = .scaleAspectFit
+        } else if let profileImagePath = user.profileImageURL {
             Task {
                 do {
                     // Check if it's a storage path (not a full URL)

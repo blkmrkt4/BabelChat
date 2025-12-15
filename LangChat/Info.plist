@@ -71,5 +71,7 @@
 	<string>$(OPENROUTER_API_KEY)</string>
 	<key>REVENUECAT_API_KEY</key>
 	<string>$(REVENUECAT_API_KEY)</string>
+	<key>GOOGLE_CLOUD_API_KEY</key>
+	<string>$(GOOGLE_CLOUD_API_KEY)</string>
 </dict>
 </plist>

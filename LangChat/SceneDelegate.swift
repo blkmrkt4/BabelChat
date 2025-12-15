@@ -159,7 +159,8 @@ class SceneDelegate: UIResponder, UIWindowSceneDelegate {
 
     func sceneWillEnterForeground(_ scene: UIScene) {
         // Called as the scene transitions from the background to the foreground.
-        // Use this method to undo the changes made on entering the background.
+        // Clear TTS voice cache so any web-admin changes take effect immediately
+        TTSService.shared.clearVoiceCache()
     }
 
     func sceneDidEnterBackground(_ scene: UIScene) {

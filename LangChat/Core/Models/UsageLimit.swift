@@ -53,8 +53,8 @@ struct DailyUsage: Codable {
         switch tier {
         case .free:
             return count >= type.limitForFreeTier
-        case .premium:
-            return false // Premium has no limits
+        case .premium, .pro:
+            return false // Premium and Pro have no limits
         }
     }
 
@@ -62,7 +62,7 @@ struct DailyUsage: Codable {
         switch tier {
         case .free:
             return max(0, type.limitForFreeTier - count)
-        case .premium:
+        case .premium, .pro:
             return nil // Unlimited
         }
     }

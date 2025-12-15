@@ -7,16 +7,49 @@
 
 import Foundation
 
+// MARK: - TTS Voice Quality
+enum TTSVoiceQuality: String, Codable {
+    case appleNative = "apple"
+    case googleNeural2 = "google_neural2"
+    case googleChirp = "google_chirp"
+
+    var displayName: String {
+        switch self {
+        case .appleNative:
+            return "Standard"
+        case .googleNeural2:
+            return "Natural (Neural2)"
+        case .googleChirp:
+            return "Premium (Chirp)"
+        }
+    }
+}
+
+// MARK: - Subscription Tier
 enum SubscriptionTier: String, Codable {
     case free = "free"
     case premium = "premium"
+    case pro = "pro"
 
     var displayName: String {
         switch self {
         case .free:
-            return "Discovery"
+            return "Free"
         case .premium:
             return "Premium"
+        case .pro:
+            return "Pro"
+        }
+    }
+
+    var price: String {
+        switch self {
+        case .free:
+            return "Free"
+        case .premium:
+            return "$9.99/month"
+        case .pro:
+            return "$19.99/month"
         }
     }
 
@@ -24,22 +57,36 @@ enum SubscriptionTier: String, Codable {
         switch self {
         case .free:
             return [
-                "5 AI chat messages per day",
-                "View up to 10 profiles per day",
-                "Unlimited matches",
-                "AI chat only (subject to message limit)"
+                "No matching with real people - AI Muse chats only",
+                "50 messages per month",
+                "Full translation & grammar insights",
+                "Basic text to speech"
             ]
         case .premium:
             return [
-                "Unlimited AI chat messages",
-                "Unlimited profile views",
-                "Direct messaging with matches",
-                "Full conversation history",
-                "All language pairs",
-                "Grammar tips & insights",
-                "Cultural context",
-                "Voice pronunciation"
+                "Match with real people worldwide",
+                "Unlimited messages",
+                "Full translation & grammar insights",
+                "200 Text-to-Speech plays/month with natural voices"
             ]
+        case .pro:
+            return [
+                "Everything in Premium",
+                "Unlimited Text-to-Speech plays",
+                "Natural voices (Google Neural2)",
+                "Higher word limit per play - 150 vs 100 for Premium"
+            ]
+        }
+    }
+
+    var shortDescription: String {
+        switch self {
+        case .free:
+            return "Practice with AI Muse"
+        case .premium:
+            return "Match with real people + natural voices"
+        case .pro:
+            return "Unlimited learning, zero limits"
         }
     }
 
@@ -50,15 +97,18 @@ enum SubscriptionTier: String, Codable {
             return nil // Free tier has no product
         case .premium:
             return "premium_monthly" // Must match RevenueCat dashboard
+        case .pro:
+            return "pro_monthly" // Must match RevenueCat dashboard
         }
     }
 
-    // Daily limits for free tier
-    var dailyAIMessageLimit: Int? {
+    // MARK: - Message Limits
+
+    var monthlyMessageLimit: Int? {
         switch self {
         case .free:
-            return 5
-        case .premium:
+            return 50
+        case .premium, .pro:
             return nil // Unlimited
         }
     }
@@ -67,7 +117,7 @@ enum SubscriptionTier: String, Codable {
         switch self {
         case .free:
             return 10
-        case .premium:
+        case .premium, .pro:
             return nil // Unlimited
         }
     }
@@ -76,13 +126,79 @@ enum SubscriptionTier: String, Codable {
         switch self {
         case .free:
             return false
-        case .premium:
+        case .premium, .pro:
             return true
         }
     }
 
     var allowsUnlimitedMatches: Bool {
-        return true // Both tiers allow unlimited matches
+        return true // All tiers allow unlimited matches
+    }
+
+    // MARK: - TTS Properties
+
+    /// Monthly TTS play limit (nil = unlimited)
+    var monthlyTTSLimit: Int? {
+        switch self {
+        case .free:
+            return 10
+        case .premium:
+            return 200
+        case .pro:
+            return nil // Unlimited
+        }
+    }
+
+    /// Maximum words per TTS play
+    var maxWordsPerTTSPlay: Int {
+        switch self {
+        case .free, .premium:
+            return 100
+        case .pro:
+            return 150
+        }
+    }
+
+    /// Voice quality for this tier
+    var ttsVoiceQuality: TTSVoiceQuality {
+        switch self {
+        case .free:
+            return .appleNative
+        case .premium, .pro:
+            return .googleNeural2
+        }
+    }
+
+    /// Whether this tier uses premium (Google) TTS
+    var hasPremiumTTS: Bool {
+        switch self {
+        case .free:
+            return false
+        case .premium, .pro:
+            return true
+        }
+    }
+
+    /// TTS limit display text for UI
+    var ttsLimitDisplayText: String {
+        switch self {
+        case .free:
+            return "10 plays/month"
+        case .premium:
+            return "200 plays/month"
+        case .pro:
+            return "Unlimited"
+        }
+    }
+
+    /// Voice quality display text for UI
+    var ttsVoiceDisplayText: String {
+        switch self {
+        case .free:
+            return "Standard voice"
+        case .premium, .pro:
+            return "Natural voices (Google Neural2)"
+        }
     }
 }
 

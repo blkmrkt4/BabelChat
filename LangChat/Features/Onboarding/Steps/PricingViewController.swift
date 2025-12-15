@@ -10,6 +10,7 @@ import UIKit
 protocol PricingViewControllerDelegate: AnyObject {
     func didSelectFreeTier()
     func didSelectPremiumTier()
+    func didSelectProTier()
     func didSkipPricing()
 }
 
@@ -37,18 +38,26 @@ class PricingViewController: UIViewController {
     private let premiumFeatureStack = UIStackView()
     private let premiumButton = UIButton(type: .system)
 
+    // Pro tier card
+    private let proCard = UIView()
+    private let proTierLabel = UILabel()
+    private let proPriceLabel = UILabel()
+    private let proFeatureStack = UIStackView()
+    private let proButton = UIButton(type: .system)
+
     private let skipButton = UIButton(type: .system)
 
     // MARK: - Properties
     weak var delegate: PricingViewControllerDelegate?
     private let subscriptionService = SubscriptionService.shared
+    private var pricingConfig: PricingConfig = PricingConfig.defaultConfig
 
     // MARK: - Lifecycle
     override func viewDidLoad() {
         super.viewDidLoad()
         setupViews()
         setupConstraints()
-        loadPricing()
+        loadPricingConfig()
     }
 
     // MARK: - Setup
@@ -70,41 +79,37 @@ class PricingViewController: UIViewController {
 
         // Content stack
         contentStack.axis = .vertical
-        contentStack.spacing = 24
+        contentStack.spacing = 12
         contentStack.alignment = .fill
         scrollView.addSubview(contentStack)
 
         // Title
         titleLabel.text = "Choose Your Plan"
-        titleLabel.font = .systemFont(ofSize: 32, weight: .bold)
+        titleLabel.font = .systemFont(ofSize: 26, weight: .bold)
         titleLabel.textColor = .white
         titleLabel.textAlignment = .center
         titleLabel.numberOfLines = 0
         contentStack.addArrangedSubview(titleLabel)
 
         // Subtitle
-        subtitleLabel.text = "Start free, upgrade anytime for unlimited access"
-        subtitleLabel.font = .systemFont(ofSize: 16, weight: .regular)
+        subtitleLabel.text = "Practice with AI free, upgrade for real connections & natural voices"
+        subtitleLabel.font = .systemFont(ofSize: 14, weight: .regular)
         subtitleLabel.textColor = .white.withAlphaComponent(0.8)
         subtitleLabel.textAlignment = .center
         subtitleLabel.numberOfLines = 0
         contentStack.addArrangedSubview(subtitleLabel)
 
-        // Add spacing
-        let spacer = UIView()
-        spacer.heightAnchor.constraint(equalToConstant: 16).isActive = true
-        contentStack.addArrangedSubview(spacer)
-
-        // Setup pricing cards (Premium first to grab attention)
-        setupPremiumCard()
+        // Setup pricing cards
         setupFreeCard()
+        setupPremiumCard()
+        setupProCard()
 
         // Skip button
         skipButton.setTitle("Continue with Free", for: .normal)
-        skipButton.titleLabel?.font = .systemFont(ofSize: 18, weight: .semibold)
+        skipButton.titleLabel?.font = .systemFont(ofSize: 16, weight: .semibold)
         skipButton.setTitleColor(.white, for: .normal)
         skipButton.backgroundColor = .white.withAlphaComponent(0.15)
-        skipButton.layer.cornerRadius = 25
+        skipButton.layer.cornerRadius = 22
         skipButton.layer.borderWidth = 1
         skipButton.layer.borderColor = UIColor.white.withAlphaComponent(0.3).cgColor
         skipButton.addTarget(self, action: #selector(skipTapped), for: .touchUpInside)
@@ -113,53 +118,53 @@ class PricingViewController: UIViewController {
 
     private func setupFreeCard() {
         freeCard.backgroundColor = .white.withAlphaComponent(0.1)
-        freeCard.layer.cornerRadius = 20
+        freeCard.layer.cornerRadius = 16
         freeCard.layer.borderWidth = 1.5
         freeCard.layer.borderColor = UIColor.white.withAlphaComponent(0.2).cgColor
         contentStack.addArrangedSubview(freeCard)
 
         let cardStack = UIStackView()
         cardStack.axis = .vertical
-        cardStack.spacing = 16
+        cardStack.spacing = 8
         cardStack.alignment = .leading
         freeCard.addSubview(cardStack)
 
-        // Tier name
-        freeTierLabel.text = "Discovery"
-        freeTierLabel.font = .systemFont(ofSize: 24, weight: .bold)
+        // Tier name and price on same line
+        let headerStack = UIStackView()
+        headerStack.axis = .horizontal
+        headerStack.spacing = 12
+        headerStack.alignment = .firstBaseline
+        cardStack.addArrangedSubview(headerStack)
+
+        freeTierLabel.text = "Free"
+        freeTierLabel.font = .systemFont(ofSize: 20, weight: .bold)
         freeTierLabel.textColor = .white
-        cardStack.addArrangedSubview(freeTierLabel)
+        headerStack.addArrangedSubview(freeTierLabel)
 
-        // Price
-        freePriceLabel.text = "Free"
-        freePriceLabel.font = .systemFont(ofSize: 36, weight: .heavy)
+        freePriceLabel.text = "$0"
+        freePriceLabel.font = .systemFont(ofSize: 20, weight: .heavy)
         freePriceLabel.textColor = .systemGreen
-        cardStack.addArrangedSubview(freePriceLabel)
+        headerStack.addArrangedSubview(freePriceLabel)
 
-        // Features
+        // Features (populated by loadPricingConfig)
         freeFeatureStack.axis = .vertical
-        freeFeatureStack.spacing = 12
+        freeFeatureStack.spacing = 6
         freeFeatureStack.alignment = .leading
         cardStack.addArrangedSubview(freeFeatureStack)
-
-        for feature in SubscriptionTier.free.features {
-            let featureLabel = createFeatureLabel(feature, isIncluded: true)
-            freeFeatureStack.addArrangedSubview(featureLabel)
-        }
 
         // Layout
         cardStack.translatesAutoresizingMaskIntoConstraints = false
         NSLayoutConstraint.activate([
-            cardStack.topAnchor.constraint(equalTo: freeCard.topAnchor, constant: 24),
-            cardStack.leadingAnchor.constraint(equalTo: freeCard.leadingAnchor, constant: 24),
-            cardStack.trailingAnchor.constraint(equalTo: freeCard.trailingAnchor, constant: -24),
-            cardStack.bottomAnchor.constraint(equalTo: freeCard.bottomAnchor, constant: -24)
+            cardStack.topAnchor.constraint(equalTo: freeCard.topAnchor, constant: 16),
+            cardStack.leadingAnchor.constraint(equalTo: freeCard.leadingAnchor, constant: 16),
+            cardStack.trailingAnchor.constraint(equalTo: freeCard.trailingAnchor, constant: -16),
+            cardStack.bottomAnchor.constraint(equalTo: freeCard.bottomAnchor, constant: -16)
         ])
     }
 
     private func setupPremiumCard() {
         premiumCard.backgroundColor = .systemBlue.withAlphaComponent(0.2)
-        premiumCard.layer.cornerRadius = 20
+        premiumCard.layer.cornerRadius = 16
         premiumCard.layer.borderWidth = 2
         premiumCard.layer.borderColor = UIColor.systemBlue.cgColor
         premiumCard.layer.shadowColor = UIColor.systemBlue.cgColor
@@ -170,61 +175,50 @@ class PricingViewController: UIViewController {
 
         let cardStack = UIStackView()
         cardStack.axis = .vertical
-        cardStack.spacing = 16
+        cardStack.spacing = 8
         cardStack.alignment = .leading
         premiumCard.addSubview(cardStack)
 
-        // Popular badge
-        premiumBadge.text = "MOST POPULAR"
-        premiumBadge.font = .systemFont(ofSize: 12, weight: .bold)
-        premiumBadge.textColor = .systemYellow
-        premiumBadge.backgroundColor = .systemYellow.withAlphaComponent(0.2)
-        premiumBadge.textAlignment = .center
-        premiumBadge.layer.cornerRadius = 12
-        premiumBadge.layer.masksToBounds = true
-        premiumBadge.translatesAutoresizingMaskIntoConstraints = false
-        premiumCard.addSubview(premiumBadge)
+        // Tier name and price on same line
+        let headerStack = UIStackView()
+        headerStack.axis = .horizontal
+        headerStack.spacing = 12
+        headerStack.alignment = .firstBaseline
+        cardStack.addArrangedSubview(headerStack)
 
-        // Tier name
         premiumTierLabel.text = "Premium"
-        premiumTierLabel.font = .systemFont(ofSize: 24, weight: .bold)
+        premiumTierLabel.font = .systemFont(ofSize: 20, weight: .bold)
         premiumTierLabel.textColor = .white
-        cardStack.addArrangedSubview(premiumTierLabel)
+        headerStack.addArrangedSubview(premiumTierLabel)
 
-        // Price
-        premiumPriceLabel.text = "$9.99/month"
-        premiumPriceLabel.font = .systemFont(ofSize: 36, weight: .heavy)
+        premiumPriceLabel.text = "$9.99/mo"
+        premiumPriceLabel.font = .systemFont(ofSize: 20, weight: .heavy)
         premiumPriceLabel.textColor = .systemBlue
-        cardStack.addArrangedSubview(premiumPriceLabel)
+        headerStack.addArrangedSubview(premiumPriceLabel)
 
         // Trial info
         premiumTrialLabel.text = "7-day free trial • Cancel anytime"
-        premiumTrialLabel.font = .systemFont(ofSize: 14, weight: .medium)
+        premiumTrialLabel.font = .systemFont(ofSize: 12, weight: .medium)
         premiumTrialLabel.textColor = .white.withAlphaComponent(0.9)
         premiumTrialLabel.backgroundColor = .white.withAlphaComponent(0.15)
         premiumTrialLabel.textAlignment = .center
-        premiumTrialLabel.layer.cornerRadius = 16
+        premiumTrialLabel.layer.cornerRadius = 12
         premiumTrialLabel.layer.masksToBounds = true
         premiumTrialLabel.translatesAutoresizingMaskIntoConstraints = false
         cardStack.addArrangedSubview(premiumTrialLabel)
 
-        // Features
+        // Features (populated by loadPricingConfig)
         premiumFeatureStack.axis = .vertical
-        premiumFeatureStack.spacing = 12
+        premiumFeatureStack.spacing = 6
         premiumFeatureStack.alignment = .leading
         cardStack.addArrangedSubview(premiumFeatureStack)
 
-        for feature in SubscriptionTier.premium.features {
-            let featureLabel = createFeatureLabel(feature, isIncluded: true)
-            premiumFeatureStack.addArrangedSubview(featureLabel)
-        }
-
         // Start trial button
         premiumButton.setTitle("Start Free Trial", for: .normal)
-        premiumButton.titleLabel?.font = .systemFont(ofSize: 18, weight: .bold)
+        premiumButton.titleLabel?.font = .systemFont(ofSize: 16, weight: .bold)
         premiumButton.setTitleColor(.white, for: .normal)
         premiumButton.backgroundColor = .systemBlue
-        premiumButton.layer.cornerRadius = 25
+        premiumButton.layer.cornerRadius = 22
         premiumButton.addTarget(self, action: #selector(premiumTapped), for: .touchUpInside)
         premiumButton.translatesAutoresizingMaskIntoConstraints = false
         cardStack.addArrangedSubview(premiumButton)
@@ -232,32 +226,90 @@ class PricingViewController: UIViewController {
         // Layout
         cardStack.translatesAutoresizingMaskIntoConstraints = false
         NSLayoutConstraint.activate([
-            premiumBadge.topAnchor.constraint(equalTo: premiumCard.topAnchor, constant: 16),
-            premiumBadge.trailingAnchor.constraint(equalTo: premiumCard.trailingAnchor, constant: -16),
-            premiumBadge.widthAnchor.constraint(equalToConstant: 120),
-            premiumBadge.heightAnchor.constraint(equalToConstant: 24),
+            cardStack.topAnchor.constraint(equalTo: premiumCard.topAnchor, constant: 16),
+            cardStack.leadingAnchor.constraint(equalTo: premiumCard.leadingAnchor, constant: 16),
+            cardStack.trailingAnchor.constraint(equalTo: premiumCard.trailingAnchor, constant: -16),
+            cardStack.bottomAnchor.constraint(equalTo: premiumCard.bottomAnchor, constant: -16),
 
-            cardStack.topAnchor.constraint(equalTo: premiumBadge.bottomAnchor, constant: 16),
-            cardStack.leadingAnchor.constraint(equalTo: premiumCard.leadingAnchor, constant: 24),
-            cardStack.trailingAnchor.constraint(equalTo: premiumCard.trailingAnchor, constant: -24),
-            cardStack.bottomAnchor.constraint(equalTo: premiumCard.bottomAnchor, constant: -24),
-
-            premiumTrialLabel.heightAnchor.constraint(equalToConstant: 32),
+            premiumTrialLabel.heightAnchor.constraint(equalToConstant: 26),
             premiumTrialLabel.leadingAnchor.constraint(equalTo: cardStack.leadingAnchor),
             premiumTrialLabel.trailingAnchor.constraint(equalTo: cardStack.trailingAnchor),
 
-            premiumButton.heightAnchor.constraint(equalToConstant: 56),
+            premiumButton.heightAnchor.constraint(equalToConstant: 44),
             premiumButton.leadingAnchor.constraint(equalTo: cardStack.leadingAnchor),
             premiumButton.trailingAnchor.constraint(equalTo: cardStack.trailingAnchor)
+        ])
+    }
+
+    private func setupProCard() {
+        proCard.backgroundColor = .systemYellow.withAlphaComponent(0.1)
+        proCard.layer.cornerRadius = 16
+        proCard.layer.borderWidth = 2
+        proCard.layer.borderColor = UIColor.systemYellow.cgColor
+        proCard.layer.shadowColor = UIColor.systemYellow.cgColor
+        proCard.layer.shadowOpacity = 0.3
+        proCard.layer.shadowOffset = CGSize(width: 0, height: 4)
+        proCard.layer.shadowRadius = 8
+        contentStack.addArrangedSubview(proCard)
+
+        let cardStack = UIStackView()
+        cardStack.axis = .vertical
+        cardStack.spacing = 8
+        cardStack.alignment = .leading
+        proCard.addSubview(cardStack)
+
+        // Tier name and price on same line
+        let headerStack = UIStackView()
+        headerStack.axis = .horizontal
+        headerStack.spacing = 12
+        headerStack.alignment = .firstBaseline
+        cardStack.addArrangedSubview(headerStack)
+
+        proTierLabel.text = "Pro"
+        proTierLabel.font = .systemFont(ofSize: 20, weight: .bold)
+        proTierLabel.textColor = .systemYellow
+        headerStack.addArrangedSubview(proTierLabel)
+
+        proPriceLabel.text = "$19.99/mo"
+        proPriceLabel.font = .systemFont(ofSize: 20, weight: .heavy)
+        proPriceLabel.textColor = .systemYellow
+        headerStack.addArrangedSubview(proPriceLabel)
+
+        // Features (populated by loadPricingConfig)
+        proFeatureStack.axis = .vertical
+        proFeatureStack.spacing = 6
+        proFeatureStack.alignment = .leading
+        cardStack.addArrangedSubview(proFeatureStack)
+
+        // Button
+        proButton.setTitle("Start Pro", for: .normal)
+        proButton.titleLabel?.font = .systemFont(ofSize: 16, weight: .bold)
+        proButton.setTitleColor(.black, for: .normal)
+        proButton.backgroundColor = .systemYellow
+        proButton.layer.cornerRadius = 22
+        proButton.addTarget(self, action: #selector(proTapped), for: .touchUpInside)
+        proButton.translatesAutoresizingMaskIntoConstraints = false
+        cardStack.addArrangedSubview(proButton)
+
+        // Layout
+        cardStack.translatesAutoresizingMaskIntoConstraints = false
+        NSLayoutConstraint.activate([
+            cardStack.topAnchor.constraint(equalTo: proCard.topAnchor, constant: 16),
+            cardStack.leadingAnchor.constraint(equalTo: proCard.leadingAnchor, constant: 16),
+            cardStack.trailingAnchor.constraint(equalTo: proCard.trailingAnchor, constant: -16),
+            cardStack.bottomAnchor.constraint(equalTo: proCard.bottomAnchor, constant: -16),
+
+            proButton.heightAnchor.constraint(equalToConstant: 44),
+            proButton.leadingAnchor.constraint(equalTo: cardStack.leadingAnchor),
+            proButton.trailingAnchor.constraint(equalTo: cardStack.trailingAnchor)
         ])
     }
 
     private func createFeatureLabel(_ text: String, isIncluded: Bool) -> UILabel {
         let label = UILabel()
         let checkmark = isIncluded ? "✓" : "✗"
-        let color = isIncluded ? UIColor.systemGreen : UIColor.systemGray
         label.text = "\(checkmark) \(text)"
-        label.font = .systemFont(ofSize: 15, weight: .medium)
+        label.font = .systemFont(ofSize: 13, weight: .medium)
         label.textColor = .white.withAlphaComponent(isIncluded ? 1.0 : 0.5)
         label.numberOfLines = 0
         return label
@@ -272,34 +324,73 @@ class PricingViewController: UIViewController {
             scrollView.topAnchor.constraint(equalTo: view.safeAreaLayoutGuide.topAnchor),
             scrollView.leadingAnchor.constraint(equalTo: view.leadingAnchor),
             scrollView.trailingAnchor.constraint(equalTo: view.trailingAnchor),
-            scrollView.bottomAnchor.constraint(equalTo: skipButton.topAnchor, constant: -16),
+            scrollView.bottomAnchor.constraint(equalTo: skipButton.topAnchor, constant: -8),
 
-            contentStack.topAnchor.constraint(equalTo: scrollView.topAnchor, constant: 24),
-            contentStack.leadingAnchor.constraint(equalTo: scrollView.leadingAnchor, constant: 24),
-            contentStack.trailingAnchor.constraint(equalTo: scrollView.trailingAnchor, constant: -24),
-            contentStack.bottomAnchor.constraint(equalTo: scrollView.bottomAnchor, constant: -24),
-            contentStack.widthAnchor.constraint(equalTo: scrollView.widthAnchor, constant: -48),
+            contentStack.topAnchor.constraint(equalTo: scrollView.topAnchor, constant: 8),
+            contentStack.leadingAnchor.constraint(equalTo: scrollView.leadingAnchor, constant: 20),
+            contentStack.trailingAnchor.constraint(equalTo: scrollView.trailingAnchor, constant: -20),
+            contentStack.bottomAnchor.constraint(equalTo: scrollView.bottomAnchor, constant: -8),
+            contentStack.widthAnchor.constraint(equalTo: scrollView.widthAnchor, constant: -40),
 
-            skipButton.leadingAnchor.constraint(equalTo: view.leadingAnchor, constant: 24),
-            skipButton.trailingAnchor.constraint(equalTo: view.trailingAnchor, constant: -24),
-            skipButton.bottomAnchor.constraint(equalTo: view.safeAreaLayoutGuide.bottomAnchor, constant: -24),
-            skipButton.heightAnchor.constraint(equalToConstant: 56)
+            skipButton.leadingAnchor.constraint(equalTo: view.leadingAnchor, constant: 20),
+            skipButton.trailingAnchor.constraint(equalTo: view.trailingAnchor, constant: -20),
+            skipButton.bottomAnchor.constraint(equalTo: view.safeAreaLayoutGuide.bottomAnchor, constant: -12),
+            skipButton.heightAnchor.constraint(equalToConstant: 50)
         ])
     }
 
     // MARK: - Data Loading
-    private func loadPricing() {
-        // Fetch pricing from RevenueCat
+    private func loadPricingConfig() {
+        // Show default config immediately
+        updateUIWithConfig(pricingConfig)
+
+        // Fetch remote config from Supabase
+        Task {
+            let config = await PricingConfigManager.shared.getConfig()
+            await MainActor.run {
+                self.pricingConfig = config
+                self.updateUIWithConfig(config)
+            }
+        }
+
+        // Also fetch from RevenueCat for actual App Store prices
         subscriptionService.fetchOfferings { [weak self] result in
             switch result {
             case .success(let offerings):
-                // Update UI with real pricing
-                print("Loaded \(offerings.count) offerings")
-                // TODO: Update price labels with actual prices from App Store
+                print("Loaded \(offerings.count) offerings from RevenueCat")
             case .failure(let error):
                 print("Failed to load offerings: \(error.localizedDescription)")
-                // Show default pricing
             }
+        }
+    }
+
+    private func updateUIWithConfig(_ config: PricingConfig) {
+        // Update price labels
+        premiumPriceLabel.text = config.premiumPriceFormatted
+        proPriceLabel.text = config.proPriceFormatted
+        premiumTrialLabel.text = config.premiumBanner
+
+        // Clear and repopulate feature stacks
+        freeFeatureStack.arrangedSubviews.forEach { $0.removeFromSuperview() }
+        premiumFeatureStack.arrangedSubviews.forEach { $0.removeFromSuperview() }
+        proFeatureStack.arrangedSubviews.forEach { $0.removeFromSuperview() }
+
+        // Free features
+        for feature in config.freeFeatures {
+            let label = createFeatureLabel(feature.title, isIncluded: feature.included)
+            freeFeatureStack.addArrangedSubview(label)
+        }
+
+        // Premium features
+        for feature in config.premiumFeatures {
+            let label = createFeatureLabel(feature.title, isIncluded: feature.included)
+            premiumFeatureStack.addArrangedSubview(label)
+        }
+
+        // Pro features
+        for feature in config.proFeatures {
+            let label = createFeatureLabel(feature.title, isIncluded: feature.included)
+            proFeatureStack.addArrangedSubview(label)
         }
     }
 
@@ -319,6 +410,29 @@ class PricingViewController: UIViewController {
                 case .success(let status):
                     print("✅ Purchase successful: \(status.tier.displayName)")
                     self?.delegate?.didSelectPremiumTier()
+                case .failure(let error):
+                    print("❌ Purchase failed: \(error.localizedDescription)")
+                    self?.showError(error)
+                }
+            }
+        }
+    }
+    
+    @objc private func proTapped() {
+        // Show loading state
+        proButton.setTitle("Loading...", for: .normal)
+        proButton.isEnabled = false
+
+        // Purchase pro
+        subscriptionService.purchase(tier: .pro) { [weak self] result in
+            DispatchQueue.main.async {
+                self?.proButton.setTitle("Start Pro", for: .normal)
+                self?.proButton.isEnabled = true
+
+                switch result {
+                case .success(let status):
+                    print("✅ Purchase successful: \(status.tier.displayName)")
+                    self?.delegate?.didSelectProTier()
                 case .failure(let error):
                     print("❌ Purchase failed: \(error.localizedDescription)")
                     self?.showError(error)

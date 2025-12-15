@@ -62,6 +62,54 @@ interface UserAnalytics {
   timestamp: string
 }
 
+interface GoogleCloudUsage {
+  currentMonth: {
+    totalPlays: number
+    googleTTSPlays: number
+    appleTTSPlays: number
+    estimatedCharacters: number
+    estimatedCost: number
+  }
+  byTier: {
+    free: number
+    premium: number
+    pro: number
+  }
+  projections: {
+    monthlyPlays: number
+    monthlyCost: number
+  }
+  pricing: {
+    perCharacter: number
+    perMillionChars: number
+    avgCharsPerPlay: number
+  }
+  timestamp: string
+}
+
+interface MuseUsage {
+  summary: {
+    totalInteractions: number
+    interactionsToday: number
+    interactionsWeek: number
+    interactionsMonth: number
+    uniqueUsers: number
+    uniqueUsersToday: number
+    avgPerUser: string
+  }
+  byMuse: {
+    museId: string
+    museName: string
+    language: string
+    interactions: number
+  }[]
+  byLanguage: {
+    language: string
+    interactions: number
+  }[]
+  timestamp: string
+}
+
 export default function MonitoringPage() {
   const [services, setServices] = useState<ServiceStatus[]>([])
   const [loading, setLoading] = useState(true)
@@ -95,6 +143,16 @@ export default function MonitoringPage() {
   const [analyticsLoading, setAnalyticsLoading] = useState(true)
   const [analyticsError, setAnalyticsError] = useState<string | null>(null)
 
+  // Google Cloud TTS usage state
+  const [googleCloud, setGoogleCloud] = useState<GoogleCloudUsage | null>(null)
+  const [googleCloudLoading, setGoogleCloudLoading] = useState(true)
+  const [googleCloudError, setGoogleCloudError] = useState<string | null>(null)
+
+  // Muse usage state
+  const [museUsage, setMuseUsage] = useState<MuseUsage | null>(null)
+  const [museUsageLoading, setMuseUsageLoading] = useState(true)
+  const [museUsageError, setMuseUsageError] = useState<string | null>(null)
+
   // Auto-refresh config in seconds (0 = off), default 30 minutes
   const [refreshInterval, setRefreshInterval] = useState(30 * 60)
   const [nextRefreshIn, setNextRefreshIn] = useState(0)
@@ -124,7 +182,51 @@ export default function MonitoringPage() {
     checkSupabaseHealth()
     loadRefreshInterval()
     loadUserAnalytics()
+    loadGoogleCloudUsage()
+    loadMuseUsage()
   }, [])
+
+  async function loadMuseUsage() {
+    try {
+      setMuseUsageLoading(true)
+      setMuseUsageError(null)
+
+      const response = await fetch('/api/muse-usage')
+      const data = await response.json()
+
+      if (data.success) {
+        setMuseUsage(data.data)
+      } else {
+        throw new Error(data.error || 'Failed to load Muse usage')
+      }
+    } catch (error) {
+      console.error('Failed to load Muse usage:', error)
+      setMuseUsageError(error instanceof Error ? error.message : 'Unknown error')
+    } finally {
+      setMuseUsageLoading(false)
+    }
+  }
+
+  async function loadGoogleCloudUsage() {
+    try {
+      setGoogleCloudLoading(true)
+      setGoogleCloudError(null)
+
+      const response = await fetch('/api/google-cloud-usage')
+      const data = await response.json()
+
+      if (data.success) {
+        setGoogleCloud(data.data)
+      } else {
+        throw new Error(data.error || 'Failed to load Google Cloud usage')
+      }
+    } catch (error) {
+      console.error('Failed to load Google Cloud usage:', error)
+      setGoogleCloudError(error instanceof Error ? error.message : 'Unknown error')
+    } finally {
+      setGoogleCloudLoading(false)
+    }
+  }
 
   async function loadRefreshInterval() {
     try {
@@ -197,6 +299,8 @@ export default function MonitoringPage() {
       loadTwilioBalance()
       checkSupabaseHealth()
       loadUserAnalytics()
+      loadGoogleCloudUsage()
+      loadMuseUsage()
     }, refreshInterval * 1000)
 
     const countdownTimer = setInterval(() => {
@@ -327,7 +431,9 @@ export default function MonitoringPage() {
           loadCredits(),
           loadTwilioBalance(),
           checkSupabaseHealth(),
-          loadUserAnalytics()
+          loadUserAnalytics(),
+          loadGoogleCloudUsage(),
+          loadMuseUsage()
         ])
       } else {
         setHealthCheckResult({
@@ -482,6 +588,8 @@ export default function MonitoringPage() {
                 loadTwilioBalance()
                 checkSupabaseHealth()
                 loadUserAnalytics()
+                loadGoogleCloudUsage()
+                loadMuseUsage()
               }}
               className="px-3 py-1.5 text-sm bg-gray-200 text-gray-700 rounded hover:bg-gray-300 transition"
             >
@@ -510,8 +618,8 @@ export default function MonitoringPage() {
           </div>
         )}
 
-        {/* Service Status Grid - All 3 services in one row */}
-        <div className="grid grid-cols-3 gap-3">
+        {/* Service Status Grid - All 4 services in one row */}
+        <div className="grid grid-cols-4 gap-3">
           {/* OpenRouter */}
           <div className="bg-white rounded-lg shadow-sm p-3 border-l-4 border-blue-500">
             <div className="flex items-center justify-between mb-2">
@@ -607,6 +715,36 @@ export default function MonitoringPage() {
                   <span className={supabaseHealth.tablesAccessible ? 'text-green-600' : 'text-red-600'}>
                     {supabaseHealth.tablesAccessible ? 'Accessible' : 'Error'}
                   </span>
+                </div>
+              </div>
+            ) : null}
+          </div>
+
+          {/* Google Cloud TTS */}
+          <div className="bg-white rounded-lg shadow-sm p-3 border-l-4 border-amber-500">
+            <div className="flex items-center justify-between mb-2">
+              <span className="text-xs font-semibold text-gray-500 uppercase">Google TTS</span>
+              {!googleCloudLoading && googleCloud && (
+                <span className="text-green-500 text-xs">Active</span>
+              )}
+            </div>
+            {googleCloudLoading ? (
+              <div className="text-xs text-gray-400">Loading...</div>
+            ) : googleCloudError ? (
+              <div className="text-xs text-red-500">{googleCloudError}</div>
+            ) : googleCloud ? (
+              <div className="space-y-1">
+                <div className="flex justify-between items-baseline">
+                  <span className="text-xs text-gray-500">Est. Cost</span>
+                  <span className="text-lg font-bold text-amber-600">${googleCloud.currentMonth.estimatedCost.toFixed(2)}</span>
+                </div>
+                <div className="flex justify-between text-xs">
+                  <span className="text-gray-500">TTS Plays</span>
+                  <span className="font-medium">{googleCloud.currentMonth.googleTTSPlays.toLocaleString()}</span>
+                </div>
+                <div className="flex justify-between text-xs">
+                  <span className="text-gray-500">Proj. Monthly</span>
+                  <span className="font-medium text-amber-600">${googleCloud.projections.monthlyCost.toFixed(2)}</span>
                 </div>
               </div>
             ) : null}
@@ -826,6 +964,77 @@ export default function MonitoringPage() {
                     <span>{analytics.messages.week.toLocaleString()} in last 7 days</span>
                     <span>{analytics.messages.avgPerUser} avg/user</span>
                   </div>
+                </div>
+              </div>
+            </div>
+          ) : null}
+        </div>
+
+        {/* Muse Usage */}
+        <div className="bg-white rounded-lg shadow-sm overflow-hidden">
+          <div className="px-3 py-2 border-b bg-gray-50">
+            <span className="text-sm font-semibold text-gray-700">Muse Usage (AI Practice Partners)</span>
+          </div>
+          {museUsageLoading ? (
+            <div className="p-4 text-center text-gray-400 text-sm">Loading Muse usage...</div>
+          ) : museUsageError ? (
+            <div className="p-4 text-center text-red-500 text-sm">{museUsageError}</div>
+          ) : museUsage ? (
+            <div className="p-4">
+              <div className="grid grid-cols-2 gap-4">
+                {/* Summary Section */}
+                <div className="space-y-3">
+                  <h3 className="text-xs font-semibold text-gray-500 uppercase">Interactions</h3>
+                  <div className="grid grid-cols-2 gap-3">
+                    <div className="bg-gray-50 rounded p-2">
+                      <div className="text-2xl font-bold text-gray-800">{museUsage.summary.totalInteractions.toLocaleString()}</div>
+                      <div className="text-xs text-gray-500">Total</div>
+                    </div>
+                    <div className="bg-gray-50 rounded p-2">
+                      <div className="text-2xl font-bold text-pink-600">{museUsage.summary.interactionsToday.toLocaleString()}</div>
+                      <div className="text-xs text-gray-500">Today</div>
+                    </div>
+                    <div className="bg-gray-50 rounded p-2">
+                      <div className="text-lg font-bold text-gray-600">{museUsage.summary.uniqueUsers}</div>
+                      <div className="text-xs text-gray-500">Unique Users</div>
+                    </div>
+                    <div className="bg-gray-50 rounded p-2">
+                      <div className="text-lg font-bold text-pink-600">{museUsage.summary.avgPerUser}</div>
+                      <div className="text-xs text-gray-500">Avg/User</div>
+                    </div>
+                  </div>
+                  <div className="text-xs text-gray-400">
+                    {museUsage.summary.interactionsWeek.toLocaleString()} in last 7 days • {museUsage.summary.uniqueUsersToday} users today
+                  </div>
+                </div>
+
+                {/* By Muse Section */}
+                <div className="space-y-3">
+                  <h3 className="text-xs font-semibold text-gray-500 uppercase">By Muse</h3>
+                  <div className="space-y-2 max-h-40 overflow-y-auto">
+                    {museUsage.byMuse.length > 0 ? (
+                      museUsage.byMuse.slice(0, 6).map((muse) => (
+                        <div key={muse.museId} className="flex justify-between items-center bg-gray-50 rounded px-2 py-1">
+                          <div>
+                            <span className="font-medium text-sm">{muse.museName}</span>
+                            <span className="text-xs text-gray-400 ml-2">{muse.language}</span>
+                          </div>
+                          <span className="text-sm font-bold text-pink-600">{muse.interactions.toLocaleString()}</span>
+                        </div>
+                      ))
+                    ) : (
+                      <div className="text-xs text-gray-400 text-center py-4">No Muse interactions yet</div>
+                    )}
+                  </div>
+                  {museUsage.byLanguage.length > 0 && (
+                    <div className="flex flex-wrap gap-1 pt-2 border-t">
+                      {museUsage.byLanguage.slice(0, 5).map((lang) => (
+                        <span key={lang.language} className="text-xs bg-pink-100 text-pink-700 px-2 py-0.5 rounded">
+                          {lang.language}: {lang.interactions}
+                        </span>
+                      ))}
+                    </div>
+                  )}
                 </div>
               </div>
             </div>

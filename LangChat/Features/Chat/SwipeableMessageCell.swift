@@ -39,10 +39,12 @@ class SwipeableMessageCell: UITableViewCell {
     private let alternativesLabel = UILabel()
     private let alternativesStackView = UIStackView()
 
-    // Speech synthesizer for pronunciation
-    private let speechSynthesizer = AVSpeechSynthesizer()
+    // TTS usage info (cached to avoid repeated API calls)
+    private var ttsUsageInfo: TTSUsageInfo?
+    private var currentTier: SubscriptionTier = .free
 
     private var currentMessage: Message?
+    private var chatPartner: User? // The other user in the conversation (for getting their gender for TTS)
     private var granularityLevel: Int = 2 // 1-3 from settings
     weak var delegate: SwipeableMessageCellDelegate?
 
@@ -499,35 +501,148 @@ class SwipeableMessageCell: UITableViewCell {
             }
         }
 
-        // Use AVSpeechSynthesizer with original language
-        let utterance = AVSpeechUtterance(string: message.text)
+        // Determine the language of the message for TTS
+        // Priority: 1) Detect from text content, 2) detectedLanguage (set by API), 3) originalLanguage (from DB), 4) fallback to learningLanguage
+        let language: String
+        if let textDetected = Language.detect(from: message.text) {
+            // Best: detect directly from the message text
+            language = textDetected.rawValue
+        } else if let detected = message.detectedLanguage {
+            language = detected.rawValue
+        } else if let original = message.originalLanguage {
+            language = original.rawValue
+        } else {
+            // Fallback to the language being learned
+            language = learningLanguage.rawValue
+        }
+        print("🔊 TTS language for message: '\(message.text.prefix(30))...' -> \(language)")
 
-        // Set voice based on language if available
-        if let language = message.originalLanguage {
-            let languageCode: String
-            switch language {
-            case .spanish: languageCode = "es-ES"
-            case .french: languageCode = "fr-FR"
-            case .german: languageCode = "de-DE"
-            case .japanese: languageCode = "ja-JP"
-            case .korean: languageCode = "ko-KR"
-            case .chinese: languageCode = "zh-CN"
-            case .portuguese: languageCode = "pt-PT"
-            case .italian: languageCode = "it-IT"
-            case .russian: languageCode = "ru-RU"
-            default: languageCode = "en-US"
+        // Fetch TTS usage info if needed
+        Task {
+            // Get current usage info
+            let usageInfo: TTSUsageInfo
+            if let cached = self.ttsUsageInfo {
+                usageInfo = cached
+            } else {
+                do {
+                    usageInfo = try await SupabaseService.shared.getTTSUsageInfo()
+                    await MainActor.run { self.ttsUsageInfo = usageInfo }
+                } catch {
+                    // Fallback to free tier defaults
+                    usageInfo = TTSUsageInfo(
+                        playsUsed: 0,
+                        playsLimit: 10,
+                        billingCycleStart: nil,
+                        voiceQuality: .appleNative
+                    )
+                }
             }
-            utterance.voice = AVSpeechSynthesisVoice(language: languageCode)
+
+            // Check if user can play TTS
+            let canPlayResult = TTSService.shared.canPlayTTS(
+                text: message.text,
+                tier: self.currentTier,
+                usageInfo: usageInfo
+            )
+
+            await MainActor.run {
+                switch canPlayResult {
+                case .failure(let error):
+                    self.showTTSError(error)
+                case .success:
+                    // Get the speaker's gender for voice selection
+                    // If message is from current user, we don't have their gender easily available
+                    // If message is from chat partner, use their gender
+                    let speakerGender = message.isSentByCurrentUser ? nil : self.chatPartner?.gender
+                    self.playTTSWithService(text: message.text, language: language, speakerGender: speakerGender, usageInfo: usageInfo)
+                }
+            }
+        }
+    }
+
+    private func playTTSWithService(text: String, language: String, speakerGender: String? = nil, usageInfo: TTSUsageInfo) {
+        showToast("🔊 Loading voice...")
+
+        TTSService.shared.playTTS(
+            text: text,
+            language: language,
+            speakerGender: speakerGender,
+            tier: currentTier,
+            usageInfo: usageInfo
+        ) { [weak self] result in
+            guard let self = self else { return }
+
+            if result.success {
+                // Update cached usage info
+                if let remaining = result.remainingPlays {
+                    let newUsageInfo = TTSUsageInfo(
+                        playsUsed: (usageInfo.playsLimit ?? 0) - remaining,
+                        playsLimit: usageInfo.playsLimit,
+                        billingCycleStart: usageInfo.billingCycleStart,
+                        voiceQuality: usageInfo.voiceQuality
+                    )
+                    self.ttsUsageInfo = newUsageInfo
+                }
+
+            } else if let error = result.error {
+                self.showTTSError(error)
+            }
+        }
+    }
+
+    private func showTTSError(_ error: TTSError) {
+        switch error {
+        case .messageTooLong(let wordCount, let limit):
+            showTTSLimitAlert(
+                title: "Message Too Long",
+                message: "Message too long for text-to-speech (\(wordCount) words).\n\nMessages over \(limit) words cannot be played. Try breaking into shorter messages for better learning!",
+                showUpgrade: false
+            )
+        case .limitReached(_, let limit):
+            if currentTier == .free {
+                showTTSLimitAlert(
+                    title: "TTS Limit Reached",
+                    message: "You've used all \(limit) TTS plays this month.\n\nUpgrade to Premium for 200 plays with natural-sounding voices!",
+                    showUpgrade: true
+                )
+            } else {
+                showTTSLimitAlert(
+                    title: "TTS Limit Reached",
+                    message: "You've used all \(limit) premium TTS plays this month.\n\nAdditional plays will use standard voice quality.\n\nUpgrade to Pro for unlimited premium voices!",
+                    showUpgrade: true
+                )
+            }
+        case .apiError, .audioPlaybackFailed, .notConfigured:
+            showToast("Unable to play audio. Please try again.")
+        }
+    }
+
+    private func showTTSLimitAlert(title: String, message: String, showUpgrade: Bool) {
+        guard let viewController = self.window?.rootViewController?.presentedViewController ?? self.window?.rootViewController else {
+            showToast(message)
+            return
         }
 
-        utterance.rate = 0.4 // Slower for language learning
-        utterance.pitchMultiplier = 1.0
-        utterance.volume = 0.9
+        let alert = UIAlertController(title: title, message: message, preferredStyle: .alert)
 
-        speechSynthesizer.speak(utterance)
+        if showUpgrade {
+            alert.addAction(UIAlertAction(title: "Upgrade", style: .default) { _ in
+                // Post notification to show upgrade screen
+                NotificationCenter.default.post(name: NSNotification.Name("ShowUpgradePrompt"), object: nil)
+            })
+            alert.addAction(UIAlertAction(title: "Dismiss", style: .cancel))
+        } else {
+            alert.addAction(UIAlertAction(title: "Got it", style: .default))
+        }
 
-        // Show pronunciation indicator
-        showToast("🔊 Playing pronunciation...")
+        viewController.present(alert, animated: true)
+    }
+
+    /// Set the user's subscription tier for TTS voice selection
+    func setSubscriptionTier(_ tier: SubscriptionTier) {
+        self.currentTier = tier
+        // Clear cached usage info when tier changes
+        self.ttsUsageInfo = nil
     }
 
     @objc private func swipeLeftFromCenter() {
@@ -561,6 +676,7 @@ class SwipeableMessageCell: UITableViewCell {
     // MARK: - Configuration
     func configure(with message: Message, user: User, granularity: Int = 2, learningLanguage: Language, nativeLanguage: Language) {
         currentMessage = message
+        chatPartner = user // Store the chat partner for TTS gender selection
         granularityLevel = granularity
         self.learningLanguage = learningLanguage
         self.nativeLanguage = nativeLanguage
