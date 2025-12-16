@@ -757,7 +757,7 @@ Respond in EXACTLY this JSON format (all text in English):
             testInput,
             sourceLang,
             targetLang,
-            baselineType: 'model',
+            baselineType: 'model' as const,
             baselineModelId: actualBaselineId,
             baselineModelName: baselineLabel,
             googleTranslateOutput: baselineResult,
@@ -837,7 +837,7 @@ Respond in EXACTLY this JSON format (all text in English):
             targetLang,
 
             // Baseline info (actual model used after fallbacks)
-            baselineType: 'model',
+            baselineType: 'model' as const,
             baselineModelId: actualBaselineId,
             baselineModelName: baselineLabel,
             googleTranslateOutput: baselineResult,
@@ -929,7 +929,7 @@ Respond in EXACTLY this JSON format (all text in English):
             targetLang,
 
             // Baseline info (actual model used after fallbacks)
-            baselineType: 'model',
+            baselineType: 'model' as const,
             baselineModelId: actualBaselineId,
             baselineModelName: baselineLabel,
             googleTranslateOutput: baselineResult,

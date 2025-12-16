@@ -13,6 +13,7 @@ import {
   type EvaluationResult
 } from '@/lib/evaluationStorage'
 import { fetchOpenRouterModels, formatContextLength, type OpenRouterModel } from '@/lib/openrouter'
+import { supabase } from '@/lib/supabase'
 
 const DEFAULT_CATEGORIES = ['translation', 'grammar', 'scoring'] as const
 type SortBy = 'score' | 'name' | 'recent'
