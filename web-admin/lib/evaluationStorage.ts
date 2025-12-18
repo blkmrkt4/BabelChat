@@ -150,14 +150,14 @@ export async function getEvaluationsByCategory(category: string): Promise<Evalua
       .order('timestamp', { ascending: false })
 
     if (error) {
-      console.error('🔴 Supabase error:', error)
+      console.error('🔴 Supabase error:', error.message || 'Unknown error', { code: error.code, details: error.details, hint: error.hint })
       throw error
     }
 
     console.log('🔵 Found', data?.length || 0, 'evaluations for category', category)
     return data ? data.map(toCamelCase) : []
-  } catch (error) {
-    console.error('🔴 Error fetching evaluations by category:', error)
+  } catch (error: any) {
+    console.error('🔴 Error fetching evaluations by category:', error?.message || error)
     return []
   }
 }

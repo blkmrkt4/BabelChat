@@ -582,30 +582,156 @@ class ChatViewController: UIViewController {
     }
 
     @objc private func museButtonTapped() {
-        // Show Muse assistant dialog
-        let alert = UIAlertController(
-            title: "Ask your Muse",
-            message: "What would you like to say in \(conversationLearningLanguage.name)?",
-            preferredStyle: .alert
-        )
+        // Show Muse assistant dialog with multi-line text input
+        let alertVC = UIViewController()
+        alertVC.modalPresentationStyle = .overCurrentContext
+        alertVC.modalTransitionStyle = .crossDissolve
 
-        alert.addTextField { textField in
-            textField.placeholder = "e.g., How do I say 'I love this restaurant'?"
-            textField.autocapitalizationType = .sentences
+        // Dimmed background
+        let dimmedView = UIView()
+        dimmedView.backgroundColor = UIColor.black.withAlphaComponent(0.5)
+        dimmedView.translatesAutoresizingMaskIntoConstraints = false
+        alertVC.view.addSubview(dimmedView)
+
+        // Card container
+        let cardView = UIView()
+        cardView.backgroundColor = .systemBackground
+        cardView.layer.cornerRadius = 16
+        cardView.translatesAutoresizingMaskIntoConstraints = false
+        alertVC.view.addSubview(cardView)
+
+        // Title
+        let titleLabel = UILabel()
+        titleLabel.text = "Ask your Muse"
+        titleLabel.font = .systemFont(ofSize: 18, weight: .semibold)
+        titleLabel.textAlignment = .center
+        titleLabel.translatesAutoresizingMaskIntoConstraints = false
+        cardView.addSubview(titleLabel)
+
+        // Subtitle
+        let subtitleLabel = UILabel()
+        subtitleLabel.text = "What would you like to say in \(conversationLearningLanguage.name)?"
+        subtitleLabel.font = .systemFont(ofSize: 14)
+        subtitleLabel.textColor = .secondaryLabel
+        subtitleLabel.textAlignment = .center
+        subtitleLabel.numberOfLines = 0
+        subtitleLabel.translatesAutoresizingMaskIntoConstraints = false
+        cardView.addSubview(subtitleLabel)
+
+        // Text view for multi-line input
+        let textView = UITextView()
+        textView.font = .systemFont(ofSize: 16)
+        textView.layer.borderColor = UIColor.systemGray4.cgColor
+        textView.layer.borderWidth = 1
+        textView.layer.cornerRadius = 8
+        textView.textContainerInset = UIEdgeInsets(top: 10, left: 8, bottom: 10, right: 8)
+        textView.translatesAutoresizingMaskIntoConstraints = false
+        cardView.addSubview(textView)
+
+        // Placeholder label
+        let placeholderLabel = UILabel()
+        placeholderLabel.text = "e.g., How do I say 'I love this restaurant'?"
+        placeholderLabel.font = .systemFont(ofSize: 16)
+        placeholderLabel.textColor = .placeholderText
+        placeholderLabel.translatesAutoresizingMaskIntoConstraints = false
+        textView.addSubview(placeholderLabel)
+
+        // Button stack
+        let buttonStack = UIStackView()
+        buttonStack.axis = .horizontal
+        buttonStack.spacing = 12
+        buttonStack.distribution = .fillEqually
+        buttonStack.translatesAutoresizingMaskIntoConstraints = false
+        cardView.addSubview(buttonStack)
+
+        // Cancel button
+        let cancelButton = UIButton(type: .system)
+        cancelButton.setTitle("Cancel", for: .normal)
+        cancelButton.titleLabel?.font = .systemFont(ofSize: 16, weight: .medium)
+        cancelButton.backgroundColor = .systemGray5
+        cancelButton.setTitleColor(.label, for: .normal)
+        cancelButton.layer.cornerRadius = 10
+        buttonStack.addArrangedSubview(cancelButton)
+
+        // Ask button
+        let askButton = UIButton(type: .system)
+        askButton.setTitle("Ask", for: .normal)
+        askButton.titleLabel?.font = .systemFont(ofSize: 16, weight: .semibold)
+        askButton.backgroundColor = .systemBlue
+        askButton.setTitleColor(.white, for: .normal)
+        askButton.layer.cornerRadius = 10
+        buttonStack.addArrangedSubview(askButton)
+
+        // Constraints
+        NSLayoutConstraint.activate([
+            dimmedView.topAnchor.constraint(equalTo: alertVC.view.topAnchor),
+            dimmedView.leadingAnchor.constraint(equalTo: alertVC.view.leadingAnchor),
+            dimmedView.trailingAnchor.constraint(equalTo: alertVC.view.trailingAnchor),
+            dimmedView.bottomAnchor.constraint(equalTo: alertVC.view.bottomAnchor),
+
+            cardView.centerYAnchor.constraint(equalTo: alertVC.view.centerYAnchor),
+            cardView.leadingAnchor.constraint(equalTo: alertVC.view.leadingAnchor, constant: 24),
+            cardView.trailingAnchor.constraint(equalTo: alertVC.view.trailingAnchor, constant: -24),
+
+            titleLabel.topAnchor.constraint(equalTo: cardView.topAnchor, constant: 20),
+            titleLabel.leadingAnchor.constraint(equalTo: cardView.leadingAnchor, constant: 16),
+            titleLabel.trailingAnchor.constraint(equalTo: cardView.trailingAnchor, constant: -16),
+
+            subtitleLabel.topAnchor.constraint(equalTo: titleLabel.bottomAnchor, constant: 8),
+            subtitleLabel.leadingAnchor.constraint(equalTo: cardView.leadingAnchor, constant: 16),
+            subtitleLabel.trailingAnchor.constraint(equalTo: cardView.trailingAnchor, constant: -16),
+
+            textView.topAnchor.constraint(equalTo: subtitleLabel.bottomAnchor, constant: 16),
+            textView.leadingAnchor.constraint(equalTo: cardView.leadingAnchor, constant: 16),
+            textView.trailingAnchor.constraint(equalTo: cardView.trailingAnchor, constant: -16),
+            textView.heightAnchor.constraint(equalToConstant: 80),
+
+            placeholderLabel.topAnchor.constraint(equalTo: textView.topAnchor, constant: 10),
+            placeholderLabel.leadingAnchor.constraint(equalTo: textView.leadingAnchor, constant: 12),
+            placeholderLabel.trailingAnchor.constraint(equalTo: textView.trailingAnchor, constant: -12),
+
+            buttonStack.topAnchor.constraint(equalTo: textView.bottomAnchor, constant: 16),
+            buttonStack.leadingAnchor.constraint(equalTo: cardView.leadingAnchor, constant: 16),
+            buttonStack.trailingAnchor.constraint(equalTo: cardView.trailingAnchor, constant: -16),
+            buttonStack.bottomAnchor.constraint(equalTo: cardView.bottomAnchor, constant: -20),
+            buttonStack.heightAnchor.constraint(equalToConstant: 44)
+        ])
+
+        // Handle placeholder visibility
+        NotificationCenter.default.addObserver(forName: UITextView.textDidChangeNotification, object: textView, queue: .main) { _ in
+            placeholderLabel.isHidden = !textView.text.isEmpty
         }
 
-        let askAction = UIAlertAction(title: "Ask", style: .default) { [weak self] _ in
-            guard let self = self,
-                  let query = alert.textFields?.first?.text,
-                  !query.isEmpty else { return }
+        // Button actions
+        cancelButton.addAction(UIAction { _ in
+            alertVC.dismiss(animated: true)
+        }, for: .touchUpInside)
 
-            self.askMuse(query: query)
+        askButton.addAction(UIAction { [weak self] _ in
+            guard let self = self, !textView.text.isEmpty else { return }
+            alertVC.dismiss(animated: true) {
+                self.askMuse(query: textView.text)
+            }
+        }, for: .touchUpInside)
+
+        // Dismiss on background tap
+        let tapGesture = UITapGestureRecognizer(target: alertVC, action: nil)
+        tapGesture.addTarget(self, action: #selector(dismissMuseDialog))
+        dimmedView.addGestureRecognizer(tapGesture)
+
+        // Store reference for dismissal
+        self.museDialogVC = alertVC
+
+        present(alertVC, animated: true) {
+            textView.becomeFirstResponder()
         }
+    }
 
-        alert.addAction(askAction)
-        alert.addAction(UIAlertAction(title: "Cancel", style: .cancel))
+    private var museDialogVC: UIViewController?
 
-        present(alert, animated: true)
+    @objc private func dismissMuseDialog() {
+        museDialogVC?.dismiss(animated: true)
+        museDialogVC = nil
     }
 
     private func askMuse(query: String) {

@@ -13,7 +13,6 @@ import {
   type EvaluationResult
 } from '@/lib/evaluationStorage'
 import { fetchOpenRouterModels, formatContextLength, type OpenRouterModel } from '@/lib/openrouter'
-import { supabase } from '@/lib/supabase'
 
 const DEFAULT_CATEGORIES = ['translation', 'grammar', 'scoring'] as const
 type SortBy = 'score' | 'name' | 'recent'
@@ -222,68 +221,6 @@ export default function RoundRobinResults() {
   return (
     <div className="max-w-7xl mx-auto space-y-6">
       <h1 className="text-3xl font-bold">Round Robin Results</h1>
-
-      {/* Debug Info */}
-      <div className="bg-blue-50 border-2 border-blue-400 rounded-lg p-4">
-        <p className="text-sm font-semibold text-blue-900 mb-2">🗄️ Supabase Storage Info</p>
-        <div className="text-xs space-y-1">
-          <p><span className="font-semibold">Current Category:</span> {category}</p>
-          <p><span className="font-semibold">Evaluations in Current Category:</span> {evaluations.length}</p>
-          <button
-            onClick={async () => {
-              const all = await getAllEvaluations()
-              console.log('All evaluations from Supabase:', all)
-
-              // Group by model to show per-model scores
-              const byModel = all.reduce((acc: any, e: any) => {
-                if (!acc[e.modelId]) acc[e.modelId] = []
-                acc[e.modelId].push(e)
-                return acc
-              }, {})
-
-              console.log('Scores by model:')
-              Object.entries(byModel).forEach(([modelId, evals]: [string, any]) => {
-                console.log(`\n${evals[0].modelName} (${modelId}):`)
-                evals.forEach((e: any, i: number) => {
-                  console.log(`  Test ${i+1}: score=${e.score}, error=${e.error || 'none'}`)
-                })
-                const scores = evals.map((e: any) => e.score)
-                console.log(`  Average: ${(scores.reduce((a: number, b: number) => a + b, 0) / scores.length).toFixed(1)}`)
-                console.log(`  Min/Max: ${Math.min(...scores)} - ${Math.max(...scores)}`)
-              })
-
-              alert(`Total evaluations: ${all.length}\nCheck console for detailed breakdown`)
-            }}
-            className="mt-2 px-3 py-1 bg-blue-600 text-white rounded hover:bg-blue-700 text-xs"
-          >
-            Debug Scores in Console
-          </button>
-          <button
-            onClick={async () => {
-              try {
-                const { data, error, count } = await supabase
-                  .from('model_evaluations')
-                  .select('*', { count: 'exact' })
-                  .limit(5)
-
-                if (error) {
-                  console.error('Supabase error:', error)
-                  alert(`Error: ${error.message}`)
-                } else {
-                  console.log('Sample data:', data)
-                  alert(`Found ${count} evaluations in Supabase database.\nShowing first 5 in console.`)
-                }
-              } catch (err: any) {
-                console.error('Error:', err)
-                alert(`Error: ${err.message}`)
-              }
-            }}
-            className="ml-2 mt-2 px-3 py-1 bg-green-600 text-white rounded hover:bg-green-700 text-xs"
-          >
-            Check Supabase Database
-          </button>
-        </div>
-      </div>
 
       {/* Category and Language Pair Selector */}
       <div className="bg-white rounded-lg shadow p-6 space-y-4">

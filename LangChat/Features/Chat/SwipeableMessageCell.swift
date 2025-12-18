@@ -419,6 +419,12 @@ class SwipeableMessageCell: UITableViewCell {
         let translationSwipe = UISwipeGestureRecognizer(target: self, action: #selector(swipeFromTranslation))
         translationSwipe.direction = .right
         rightPane.addGestureRecognizer(translationSwipe)
+
+        // Double tap on translation pane for TTS
+        let translationDoubleTap = UITapGestureRecognizer(target: self, action: #selector(pronounceTranslation))
+        translationDoubleTap.numberOfTapsRequired = 2
+        translationBubbleView.addGestureRecognizer(translationDoubleTap)
+        translationBubbleView.isUserInteractionEnabled = true
     }
 
     @objc private func handleGrammarLongPress(_ gesture: UILongPressGestureRecognizer) {
@@ -555,6 +561,78 @@ class SwipeableMessageCell: UITableViewCell {
                     // If message is from chat partner, use their gender
                     let speakerGender = message.isSentByCurrentUser ? nil : self.chatPartner?.gender
                     self.playTTSWithService(text: message.text, language: language, speakerGender: speakerGender, usageInfo: usageInfo)
+                }
+            }
+        }
+    }
+
+    @objc private func pronounceTranslation() {
+        guard let translationText = translationLabel.text,
+              !translationText.isEmpty,
+              !translationText.starts(with: "Swipe to translate"),
+              !translationText.starts(with: "Translating..."),
+              !translationText.starts(with: "Translation failed") else {
+            return
+        }
+
+        // Visual feedback on translation bubble
+        UIView.animate(withDuration: 0.1, animations: {
+            self.translationBubbleView.transform = CGAffineTransform(scaleX: 0.95, y: 0.95)
+        }) { _ in
+            UIView.animate(withDuration: 0.1) {
+                self.translationBubbleView.transform = .identity
+            }
+        }
+
+        // Determine the language of the translation
+        // Translation is TO the user's native language (if message was in learning language)
+        // or TO the learning language (if message was in native language)
+        // Detect from translation text to be accurate
+        let language: String
+        if let textDetected = Language.detect(from: translationText) {
+            language = textDetected.rawValue
+        } else {
+            // Fallback: translations are typically to native language
+            language = nativeLanguage.rawValue
+        }
+        print("🔊 TTS for translation: '\(translationText.prefix(30))...' -> \(language)")
+
+        // Fetch TTS usage info if needed
+        Task {
+            // Get current usage info
+            let usageInfo: TTSUsageInfo
+            if let cached = self.ttsUsageInfo {
+                usageInfo = cached
+            } else {
+                do {
+                    usageInfo = try await SupabaseService.shared.getTTSUsageInfo()
+                    await MainActor.run { self.ttsUsageInfo = usageInfo }
+                } catch {
+                    // Fallback to free tier defaults
+                    usageInfo = TTSUsageInfo(
+                        playsUsed: 0,
+                        playsLimit: 10,
+                        billingCycleStart: nil,
+                        voiceQuality: .appleNative
+                    )
+                }
+            }
+
+            // Check if user can play TTS
+            let canPlayResult = TTSService.shared.canPlayTTS(
+                text: translationText,
+                tier: self.currentTier,
+                usageInfo: usageInfo
+            )
+
+            await MainActor.run {
+                switch canPlayResult {
+                case .failure(let error):
+                    self.showTTSError(error)
+                case .success:
+                    // For translations, we don't have a specific speaker gender
+                    // Use nil to let the service pick a default voice
+                    self.playTTSWithService(text: translationText, language: language, speakerGender: nil, usageInfo: usageInfo)
                 }
             }
         }
