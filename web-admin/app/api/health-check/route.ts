@@ -77,8 +77,8 @@ async function testModel(config: any) {
       headers: {
         'Authorization': `Bearer ${OPENROUTER_API_KEY}`,
         'Content-Type': 'application/json',
-        'HTTP-Referer': 'https://langchat.app',
-        'X-Title': 'LangChat Health Check'
+        'HTTP-Referer': 'https://fluenca.app',
+        'X-Title': 'Fluenca Health Check'
       },
       body: JSON.stringify({
         model: config.model_id,
@@ -199,7 +199,7 @@ async function sendAlert(config: any, service: string, modelId: string, failureC
   // Only send SMS for 3+ consecutive failures (service is actually down)
   if (failureCount < 3) return
 
-  const smsMessage = `🚨 LangChat Alert: ${service} ${modelId} is DOWN (${failureCount} failures). Check your dashboard.`
+  const smsMessage = `🚨 Fluenca Alert: ${service} ${modelId} is DOWN (${failureCount} failures). Check your dashboard.`
 
   try {
     // Send SMS via Twilio

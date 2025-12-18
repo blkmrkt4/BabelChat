@@ -12,7 +12,7 @@ export async function POST(request: Request) {
     }
 
     // Send test SMS (under 160 chars for trial account)
-    const message = `LangChat Test: ${recipientType || 'test'} SMS monitoring is working. Alerts configured correctly.`
+    const message = `Fluenca Test: ${recipientType || 'test'} SMS monitoring is working. Alerts configured correctly.`
 
     const response = await fetch(`${process.env.NEXT_PUBLIC_BASE_URL}/api/send-sms`, {
       method: 'POST',
