@@ -1850,6 +1850,184 @@ extension SupabaseService {
     }
 }
 
+// MARK: - Invite Methods
+
+extension SupabaseService {
+
+    /// Result of accepting an invite
+    struct InviteResult {
+        let success: Bool
+        let matchId: String?
+        let inviterName: String?
+        let inviterId: String?
+        let error: String?
+    }
+
+    /// Generate an invite code for the current user
+    func generateInviteCode() async throws -> String {
+        guard let userId = currentUserId else {
+            throw NSError(domain: "SupabaseService", code: 401, userInfo: [NSLocalizedDescriptionKey: "Not authenticated"])
+        }
+
+        // Call the database function to generate invite code
+        let response: PostgrestResponse<[String: String]> = try await client.rpc(
+            "create_invite",
+            params: ["p_inviter_id": userId.uuidString]
+        ).single().execute()
+
+        guard let code = response.value["create_invite"] else {
+            throw NSError(domain: "SupabaseService", code: 500, userInfo: [NSLocalizedDescriptionKey: "Failed to generate invite code"])
+        }
+
+        print("✅ Generated invite code: \(code)")
+        return code
+    }
+
+    /// Get all invites created by the current user
+    func getMyInvites() async throws -> [Invite] {
+        guard let userId = currentUserId else {
+            throw NSError(domain: "SupabaseService", code: 401, userInfo: [NSLocalizedDescriptionKey: "Not authenticated"])
+        }
+
+        let response: [Invite] = try await client
+            .from("invites")
+            .select()
+            .eq("inviter_id", value: userId.uuidString)
+            .order("created_at", ascending: false)
+            .execute()
+            .value
+
+        return response
+    }
+
+    /// Validate an invite code (check if it exists and is valid)
+    func validateInviteCode(_ code: String) async throws -> InviteValidation? {
+        let response: [InviteValidation] = try await client
+            .from("invites")
+            .select("id, code, status, expires_at, inviter_id, profiles!invites_inviter_id_fkey(name)")
+            .eq("code", value: code)
+            .eq("status", value: "pending")
+            .execute()
+            .value
+
+        guard let invite = response.first else {
+            return nil
+        }
+
+        // Check if expired
+        if let expiresAt = invite.expiresAt, expiresAt < Date() {
+            return nil
+        }
+
+        return invite
+    }
+
+    /// Accept an invite code and create auto-match
+    func acceptInvite(code: String) async throws -> InviteResult {
+        guard let userId = currentUserId else {
+            return InviteResult(success: false, matchId: nil, inviterName: nil, inviterId: nil, error: "Not authenticated")
+        }
+
+        // Call the database function to accept invite
+        struct AcceptInviteResponse: Decodable {
+            let success: Bool
+            let match_id: String?
+            let inviter_name: String?
+            let inviter_id: String?
+            let error: String?
+        }
+
+        let response: PostgrestResponse<AcceptInviteResponse> = try await client.rpc(
+            "accept_invite",
+            params: ["p_code": code, "p_new_user_id": userId.uuidString]
+        ).single().execute()
+
+        let result = response.value
+        return InviteResult(
+            success: result.success,
+            matchId: result.match_id,
+            inviterName: result.inviter_name,
+            inviterId: result.inviter_id,
+            error: result.error
+        )
+    }
+
+    /// Build a shareable invite link URL
+    func buildInviteLink(code: String) -> URL? {
+        // Format: fluenca://invite/FLU-ABC123
+        return URL(string: "fluenca://invite/\(code)")
+    }
+
+    /// Build a shareable invite link with fallback web URL
+    func buildShareableInviteText(code: String, inviterName: String) -> String {
+        let appLink = "fluenca://invite/\(code)"
+        // TODO: Add web fallback URL when website is ready
+        // let webLink = "https://fluenca.app/invite/\(code)"
+
+        return """
+        \(inviterName) has invited you to connect on Fluenca!
+
+        Open this link to connect: \(appLink)
+
+        Don't have Fluenca? Download it from the App Store first, then tap the link above.
+
+        Invite code: \(code)
+        """
+    }
+}
+
+// MARK: - Invite Data Models
+
+struct Invite: Codable {
+    let id: String
+    let inviterId: String
+    let code: String
+    let status: String
+    let invitedUserId: String?
+    let matchId: String?
+    let createdAt: Date?
+    let expiresAt: Date?
+    let acceptedAt: Date?
+
+    enum CodingKeys: String, CodingKey {
+        case id
+        case inviterId = "inviter_id"
+        case code
+        case status
+        case invitedUserId = "invited_user_id"
+        case matchId = "match_id"
+        case createdAt = "created_at"
+        case expiresAt = "expires_at"
+        case acceptedAt = "accepted_at"
+    }
+}
+
+struct InviteValidation: Codable {
+    let id: String
+    let code: String
+    let status: String
+    let expiresAt: Date?
+    let inviterId: String
+    let profiles: InviterProfile?
+
+    enum CodingKeys: String, CodingKey {
+        case id
+        case code
+        case status
+        case expiresAt = "expires_at"
+        case inviterId = "inviter_id"
+        case profiles
+    }
+
+    struct InviterProfile: Codable {
+        let name: String?
+    }
+
+    var inviterName: String? {
+        return profiles?.name
+    }
+}
+
 // MARK: - Language Proficiency Extension
 
 extension LanguageProficiency {

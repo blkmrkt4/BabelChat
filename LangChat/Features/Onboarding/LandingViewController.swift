@@ -12,6 +12,7 @@ class LandingViewController: UIViewController {
     private let overlayView = UIView()
     private let logoLabel = UILabel()
     private let taglineLabel = UILabel()
+    private let taglineLabel2 = UILabel()
     private let buttonsStackView = UIStackView()
     private let signInWithAppleButton = ASAuthorizationAppleIDButton(type: .signIn, style: .white)
     private let createAccountButton = UIButton(type: .system)
@@ -65,19 +66,27 @@ class LandingViewController: UIViewController {
         view.addSubview(overlayView)
 
         // Logo/App Name
-        logoLabel.text = "LangChat"
+        logoLabel.text = "Fluenca"
         logoLabel.font = .systemFont(ofSize: 48, weight: .bold)
         logoLabel.textColor = .white
         logoLabel.textAlignment = .center
         view.addSubview(logoLabel)
 
         // Tagline
-        taglineLabel.text = "Connect Through Language"
+        taglineLabel.text = "Your brain learns faster when it cares"
         taglineLabel.font = .systemFont(ofSize: 20, weight: .medium)
         taglineLabel.textColor = .white.withAlphaComponent(0.9)
         taglineLabel.textAlignment = .center
         taglineLabel.numberOfLines = 0
         view.addSubview(taglineLabel)
+
+        // Second tagline
+        taglineLabel2.text = "Speaking like a local is the fastest path to fluency"
+        taglineLabel2.font = .systemFont(ofSize: 16, weight: .regular)
+        taglineLabel2.textColor = .white.withAlphaComponent(0.7)
+        taglineLabel2.textAlignment = .center
+        taglineLabel2.numberOfLines = 0
+        view.addSubview(taglineLabel2)
 
         // Buttons stack
         buttonsStackView.axis = .vertical
@@ -154,6 +163,7 @@ class LandingViewController: UIViewController {
         logoLabel.translatesAutoresizingMaskIntoConstraints = false
         taglineLabel.translatesAutoresizingMaskIntoConstraints = false
         buttonsStackView.translatesAutoresizingMaskIntoConstraints = false
+        taglineLabel2.translatesAutoresizingMaskIntoConstraints = false
         closeButton.translatesAutoresizingMaskIntoConstraints = false
         signInWithAppleButton.translatesAutoresizingMaskIntoConstraints = false
         dividerView.translatesAutoresizingMaskIntoConstraints = false
@@ -182,6 +192,11 @@ class LandingViewController: UIViewController {
             taglineLabel.topAnchor.constraint(equalTo: logoLabel.bottomAnchor, constant: 12),
             taglineLabel.leadingAnchor.constraint(equalTo: view.leadingAnchor, constant: 40),
             taglineLabel.trailingAnchor.constraint(equalTo: view.trailingAnchor, constant: -40),
+
+            // Second tagline
+            taglineLabel2.topAnchor.constraint(equalTo: taglineLabel.bottomAnchor, constant: 8),
+            taglineLabel2.leadingAnchor.constraint(equalTo: view.leadingAnchor, constant: 40),
+            taglineLabel2.trailingAnchor.constraint(equalTo: view.trailingAnchor, constant: -40),
 
             // Buttons at bottom
             buttonsStackView.leadingAnchor.constraint(equalTo: view.leadingAnchor, constant: 40),

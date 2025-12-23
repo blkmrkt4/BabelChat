@@ -16,8 +16,31 @@ interface PricingConfig {
   pro_banner: string
   pro_features: Feature[]
   free_features: Feature[]
+  weekly_pricing_countries: string[]  // Country codes that show weekly pricing
   updated_at: string
 }
+
+// Common country codes for reference
+const COUNTRY_OPTIONS = [
+  { code: 'IN', name: 'India', flag: '🇮🇳' },
+  { code: 'BR', name: 'Brazil', flag: '🇧🇷' },
+  { code: 'MX', name: 'Mexico', flag: '🇲🇽' },
+  { code: 'ID', name: 'Indonesia', flag: '🇮🇩' },
+  { code: 'PH', name: 'Philippines', flag: '🇵🇭' },
+  { code: 'VN', name: 'Vietnam', flag: '🇻🇳' },
+  { code: 'TH', name: 'Thailand', flag: '🇹🇭' },
+  { code: 'MY', name: 'Malaysia', flag: '🇲🇾' },
+  { code: 'TR', name: 'Turkey', flag: '🇹🇷' },
+  { code: 'EG', name: 'Egypt', flag: '🇪🇬' },
+  { code: 'NG', name: 'Nigeria', flag: '🇳🇬' },
+  { code: 'ZA', name: 'South Africa', flag: '🇿🇦' },
+  { code: 'CO', name: 'Colombia', flag: '🇨🇴' },
+  { code: 'PE', name: 'Peru', flag: '🇵🇪' },
+  { code: 'PK', name: 'Pakistan', flag: '🇵🇰' },
+  { code: 'BD', name: 'Bangladesh', flag: '🇧🇩' },
+  { code: 'AR', name: 'Argentina', flag: '🇦🇷' },
+  { code: 'CL', name: 'Chile', flag: '🇨🇱' },
+]
 
 const TITLE_MAX_LENGTH = 55
 const SUBTITLE_MAX_LENGTH = 50
@@ -73,6 +96,7 @@ export default function PricingPage() {
           { title: 'Full translation & grammar insights', subtitle: '', included: true },
           { title: 'Basic text to speech', subtitle: '', included: true },
         ],
+        weekly_pricing_countries: ['IN', 'BR', 'MX', 'ID', 'PH', 'VN', 'TH', 'MY'],
         updated_at: new Date().toISOString()
       }
       setConfig(defaults)
@@ -525,6 +549,71 @@ export default function PricingPage() {
                 ))}
               </div>
             </div>
+          </div>
+        </div>
+
+        {/* Weekly Pricing Countries */}
+        <div className="bg-white rounded-lg shadow-sm p-4">
+          <div className="flex items-center justify-between mb-3">
+            <div>
+              <h3 className="font-bold text-gray-700">Weekly Pricing Display</h3>
+              <p className="text-xs text-gray-500">
+                Users in these countries see prices as weekly (e.g., "$2.31/wk" instead of "$9.99/mo")
+              </p>
+            </div>
+          </div>
+
+          <div className="flex flex-wrap gap-2 mb-4">
+            {config.weekly_pricing_countries.map((code) => {
+              const country = COUNTRY_OPTIONS.find(c => c.code === code)
+              return (
+                <span
+                  key={code}
+                  className="inline-flex items-center gap-1 px-3 py-1.5 bg-blue-50 text-blue-700 rounded-full text-sm"
+                >
+                  <span>{country?.flag || '🌍'}</span>
+                  <span>{country?.name || code}</span>
+                  <button
+                    onClick={() => {
+                      const updated = config.weekly_pricing_countries.filter(c => c !== code)
+                      updateConfig({ weekly_pricing_countries: updated })
+                    }}
+                    className="ml-1 text-blue-400 hover:text-blue-600"
+                  >
+                    ×
+                  </button>
+                </span>
+              )
+            })}
+            {config.weekly_pricing_countries.length === 0 && (
+              <span className="text-gray-400 text-sm">No countries selected - all users see monthly pricing</span>
+            )}
+          </div>
+
+          <div className="flex items-center gap-2">
+            <select
+              className="flex-1 px-3 py-2 border rounded text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+              value=""
+              onChange={(e) => {
+                if (e.target.value && !config.weekly_pricing_countries.includes(e.target.value)) {
+                  updateConfig({
+                    weekly_pricing_countries: [...config.weekly_pricing_countries, e.target.value]
+                  })
+                }
+              }}
+            >
+              <option value="">+ Add country...</option>
+              {COUNTRY_OPTIONS.filter(c => !config.weekly_pricing_countries.includes(c.code)).map((country) => (
+                <option key={country.code} value={country.code}>
+                  {country.flag} {country.name} ({country.code})
+                </option>
+              ))}
+            </select>
+          </div>
+
+          <div className="mt-3 p-3 bg-gray-50 rounded text-xs text-gray-600">
+            <strong>How it works:</strong> Monthly price is divided by 4.33 to show weekly equivalent.
+            Users are still billed monthly - this is just a display format that makes prices feel more accessible in emerging markets.
           </div>
         </div>
 

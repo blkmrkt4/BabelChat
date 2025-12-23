@@ -232,7 +232,7 @@ class OnboardingCarouselViewController: UIViewController {
 
         // Logo
         let logoLabel = UILabel()
-        logoLabel.text = "LangChat"
+        logoLabel.text = "Fluenca"
         logoLabel.font = .systemFont(ofSize: 52, weight: .bold)
         logoLabel.textColor = .white
         logoLabel.textAlignment = .center
@@ -241,12 +241,22 @@ class OnboardingCarouselViewController: UIViewController {
 
         // Tagline
         let taglineLabel = UILabel()
-        taglineLabel.text = "Connect Through Language"
+        taglineLabel.text = "Your brain learns faster when it cares"
         taglineLabel.font = .systemFont(ofSize: 22, weight: .medium)
         taglineLabel.textColor = UIColor.white.withAlphaComponent(0.9)
         taglineLabel.textAlignment = .center
         taglineLabel.translatesAutoresizingMaskIntoConstraints = false
         pageView.addSubview(taglineLabel)
+
+        // Second tagline
+        let taglineLabel2 = UILabel()
+        taglineLabel2.text = "Speaking like a local is the fastest path to fluency"
+        taglineLabel2.font = .systemFont(ofSize: 16, weight: .regular)
+        taglineLabel2.textColor = UIColor.white.withAlphaComponent(0.7)
+        taglineLabel2.textAlignment = .center
+        taglineLabel2.numberOfLines = 0
+        taglineLabel2.translatesAutoresizingMaskIntoConstraints = false
+        pageView.addSubview(taglineLabel2)
 
         // Swipe hint
         let swipeHint = UILabel()
@@ -269,10 +279,17 @@ class OnboardingCarouselViewController: UIViewController {
             overlayView.bottomAnchor.constraint(equalTo: pageView.bottomAnchor),
 
             logoLabel.centerXAnchor.constraint(equalTo: pageView.centerXAnchor),
-            logoLabel.centerYAnchor.constraint(equalTo: pageView.centerYAnchor, constant: -40),
+            logoLabel.centerYAnchor.constraint(equalTo: pageView.centerYAnchor, constant: -60),
 
             taglineLabel.topAnchor.constraint(equalTo: logoLabel.bottomAnchor, constant: 12),
             taglineLabel.centerXAnchor.constraint(equalTo: pageView.centerXAnchor),
+            taglineLabel.leadingAnchor.constraint(equalTo: pageView.leadingAnchor, constant: 40),
+            taglineLabel.trailingAnchor.constraint(equalTo: pageView.trailingAnchor, constant: -40),
+
+            taglineLabel2.topAnchor.constraint(equalTo: taglineLabel.bottomAnchor, constant: 8),
+            taglineLabel2.centerXAnchor.constraint(equalTo: pageView.centerXAnchor),
+            taglineLabel2.leadingAnchor.constraint(equalTo: pageView.leadingAnchor, constant: 40),
+            taglineLabel2.trailingAnchor.constraint(equalTo: pageView.trailingAnchor, constant: -40),
 
             swipeHint.bottomAnchor.constraint(equalTo: pageView.bottomAnchor, constant: -100),
             swipeHint.centerXAnchor.constraint(equalTo: pageView.centerXAnchor)

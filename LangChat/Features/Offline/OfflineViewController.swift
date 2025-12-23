@@ -73,7 +73,7 @@ class OfflineViewController: UIViewController {
         containerView.addSubview(titleLabel)
 
         // Message
-        messageLabel.text = "Unable to connect to LangChat servers.\nPlease check your internet connection."
+        messageLabel.text = "Unable to connect to Fluenca servers.\nPlease check your internet connection."
         messageLabel.font = .systemFont(ofSize: 16, weight: .regular)
         messageLabel.textColor = UIColor.white.withAlphaComponent(0.7)
         messageLabel.textAlignment = .center

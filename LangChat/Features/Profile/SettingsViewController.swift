@@ -9,6 +9,7 @@ class SettingsViewController: UIViewController {
     private enum SettingSection: Int, CaseIterable {
         case profileSettings
         case matchingSettings
+        case social
         #if DEBUG
         case aiSettings
         #endif
@@ -21,6 +22,7 @@ class SettingsViewController: UIViewController {
             switch self {
             case .profileSettings: return nil  // No header for single profile item
             case .matchingSettings: return nil  // No header for single matching item
+            case .social: return "Share"
             #if DEBUG
             case .aiSettings: return "AI Settings"
             #endif
@@ -41,6 +43,10 @@ class SettingsViewController: UIViewController {
                 return [
                     ("Matching Settings", "slider.horizontal.3")
                 ]
+            case .social:
+                return [
+                    ("Invite Friends", "person.badge.plus")
+                ]
             #if DEBUG
             case .aiSettings:
                 return [
@@ -53,7 +59,6 @@ class SettingsViewController: UIViewController {
                 ]
             case .privacy:
                 return [
-                    ("Blocked Users", "person.crop.circle.badge.xmark"),
                     ("Data & Privacy", "lock.shield"),
                     ("Notifications", "bell"),
                     ("Appearance", "moon")
@@ -244,6 +249,9 @@ class SettingsViewController: UIViewController {
         case .matchingSettings:
             showMatchingSettings()
 
+        case .social:
+            showInviteFriends()
+
         #if DEBUG
         case .aiSettings:
             // Only one item now - Model Bindings (view-only)
@@ -258,10 +266,9 @@ class SettingsViewController: UIViewController {
 
         case .privacy:
             switch row {
-            case 0: showBlockedUsers()
-            case 1: showDataPrivacy()
-            case 2: break // Notifications switch cell handled by switch control
-            case 3: showAppearanceSettings()
+            case 0: showDataPrivacy()
+            case 1: break // Notifications switch cell handled by switch control
+            case 2: showAppearanceSettings()
             default: break
             }
 
@@ -364,6 +371,63 @@ class SettingsViewController: UIViewController {
         navigationController?.pushViewController(matchingPrefsVC, animated: true)
     }
 
+    private func showInviteFriends() {
+        // Show loading indicator
+        let loadingAlert = UIAlertController(title: nil, message: "Generating invite link...", preferredStyle: .alert)
+        let loadingIndicator = UIActivityIndicatorView(frame: CGRect(x: 10, y: 5, width: 50, height: 50))
+        loadingIndicator.hidesWhenStopped = true
+        loadingIndicator.style = .medium
+        loadingIndicator.startAnimating()
+        loadingAlert.view.addSubview(loadingIndicator)
+        present(loadingAlert, animated: true)
+
+        Task {
+            do {
+                // Generate invite code
+                let code = try await SupabaseService.shared.generateInviteCode()
+
+                // Get user's name for the share text
+                let firstName = UserDefaults.standard.string(forKey: "firstName") ?? "A friend"
+
+                // Build shareable text
+                let shareText = SupabaseService.shared.buildShareableInviteText(code: code, inviterName: firstName)
+
+                await MainActor.run {
+                    loadingAlert.dismiss(animated: true) {
+                        // Show share sheet
+                        let activityVC = UIActivityViewController(
+                            activityItems: [shareText],
+                            applicationActivities: nil
+                        )
+
+                        // Configure for iPad
+                        if let popover = activityVC.popoverPresentationController {
+                            popover.sourceView = self.tableView
+                            if let socialSection = SettingSection.allCases.firstIndex(of: .social) {
+                                popover.sourceRect = self.tableView.rectForRow(at: IndexPath(row: 0, section: socialSection))
+                            }
+                        }
+
+                        self.present(activityVC, animated: true)
+                    }
+                }
+            } catch {
+                await MainActor.run {
+                    loadingAlert.dismiss(animated: true) {
+                        let errorAlert = UIAlertController(
+                            title: "Error",
+                            message: "Could not generate invite link. Please try again.",
+                            preferredStyle: .alert
+                        )
+                        errorAlert.addAction(UIAlertAction(title: "OK", style: .default))
+                        self.present(errorAlert, animated: true)
+                    }
+                }
+                print("❌ Error generating invite: \(error)")
+            }
+        }
+    }
+
     private func showSubscription() {
         let subscriptionVC = SubscriptionViewController()
         let navController = UINavigationController(rootViewController: subscriptionVC)
@@ -454,15 +518,10 @@ class SettingsViewController: UIViewController {
 
         if let popover = alert.popoverPresentationController {
             popover.sourceView = tableView
-            popover.sourceRect = tableView.rectForRow(at: IndexPath(row: 3, section: SettingSection.privacy.rawValue))
+            popover.sourceRect = tableView.rectForRow(at: IndexPath(row: 2, section: SettingSection.privacy.rawValue))
         }
 
         present(alert, animated: true)
-    }
-
-    private func showBlockedUsers() {
-        let blockedUsersVC = BlockedUsersViewController()
-        navigationController?.pushViewController(blockedUsersVC, animated: true)
     }
 
     private func showDataPrivacy() {
@@ -597,7 +656,7 @@ class SettingsViewController: UIViewController {
         let build = Bundle.main.infoDictionary?["CFBundleVersion"] as? String ?? "1"
 
         let alert = UIAlertController(
-            title: "LangChat",
+            title: "Fluenca",
             message: "Version \(version) (\(build))",
             preferredStyle: .alert
         )
@@ -632,7 +691,7 @@ extension SettingsViewController: UITableViewDataSource {
         // Use switch cell for specific settings
         if settingSection == .privacy {
             switch indexPath.row {
-            case 2: // Notifications
+            case 1: // Notifications
                 let cell = tableView.dequeueReusableCell(withIdentifier: "SwitchCell", for: indexPath) as! SwitchTableViewCell
                 let isEnabled = UserDefaults.standard.object(forKey: "notificationsEnabled") as? Bool ?? true
                 cell.configure(title: item.title, icon: item.icon, isOn: isEnabled)

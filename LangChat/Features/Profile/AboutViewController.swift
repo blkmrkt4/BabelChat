@@ -47,7 +47,7 @@ class AboutViewController: UIViewController {
 
         // App name
         let nameLabel = UILabel()
-        nameLabel.text = "LangChat"
+        nameLabel.text = "Fluenca"
         nameLabel.font = .systemFont(ofSize: 28, weight: .bold)
         nameLabel.textAlignment = .center
         contentView.addSubview(nameLabel)
@@ -101,7 +101,7 @@ class AboutViewController: UIViewController {
 
         // Copyright
         let copyrightLabel = UILabel()
-        copyrightLabel.text = "© 2024 LangChat. All rights reserved."
+        copyrightLabel.text = "© 2025 Fluenca. All rights reserved."
         copyrightLabel.font = .systemFont(ofSize: 14)
         copyrightLabel.textColor = .tertiaryLabel
         copyrightLabel.textAlignment = .center
@@ -159,7 +159,7 @@ class AboutViewController: UIViewController {
     @objc private func showAcknowledgments() {
         let alert = UIAlertController(
             title: "Acknowledgments",
-            message: "LangChat uses the following open source libraries:\n\n• Lorem Picsum for placeholder images\n• Additional libraries will be listed here",
+            message: "Fluenca uses the following open source libraries:\n\n• Supabase Swift SDK\n• RevenueCat Purchases SDK",
             preferredStyle: .alert
         )
         alert.addAction(UIAlertAction(title: "OK", style: .default))

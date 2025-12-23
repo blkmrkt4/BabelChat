@@ -73,5 +73,20 @@
 	<string>$(REVENUECAT_API_KEY)</string>
 	<key>GOOGLE_CLOUD_API_KEY</key>
 	<string>$(GOOGLE_CLOUD_API_KEY)</string>
+
+	<!-- Deep Linking / URL Schemes -->
+	<key>CFBundleURLTypes</key>
+	<array>
+		<dict>
+			<key>CFBundleTypeRole</key>
+			<string>Editor</string>
+			<key>CFBundleURLName</key>
+			<string>com.painkillerlabs.fluenca</string>
+			<key>CFBundleURLSchemes</key>
+			<array>
+				<string>fluenca</string>
+			</array>
+		</dict>
+	</array>
 </dict>
 </plist>

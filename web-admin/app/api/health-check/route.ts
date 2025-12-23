@@ -13,14 +13,23 @@ export async function GET(request: Request) {
   // Verify the request is authorized
   const authHeader = request.headers.get('authorization')
   const referer = request.headers.get('referer') || ''
+  const origin = request.headers.get('origin') || ''
+  const host = request.headers.get('host') || ''
   const expectedKey = process.env.HEALTH_CHECK_SECRET || 'dev-secret'
 
   // Allow if: valid bearer token OR same-origin request (for web admin UI)
+  const baseUrl = process.env.NEXT_PUBLIC_BASE_URL || ''
   const isSameOrigin = referer.includes('localhost') ||
-                       referer.includes(process.env.NEXT_PUBLIC_BASE_URL || '')
+                       origin.includes('localhost') ||
+                       referer.includes(baseUrl) ||
+                       origin.includes(baseUrl) ||
+                       (baseUrl && host.includes(new URL(baseUrl).host)) ||
+                       host.includes('vercel.app') ||  // Allow Vercel preview deployments
+                       host.includes('silentseer.com')  // Production domain
   const hasValidToken = authHeader === `Bearer ${expectedKey}`
 
   if (!hasValidToken && !isSameOrigin) {
+    console.log('Unauthorized request:', { referer, origin, host, baseUrl })
     return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
   }
 

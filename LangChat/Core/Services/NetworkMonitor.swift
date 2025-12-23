@@ -97,11 +97,11 @@ final class NetworkMonitor {
             print("⚠️ Supabase response received but couldn't parse - proceeding")
             return true
         } catch {
-            // Request failed, but NWPathMonitor says we have network
-            // This could be a temporary issue or simulator quirk - proceed anyway
-            print("⚠️ Supabase connectivity check failed: \(error)")
-            print("   Network path says connected - proceeding anyway")
-            return true  // Trust NWPathMonitor over the HTTP check
+            // Request failed - we can't reach Supabase, show offline screen
+            // Even if NWPathMonitor says we have network, Supabase is what matters for this app
+            print("❌ Supabase connectivity check failed: \(error)")
+            print("   Cannot reach Supabase - showing offline screen")
+            return false
         }
     }
 }

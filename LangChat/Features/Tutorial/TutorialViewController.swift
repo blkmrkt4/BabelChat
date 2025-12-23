@@ -107,14 +107,58 @@ class TutorialViewController: UIViewController {
             ]
         ),
         TutorialPage(
+            icon: "speaker.wave.3.fill",
+            title: "Listen & Speak",
+            description: "Hear how words and phrases are pronounced",
+            tips: [
+                "Double-tap any message to hear it spoken aloud",
+                "Double-tap translations to hear the pronunciation",
+                "Free users get standard text-to-speech voices",
+                "Premium & Pro unlock natural, local-sounding voices"
+            ]
+        ),
+        TutorialPage(
+            icon: "heart.circle.fill",
+            title: "Your Way to Connect",
+            description: "Match for friendship or see where it goes",
+            tips: [
+                "Enable Strictly Platonic in settings for friendship only",
+                "Platonic users only see other platonic users",
+                "Or stay open to connections that might spark",
+                "Change your preference anytime in Matching Settings"
+            ]
+        ),
+        TutorialPage(
             icon: "photo.on.rectangle.angled",
             title: "Managing Photos",
-            description: "Control your profile photos and captions",
+            description: "Control your profile photos and privacy",
             tips: [
-                "Tap any photo to view it full-screen",
-                "Long-press a photo for options menu",
-                "Add or edit captions to tell your story",
-                "Report inappropriate photos from other profiles"
+                "Long-press any photo slot to add or change photos",
+                "Add captions to tell your story",
+                "Blur individual photos until you match someone",
+                "Tap the blur icon on any photo to toggle blur"
+            ]
+        ),
+        TutorialPage(
+            icon: "person.text.rectangle.fill",
+            title: "Your Profile",
+            description: "Tell others about yourself",
+            tips: [
+                "Long-press the About section to edit your bio",
+                "Share your interests and what you're looking for",
+                "A great bio helps you find better matches",
+                "Keep it friendly and authentic"
+            ]
+        ),
+        TutorialPage(
+            icon: "link.badge.plus",
+            title: "Invite Friends",
+            description: "Bring friends to practice with",
+            tips: [
+                "Send an invite link to someone you'd like to match with",
+                "When they join, you'll be instantly matched",
+                "Premium & Pro members get instant matching",
+                "Find invite links in your Profile settings"
             ]
         ),
         TutorialPage(

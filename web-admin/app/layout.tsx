@@ -31,7 +31,7 @@ export default function RootLayout({
       <body className={inter.className}>
         <nav className="bg-blue-600 text-white p-4">
           <div className="container mx-auto flex justify-between items-center">
-            <h1 className="text-2xl font-bold">Fluenca Admin</h1>
+            <h1 className="text-2xl font-bold">ByzyB.ai</h1>
             <div className="flex gap-1">
               {links.map((link) => {
                 const isActive = pathname === link.href

@@ -23,6 +23,7 @@ struct PricingConfig: Codable {
     let proBanner: String
     let proFeatures: [PricingFeature]
     let freeFeatures: [PricingFeature]
+    let weeklyPricingCountries: [String]  // Country codes that show weekly pricing (e.g., ["IN", "BR", "MX"])
     let updatedAt: String?
 
     enum CodingKeys: String, CodingKey {
@@ -33,6 +34,7 @@ struct PricingConfig: Codable {
         case proBanner = "pro_banner"
         case proFeatures = "pro_features"
         case freeFeatures = "free_features"
+        case weeklyPricingCountries = "weekly_pricing_countries"
         case updatedAt = "updated_at"
     }
 
@@ -61,8 +63,14 @@ struct PricingConfig: Codable {
                 PricingFeature(title: "Full translation & grammar insights", subtitle: "", included: true),
                 PricingFeature(title: "Basic text to speech", subtitle: "", included: true)
             ],
+            weeklyPricingCountries: ["IN", "BR", "MX", "ID", "PH", "VN", "TH", "MY"],  // Default emerging markets
             updatedAt: nil
         )
+    }
+
+    /// Check if a country should show weekly pricing
+    func shouldShowWeeklyPricing(for countryCode: String) -> Bool {
+        return weeklyPricingCountries.contains(countryCode.uppercased())
     }
 
     // MARK: - Helper computed properties

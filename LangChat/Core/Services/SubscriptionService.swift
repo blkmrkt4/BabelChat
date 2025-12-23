@@ -6,7 +6,7 @@
 //
 
 import Foundation
-// import RevenueCat // TODO: Install RevenueCat via Swift Package Manager
+import RevenueCat
 
 class SubscriptionService: NSObject {
     static let shared = SubscriptionService()
@@ -29,6 +29,23 @@ class SubscriptionService: NSObject {
         }
     }
 
+    // MARK: - Cached Offerings for Localized Pricing
+    private(set) var cachedOfferings: [SubscriptionOffering] = []
+    private(set) var isLoadingOfferings: Bool = false
+    private var cachedPricingConfig: PricingConfig?
+
+    /// Check if current locale should show weekly pricing (uses remote config)
+    var shouldShowWeeklyPricing: Bool {
+        guard let regionCode = Locale.current.region?.identifier else { return false }
+        let config = cachedPricingConfig ?? PricingConfig.defaultConfig
+        return config.shouldShowWeeklyPricing(for: regionCode)
+    }
+
+    /// Update the cached pricing config (called when config is fetched)
+    func updatePricingConfig(_ config: PricingConfig) {
+        cachedPricingConfig = config
+    }
+
     // MARK: - Initialization
     private override init() {
         // Load saved status or default to free
@@ -46,31 +63,54 @@ class SubscriptionService: NSObject {
     /// Call this from AppDelegate to configure RevenueCat
     /// - Parameter apiKey: Your RevenueCat public API key
     func configure(apiKey: String) {
-        #if DEBUG
-        print("⚠️ Development Mode: RevenueCat disabled, using mock subscriptions")
-        #else
-        // TODO: Uncomment when RevenueCat is installed
-        // Purchases.logLevel = .debug
-        // Purchases.configure(withAPIKey: apiKey)
-        // Purchases.shared.delegate = self
-        // checkSubscriptionStatus()
+        if isDevelopmentMode {
+            print("⚠️ Development Mode: RevenueCat disabled, using mock subscriptions")
+            return
+        }
+
+        Purchases.logLevel = .debug
+        Purchases.configure(withAPIKey: apiKey)
+        Purchases.shared.delegate = self
+        checkSubscriptionStatus()
         print("✅ RevenueCat configured successfully")
-        #endif
     }
 
     // MARK: - Fetch Offerings
     /// Fetch available subscription offerings from RevenueCat
     func fetchOfferings(completion: @escaping (Result<[SubscriptionOffering], Error>) -> Void) {
-        // In development mode, return empty offerings
+        // In development mode, return mock offerings with default prices
         if isDevelopmentMode {
-            print("⚠️ Development Mode: Skipping RevenueCat offerings fetch")
-            completion(.success([]))
+            print("⚠️ Development Mode: Using mock offerings")
+            let mockOfferings = [
+                SubscriptionOffering(
+                    tier: .premium,
+                    package: nil,
+                    localizedPrice: "$9.99",
+                    localizedPricePerPeriod: "$9.99/mo",
+                    priceValue: 9.99,
+                    currencyCode: "USD",
+                    trialDays: 7
+                ),
+                SubscriptionOffering(
+                    tier: .pro,
+                    package: nil,
+                    localizedPrice: "$19.99",
+                    localizedPricePerPeriod: "$19.99/mo",
+                    priceValue: 19.99,
+                    currencyCode: "USD",
+                    trialDays: 0
+                )
+            ]
+            self.cachedOfferings = mockOfferings
+            completion(.success(mockOfferings))
             return
         }
 
-        // TODO: Uncomment when RevenueCat is installed
-        /*
-        Purchases.shared.getOfferings { offerings, error in
+        isLoadingOfferings = true
+
+        Purchases.shared.getOfferings { [weak self] offerings, error in
+            self?.isLoadingOfferings = false
+
             if let error = error {
                 completion(.failure(error))
                 return
@@ -81,21 +121,69 @@ class SubscriptionService: NSObject {
                 return
             }
 
-            // Convert RevenueCat packages to our model
+            // Convert RevenueCat packages to our model with full pricing info
             let subscriptionOfferings = current.availablePackages.compactMap { package -> SubscriptionOffering? in
-                guard let tier = SubscriptionTier(rawValue: package.identifier) else { return nil }
+                // Match by product identifier instead of package identifier
+                let productId = package.storeProduct.productIdentifier
+                let tier: SubscriptionTier
+                if productId == "premium_monthly" {
+                    tier = .premium
+                } else if productId == "pro_monthly" {
+                    tier = .pro
+                } else {
+                    return nil
+                }
+
+                let product = package.storeProduct
                 return SubscriptionOffering(
                     tier: tier,
                     package: package,
-                    price: package.storeProduct.localizedPriceString,
-                    trialDays: package.storeProduct.introductoryDiscount?.subscriptionPeriod.value ?? 0
+                    localizedPrice: product.localizedPriceString,
+                    localizedPricePerPeriod: "\(product.localizedPriceString)/mo",
+                    priceValue: NSDecimalNumber(decimal: product.price).doubleValue,
+                    currencyCode: product.currencyCode ?? "USD",
+                    trialDays: product.introductoryDiscount?.subscriptionPeriod.value ?? 0
                 )
             }
 
+            self?.cachedOfferings = subscriptionOfferings
+            NotificationCenter.default.post(name: .offeringsLoaded, object: subscriptionOfferings)
             completion(.success(subscriptionOfferings))
         }
-        */
-        completion(.success([]))
+    }
+
+    // MARK: - Localized Price Helpers
+
+    /// Get the localized price for a subscription tier
+    func localizedPrice(for tier: SubscriptionTier) -> String? {
+        return cachedOfferings.first(where: { $0.tier == tier })?.localizedPrice
+    }
+
+    /// Get the localized price with period (e.g., "$9.99/mo" or "$2.50/wk")
+    func localizedPricePerPeriod(for tier: SubscriptionTier) -> String {
+        guard let offering = cachedOfferings.first(where: { $0.tier == tier }) else {
+            return tier.price // Fallback to hardcoded
+        }
+
+        if shouldShowWeeklyPricing {
+            return offering.weeklyPriceString
+        } else {
+            return offering.localizedPricePerPeriod
+        }
+    }
+
+    /// Get trial info text for a tier
+    func trialInfoText(for tier: SubscriptionTier) -> String? {
+        guard let offering = cachedOfferings.first(where: { $0.tier == tier }),
+              offering.trialDays > 0 else {
+            return nil
+        }
+        return "\(offering.trialDays)-day free trial"
+    }
+
+    /// Check if offerings have been loaded
+    var hasLoadedOfferings: Bool {
+        return !cachedOfferings.isEmpty
     }
 
     // MARK: - Purchase
@@ -122,8 +210,6 @@ class SubscriptionService: NSObject {
             return
         }
 
-        // TODO: Uncomment when RevenueCat is installed
-        /*
         Purchases.shared.getOfferings { [weak self] offerings, error in
             if let error = error {
                 completion(.failure(error))
@@ -151,15 +237,17 @@ class SubscriptionService: NSObject {
                 completion(.success(self?.currentStatus ?? .free))
             }
         }
-        */
-        completion(.failure(SubscriptionError.revenueCatNotConfigured))
     }
 
     // MARK: - Restore Purchases
     /// Restore previous purchases
     func restorePurchases(completion: @escaping (Result<SubscriptionStatus, Error>) -> Void) {
-        // TODO: Uncomment when RevenueCat is installed
-        /*
+        if isDevelopmentMode {
+            print("⚠️ Development Mode: Restore not available")
+            completion(.success(currentStatus))
+            return
+        }
+
         Purchases.shared.restorePurchases { [weak self] customerInfo, error in
             if let error = error {
                 completion(.failure(error))
@@ -169,15 +257,16 @@ class SubscriptionService: NSObject {
             self?.updateStatus(from: customerInfo)
             completion(.success(self?.currentStatus ?? .free))
         }
-        */
-        completion(.success(currentStatus))
     }
 
     // MARK: - Check Status
     /// Check current subscription status from RevenueCat
     func checkSubscriptionStatus() {
-        // TODO: Uncomment when RevenueCat is installed
-        /*
+        if isDevelopmentMode {
+            print("⚠️ Development Mode: Using local subscription status")
+            return
+        }
+
         Purchases.shared.getCustomerInfo { [weak self] customerInfo, error in
             if let error = error {
                 print("❌ Failed to get customer info: \(error.localizedDescription)")
@@ -186,15 +275,11 @@ class SubscriptionService: NSObject {
 
             self?.updateStatus(from: customerInfo)
         }
-        */
-        print("⚠️ Development Mode: Using local subscription status")
     }
 
     // MARK: - Private Helpers
-    private func updateStatus(from customerInfo: Any?) {
-        // TODO: Uncomment when RevenueCat is installed
-        /*
-        guard let customerInfo = customerInfo as? CustomerInfo else { return }
+    private func updateStatus(from customerInfo: CustomerInfo?) {
+        guard let customerInfo = customerInfo else { return }
 
         // Check if user has active premium subscription
         if let entitlement = customerInfo.entitlements["premium"],
@@ -211,7 +296,6 @@ class SubscriptionService: NSObject {
         } else {
             self.currentStatus = .free
         }
-        */
     }
 
     private func saveStatus() {
@@ -237,9 +321,33 @@ class SubscriptionService: NSObject {
 // MARK: - Subscription Offering Model
 struct SubscriptionOffering {
     let tier: SubscriptionTier
-    let package: Any // Will be RevenueCat.Package when SDK is added
-    let price: String
+    let package: Package?
+    let localizedPrice: String          // e.g., "$9.99" or "₹799"
+    let localizedPricePerPeriod: String // e.g., "$9.99/mo" or "₹799/mo"
+    let priceValue: Double              // Numeric value for calculations
+    let currencyCode: String            // e.g., "USD", "INR"
     let trialDays: Int
+
+    /// Calculate weekly equivalent price (monthly / 4.33)
+    var weeklyPriceValue: Double {
+        return priceValue / 4.33
+    }
+
+    /// Formatted weekly price string
+    var weeklyPriceString: String {
+        let formatter = NumberFormatter()
+        formatter.numberStyle = .currency
+        formatter.currencyCode = currencyCode
+        formatter.maximumFractionDigits = 2
+
+        if let formatted = formatter.string(from: NSNumber(value: weeklyPriceValue)) {
+            return "\(formatted)/wk"
+        }
+        return localizedPricePerPeriod
+    }
+
+    // Legacy compatibility
+    var price: String { localizedPrice }
 }
 
 // MARK: - Errors
@@ -266,14 +374,12 @@ enum SubscriptionError: LocalizedError {
 // MARK: - Notifications
 extension Notification.Name {
     static let subscriptionStatusChanged = Notification.Name("subscriptionStatusChanged")
+    static let offeringsLoaded = Notification.Name("offeringsLoaded")
 }
 
 // MARK: - RevenueCat Delegate
-// TODO: Uncomment when RevenueCat is installed
-/*
 extension SubscriptionService: PurchasesDelegate {
     func purchases(_ purchases: Purchases, receivedUpdated customerInfo: CustomerInfo) {
         updateStatus(from: customerInfo)
     }
 }
-*/

@@ -26,19 +26,22 @@ enum Language: String, CaseIterable, Codable, Equatable {
     case spanish = "ES"
     case french = "FR"
     case german = "DE"
+    case portuguese = "PT"      // Brazilian Portuguese
+    case italian = "IT"
     case japanese = "JA"
     case korean = "KO"
-    case chinese = "ZH"
-    case portuguese = "PT"
-    case italian = "IT"
-    case russian = "RU"
-    case arabic = "AR"
-    case hindi = "HI"
     case dutch = "NL"
+    case chinese = "ZH"         // Mandarin Chinese
+    case russian = "RU"
     case polish = "PL"
-    case turkish = "TR"
-    case filipino = "TL"  // Tagalog/Filipino
-    case thai = "TH"
+    case hindi = "HI"
+    case indonesian = "ID"
+    case filipino = "TL"        // Tagalog/Filipino
+    case swedish = "SV"
+    case danish = "DA"
+    case finnish = "FI"
+    case norwegian = "NO"
+    case arabic = "AR"
 
     var code: String {
         return rawValue
@@ -50,19 +53,22 @@ enum Language: String, CaseIterable, Codable, Equatable {
         case .spanish: return "Spanish"
         case .french: return "French"
         case .german: return "German"
-        case .japanese: return "Japanese"
-        case .korean: return "Korean"
-        case .chinese: return "Chinese (Mandarin)"
         case .portuguese: return "Portuguese (BR)"
         case .italian: return "Italian"
-        case .russian: return "Russian"
-        case .arabic: return "Arabic"
-        case .hindi: return "Hindi"
+        case .japanese: return "Japanese"
+        case .korean: return "Korean"
         case .dutch: return "Dutch"
+        case .chinese: return "Mandarin Chinese"
+        case .russian: return "Russian"
         case .polish: return "Polish"
-        case .turkish: return "Turkish"
+        case .hindi: return "Hindi"
+        case .indonesian: return "Indonesian"
         case .filipino: return "Filipino"
-        case .thai: return "Thai"
+        case .swedish: return "Swedish"
+        case .danish: return "Danish"
+        case .finnish: return "Finnish"
+        case .norwegian: return "Norwegian"
+        case .arabic: return "Arabic"
         }
     }
 
@@ -72,19 +78,22 @@ enum Language: String, CaseIterable, Codable, Equatable {
         case .spanish: return "Español"
         case .french: return "Français"
         case .german: return "Deutsch"
-        case .japanese: return "日本語"
-        case .korean: return "한국어"
-        case .chinese: return "中文"
         case .portuguese: return "Português"
         case .italian: return "Italiano"
-        case .russian: return "Русский"
-        case .arabic: return "العربية"
-        case .hindi: return "हिन्दी"
+        case .japanese: return "日本語"
+        case .korean: return "한국어"
         case .dutch: return "Nederlands"
+        case .chinese: return "中文"
+        case .russian: return "Русский"
         case .polish: return "Polski"
-        case .turkish: return "Türkçe"
+        case .hindi: return "हिन्दी"
+        case .indonesian: return "Bahasa Indonesia"
         case .filipino: return "Filipino"
-        case .thai: return "ไทย"
+        case .swedish: return "Svenska"
+        case .danish: return "Dansk"
+        case .finnish: return "Suomi"
+        case .norwegian: return "Norsk"
+        case .arabic: return "العربية"
         }
     }
 
@@ -94,20 +103,33 @@ enum Language: String, CaseIterable, Codable, Equatable {
         case .spanish: return "🇪🇸"
         case .french: return "🇫🇷"
         case .german: return "🇩🇪"
+        case .portuguese: return "🇧🇷"
+        case .italian: return "🇮🇹"
         case .japanese: return "🇯🇵"
         case .korean: return "🇰🇷"
-        case .chinese: return "🇨🇳"
-        case .portuguese: return "🇵🇹"
-        case .italian: return "🇮🇹"
-        case .russian: return "🇷🇺"
-        case .arabic: return "🇸🇦"
-        case .hindi: return "🇮🇳"
         case .dutch: return "🇳🇱"
+        case .chinese: return "🇨🇳"
+        case .russian: return "🇷🇺"
         case .polish: return "🇵🇱"
-        case .turkish: return "🇹🇷"
+        case .hindi: return "🇮🇳"
+        case .indonesian: return "🇮🇩"
         case .filipino: return "🇵🇭"
-        case .thai: return "🇹🇭"
+        case .swedish: return "🇸🇪"
+        case .danish: return "🇩🇰"
+        case .finnish: return "🇫🇮"
+        case .norwegian: return "🇳🇴"
+        case .arabic: return "🇸🇦"
         }
+    }
+
+    /// Languages available for Muse (AI language tutors)
+    static var museLanguages: [Language] {
+        return [
+            .spanish, .french, .german, .portuguese, .italian,
+            .japanese, .korean, .dutch, .chinese, .russian,
+            .polish, .hindi, .indonesian, .filipino,
+            .swedish, .danish, .finnish, .norwegian, .arabic
+        ]
     }
 
     // MARK: - Language Detection
@@ -135,19 +157,22 @@ enum Language: String, CaseIterable, Codable, Equatable {
         case "es": return .spanish
         case "fr": return .french
         case "de": return .german
+        case "pt", "pt-br": return .portuguese
+        case "it": return .italian
         case "ja": return .japanese
         case "ko": return .korean
-        case "zh", "zh-hans", "zh-hant": return .chinese
-        case "pt": return .portuguese
-        case "it": return .italian
-        case "ru": return .russian
-        case "ar": return .arabic
-        case "hi": return .hindi
         case "nl": return .dutch
+        case "zh", "zh-hans", "zh-hant", "cmn": return .chinese
+        case "ru": return .russian
         case "pl": return .polish
-        case "tr": return .turkish
+        case "hi": return .hindi
+        case "id": return .indonesian
         case "tl", "fil": return .filipino
-        case "th": return .thai
+        case "sv": return .swedish
+        case "da": return .danish
+        case "fi": return .finnish
+        case "no", "nb", "nn": return .norwegian
+        case "ar": return .arabic
         default: return nil
         }
     }
@@ -161,19 +186,22 @@ enum Language: String, CaseIterable, Codable, Equatable {
         case "spanish": return .spanish
         case "french": return .french
         case "german": return .german
+        case "portuguese", "portuguese (br)", "brazilian portuguese": return .portuguese
+        case "italian": return .italian
         case "japanese": return .japanese
         case "korean": return .korean
-        case "chinese", "chinese (mandarin)", "mandarin": return .chinese
-        case "portuguese": return .portuguese
-        case "italian": return .italian
-        case "russian": return .russian
-        case "arabic": return .arabic
-        case "hindi": return .hindi
         case "dutch": return .dutch
+        case "chinese", "chinese (mandarin)", "mandarin", "mandarin chinese": return .chinese
+        case "russian": return .russian
         case "polish": return .polish
-        case "turkish": return .turkish
+        case "hindi": return .hindi
+        case "indonesian", "bahasa indonesia": return .indonesian
         case "filipino", "tagalog": return .filipino
-        case "thai": return .thai
+        case "swedish": return .swedish
+        case "danish": return .danish
+        case "finnish": return .finnish
+        case "norwegian": return .norwegian
+        case "arabic": return .arabic
         default: return nil
         }
     }

@@ -51,7 +51,7 @@ class BirthYearViewController: BaseOnboardingViewController {
         contentView.addSubview(datePicker)
 
         // Age restriction label
-        ageRestrictionLabel.text = "You must be at least 13 years old to use LangChat"
+        ageRestrictionLabel.text = "You must be at least 13 years old to use Fluenca"
         ageRestrictionLabel.font = .systemFont(ofSize: 14, weight: .regular)
         ageRestrictionLabel.textColor = .tertiaryLabel
         ageRestrictionLabel.textAlignment = .center

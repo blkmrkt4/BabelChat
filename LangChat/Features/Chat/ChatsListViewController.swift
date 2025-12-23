@@ -65,7 +65,8 @@ class ChatsListViewController: UIViewController {
                 var matchedUsers: [(matchId: String, user: User)] = []
 
                 for matchResponse in mutualMatches {
-                    let otherUserId = matchResponse.user1Id == currentUserIdString
+                    // Use case-insensitive comparison for UUIDs
+                    let otherUserId = matchResponse.user1Id.lowercased() == currentUserIdString.lowercased()
                         ? matchResponse.user2Id
                         : matchResponse.user1Id
 
@@ -135,10 +136,10 @@ class ChatsListViewController: UIViewController {
             preferredStyle: .actionSheet
         )
 
-        let muses = AIBotFactory.createAIBots()
-        for muse in muses {
+        let availableMuses = getAvailableMuses()
+        for muse in availableMuses {
             let action = UIAlertAction(
-                title: "\(muse.firstName) - \(muse.nativeLanguage.language.name)",
+                title: "\(muse.nativeLanguage.language.flag) \(muse.firstName) - \(muse.nativeLanguage.language.name)",
                 style: .default
             ) { [weak self] _ in
                 self?.startChatWithMuse(muse)
@@ -162,10 +163,10 @@ class ChatsListViewController: UIViewController {
             preferredStyle: .actionSheet
         )
 
-        let muses = AIBotFactory.createAIBots()
-        for muse in muses {
+        let availableMuses = getAvailableMuses()
+        for muse in availableMuses {
             let action = UIAlertAction(
-                title: "\(muse.firstName) - \(muse.nativeLanguage.language.name)",
+                title: "\(muse.nativeLanguage.language.flag) \(muse.firstName) - \(muse.nativeLanguage.language.name)",
                 style: .default
             ) { [weak self] _ in
                 self?.startChatWithMuse(muse)
@@ -180,6 +181,43 @@ class ChatsListViewController: UIViewController {
         }
 
         present(alert, animated: true)
+    }
+
+    /// Get the Muses available to the user based on their language preferences
+    /// Includes: English (always), learning languages, and additional Muse languages from onboarding
+    private func getAvailableMuses() -> [User] {
+        var availableLanguages = Set<Language>()
+
+        // Always include English
+        availableLanguages.insert(.english)
+
+        // Add learning languages from user profile
+        if let userLanguagesData = UserDefaults.standard.data(forKey: "userLanguages"),
+           let userLanguageData = try? JSONDecoder().decode(UserLanguageData.self, from: userLanguagesData) {
+            for learning in userLanguageData.learningLanguages {
+                availableLanguages.insert(learning.language)
+            }
+        }
+
+        // Add additional Muse languages from onboarding
+        if let museLanguageCodes = UserDefaults.standard.array(forKey: "museLanguages") as? [String] {
+            for code in museLanguageCodes {
+                if let language = Language(rawValue: code) {
+                    availableLanguages.insert(language)
+                }
+            }
+        }
+
+        // Get all Muses and filter to only available languages
+        let allMuses = AIBotFactory.createAIBots()
+        let filteredMuses = allMuses.filter { availableLanguages.contains($0.nativeLanguage.language) }
+
+        // If no languages selected yet (new user), show all Muses as fallback
+        if filteredMuses.isEmpty {
+            return allMuses
+        }
+
+        return filteredMuses
     }
 
     private func startChat(with match: Match) {

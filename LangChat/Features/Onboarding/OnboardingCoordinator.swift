@@ -8,6 +8,7 @@ enum OnboardingStep: Int, CaseIterable {
     case learningLanguages
     case languageProficiency
     case proficiencyRange  // NEW: Match proficiency preference
+    case museLanguages     // Additional languages for AI Muse (beyond matching languages)
     case learningGoals
     case bio
     case gender
@@ -29,6 +30,7 @@ enum OnboardingStep: Int, CaseIterable {
         case .learningLanguages: return "Languages to Learn"
         case .languageProficiency: return "Language Skills"
         case .proficiencyRange: return "Match Preferences"
+        case .museLanguages: return "Explore Languages"
         case .learningGoals: return "Learning Goals"
         case .profilePhoto: return "Add Photos"
         case .bio: return "About You"
@@ -103,6 +105,13 @@ class OnboardingCoordinator {
 
         case .proficiencyRange:
             let vc = ProficiencyRangeViewController()
+            vc.delegate = self
+            viewController = vc
+
+        case .museLanguages:
+            let vc = MuseLanguageSelectionViewController()
+            vc.learningLanguages = userData.learningLanguages
+            vc.nativeLanguage = userData.nativeLanguage
             vc.delegate = self
             viewController = vc
 
@@ -252,6 +261,10 @@ class OnboardingCoordinator {
             UserDefaults.standard.set(encoded, forKey: "userLanguages")
         }
 
+        // Save Muse languages (additional languages for AI exploration)
+        let museLanguageCodes = userData.museLanguages.map { $0.rawValue }
+        UserDefaults.standard.set(museLanguageCodes, forKey: "museLanguages")
+
         // Save matching preferences
         UserDefaults.standard.set(userData.gender.rawValue, forKey: "gender")
         UserDefaults.standard.set(userData.genderPreference.rawValue, forKey: "genderPreference")
@@ -322,6 +335,10 @@ extension OnboardingCoordinator: OnboardingStepDelegate {
             if let range = data as? ProficiencyRange {
                 userData.matchProficiencyRange = range
             }
+        case .museLanguages:
+            if let languages = data as? [Language] {
+                userData.museLanguages = languages
+            }
         case .learningGoals:
             if let goals = data as? [String] {
                 userData.learningGoals = goals
@@ -388,6 +405,7 @@ struct OnboardingUserData {
     var nativeLanguage: Language?
     var learningLanguages: [Language] = []
     var languageProficiencies: [(Language, LanguageProficiency)] = []
+    var museLanguages: [Language] = []  // Additional languages for AI Muse exploration
     var learningGoals: [String] = []
     var profilePhotos: [UIImage] = []
     var bio: String?

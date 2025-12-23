@@ -223,7 +223,7 @@ extension Color {
         VStack(spacing: 40) {
             Spacer()
 
-            Text("Welcome to LangChat")
+            Text("Welcome to Fluenca")
                 .font(.system(size: 42, weight: .bold))
                 .foregroundColor(.white)
                 .multilineTextAlignment(.center)

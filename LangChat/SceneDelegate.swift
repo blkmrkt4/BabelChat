@@ -20,12 +20,178 @@ class SceneDelegate: UIResponder, UIWindowSceneDelegate {
         // Start network monitoring
         NetworkMonitor.shared.startMonitoring()
 
+        // Handle any incoming URLs (app launched via deep link)
+        if let urlContext = connectionOptions.urlContexts.first {
+            handleIncomingURL(urlContext.url)
+        }
+
         // Show loading screen while checking connectivity
         showLoadingScreen()
         window?.makeKeyAndVisible()
 
         // Check connectivity before proceeding
         checkConnectivityAndProceed()
+    }
+
+    // MARK: - Deep Link Handling
+
+    /// Handle URLs when app is already running
+    func scene(_ scene: UIScene, openURLContexts URLContexts: Set<UIOpenURLContext>) {
+        guard let url = URLContexts.first?.url else { return }
+        handleIncomingURL(url)
+    }
+
+    /// Parse and handle incoming URLs (invite links)
+    private func handleIncomingURL(_ url: URL) {
+        print("🔗 Received URL: \(url)")
+
+        // Parse invite code from URL
+        // Supports: fluenca://invite?code=FLU-ABC123
+        // Or: fluenca://invite/FLU-ABC123
+
+        guard url.scheme == "fluenca" else {
+            print("⚠️ Unknown URL scheme: \(url.scheme ?? "nil")")
+            return
+        }
+
+        var inviteCode: String?
+
+        if url.host == "invite" {
+            // Check path component: fluenca://invite/FLU-ABC123
+            let pathComponents = url.pathComponents.filter { $0 != "/" }
+            if let code = pathComponents.first {
+                inviteCode = code
+            }
+
+            // Check query parameter: fluenca://invite?code=FLU-ABC123
+            if inviteCode == nil, let queryItems = URLComponents(url: url, resolvingAgainstBaseURL: false)?.queryItems {
+                inviteCode = queryItems.first(where: { $0.name == "code" })?.value
+            }
+        }
+
+        if let code = inviteCode {
+            print("📨 Found invite code: \(code)")
+            // Store the code for processing after authentication/onboarding
+            UserDefaults.standard.set(code, forKey: "pendingInviteCode")
+
+            // If user is already logged in and on main screen, show confirmation
+            if SupabaseService.shared.isAuthenticated,
+               let rootVC = window?.rootViewController as? MainTabBarController {
+                showInviteReceivedAlert(code: code, on: rootVC)
+            }
+        }
+    }
+
+    /// Show alert when invite received while app is active
+    private func showInviteReceivedAlert(code: String, on viewController: UIViewController) {
+        let alert = UIAlertController(
+            title: "Invite Link Received",
+            message: "You've received an invite code: \(code). Would you like to connect with this person?",
+            preferredStyle: .alert
+        )
+
+        alert.addAction(UIAlertAction(title: "Accept", style: .default) { _ in
+            self.processInviteCode(code)
+        })
+
+        alert.addAction(UIAlertAction(title: "Ignore", style: .cancel) { _ in
+            UserDefaults.standard.removeObject(forKey: "pendingInviteCode")
+        })
+
+        viewController.present(alert, animated: true)
+    }
+
+    /// Process an invite code and create the match
+    private func processInviteCode(_ code: String) {
+        Task {
+            do {
+                let result = try await SupabaseService.shared.acceptInvite(code: code)
+                await MainActor.run {
+                    UserDefaults.standard.removeObject(forKey: "pendingInviteCode")
+
+                    if result.success, let inviterName = result.inviterName {
+                        // Show success and navigate to chat
+                        self.showMatchSuccessAlert(inviterName: inviterName, matchId: result.matchId)
+                    } else {
+                        self.showInviteErrorAlert(error: result.error ?? "Unknown error")
+                    }
+                }
+            } catch {
+                await MainActor.run {
+                    self.showInviteErrorAlert(error: error.localizedDescription)
+                }
+            }
+        }
+    }
+
+    private func showMatchSuccessAlert(inviterName: String, matchId: String?) {
+        guard let rootVC = window?.rootViewController else { return }
+
+        let alert = UIAlertController(
+            title: "You're Connected!",
+            message: "You're now matched with \(inviterName). Start chatting!",
+            preferredStyle: .alert
+        )
+
+        alert.addAction(UIAlertAction(title: "OK", style: .default) { _ in
+            // TODO: Navigate to the chat with this match
+            // For now, just refresh the matches tab
+            if let tabBar = rootVC as? MainTabBarController {
+                tabBar.selectedIndex = 1 // Switch to Matches tab
+            }
+        })
+
+        rootVC.present(alert, animated: true)
+    }
+
+    private func showInviteErrorAlert(error: String) {
+        guard let rootVC = window?.rootViewController else { return }
+
+        let alert = UIAlertController(
+            title: "Invite Error",
+            message: error,
+            preferredStyle: .alert
+        )
+        alert.addAction(UIAlertAction(title: "OK", style: .default))
+        rootVC.present(alert, animated: true)
+    }
+
+    /// Process any pending invite code (from deep link during signup)
+    private func processPendingInviteCode() {
+        guard let inviteCode = UserDefaults.standard.string(forKey: "pendingInviteCode") else {
+            return
+        }
+
+        print("📨 Processing pending invite code: \(inviteCode)")
+
+        Task {
+            do {
+                let result = try await SupabaseService.shared.acceptInvite(code: inviteCode)
+
+                await MainActor.run {
+                    // Clear the pending code regardless of result
+                    UserDefaults.standard.removeObject(forKey: "pendingInviteCode")
+
+                    if result.success, let inviterName = result.inviterName {
+                        print("✅ Invite accepted - matched with \(inviterName)")
+
+                        // Show success alert after a short delay to let the UI settle
+                        DispatchQueue.main.asyncAfter(deadline: .now() + 0.5) {
+                            self.showMatchSuccessAlert(inviterName: inviterName, matchId: result.matchId)
+                        }
+                    } else if let error = result.error {
+                        print("⚠️ Invite processing failed: \(error)")
+                        // Don't show error for expired/invalid codes during app launch
+                        // Just silently clear it
+                    }
+                }
+            } catch {
+                await MainActor.run {
+                    UserDefaults.standard.removeObject(forKey: "pendingInviteCode")
+                    print("❌ Error processing invite: \(error)")
+                }
+            }
+        }
     }
 
     private func showLoadingScreen() {
@@ -93,6 +259,10 @@ class SceneDelegate: UIResponder, UIWindowSceneDelegate {
                         if hasCompletedProfile {
                             // User has completed profile - go to main app
                             print("✅ Profile complete - going to main app")
+
+                            // Check for pending invite code and process it
+                            self.processPendingInviteCode()
+
                             self.window?.rootViewController = MainTabBarController()
                         } else {
                             // User is logged in but hasn't completed profile - show onboarding

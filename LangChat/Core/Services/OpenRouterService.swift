@@ -28,7 +28,7 @@ class OpenRouterService {
         request.setValue("Bearer \(apiKey)", forHTTPHeaderField: "Authorization")
         request.setValue("application/json", forHTTPHeaderField: "Content-Type")
         request.setValue("https://langchat.app", forHTTPHeaderField: "HTTP-Referer")
-        request.setValue("LangChat iOS", forHTTPHeaderField: "X-Title")
+        request.setValue("Fluenca iOS", forHTTPHeaderField: "X-Title")
 
         let requestBody = ChatCompletionRequest(
             model: model,

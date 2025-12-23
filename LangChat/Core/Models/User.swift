@@ -14,6 +14,7 @@ struct User: Codable {
     let learningLanguages: [UserLanguage]
     let openToLanguages: [Language]
     let practiceLanguages: [UserLanguage]? // Languages user wants to practice/chat in
+    let museLanguages: [Language] // Additional languages accessible via Muse (beyond learning languages)
     let location: String?
     let showCityInProfile: Bool // Privacy setting for showing city
     let matchedDate: Date?
@@ -29,6 +30,33 @@ struct User: Codable {
 
     // Matching preferences (new comprehensive preferences model)
     let matchingPreferences: MatchingPreferences
+
+    /// Returns all languages available for Muse interactions
+    /// Includes: English (always), learning languages, and additional Muse languages
+    var availableMuseLanguages: [Language] {
+        var languages = Set<Language>()
+
+        // Always include English
+        languages.insert(.english)
+
+        // Add learning languages
+        for userLang in learningLanguages {
+            languages.insert(userLang.language)
+        }
+
+        // Add selected Muse languages
+        for lang in museLanguages {
+            languages.insert(lang)
+        }
+
+        // Sort by the order in museLanguages static list, with English first
+        let sortOrder = [Language.english] + Language.museLanguages
+        return languages.sorted { lang1, lang2 in
+            let idx1 = sortOrder.firstIndex(of: lang1) ?? 999
+            let idx2 = sortOrder.firstIndex(of: lang2) ?? 999
+            return idx1 < idx2
+        }
+    }
 
     // MARK: - Deprecated properties (kept for backwards compatibility)
     // These are now part of matchingPreferences but kept here for compatibility
@@ -60,6 +88,7 @@ struct User: Codable {
          learningLanguages: [UserLanguage],
          openToLanguages: [Language],
          practiceLanguages: [UserLanguage]? = nil,
+         museLanguages: [Language] = [],
          location: String? = nil,
          showCityInProfile: Bool = true,
          matchedDate: Date? = nil,
@@ -87,6 +116,7 @@ struct User: Codable {
         self.learningLanguages = learningLanguages
         self.openToLanguages = openToLanguages
         self.practiceLanguages = practiceLanguages
+        self.museLanguages = museLanguages
         self.location = location
         self.showCityInProfile = showCityInProfile
         self.matchedDate = matchedDate

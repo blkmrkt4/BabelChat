@@ -341,34 +341,99 @@ class PricingViewController: UIViewController {
 
     // MARK: - Data Loading
     private func loadPricingConfig() {
-        // Show default config immediately
+        // Show loading state for prices
+        premiumPriceLabel.text = "Loading..."
+        proPriceLabel.text = "Loading..."
+
+        // Show default config for features immediately
         updateUIWithConfig(pricingConfig)
 
-        // Fetch remote config from Supabase
+        // Fetch remote config from Supabase for features
         Task {
             let config = await PricingConfigManager.shared.getConfig()
             await MainActor.run {
                 self.pricingConfig = config
+                // Update SubscriptionService with config (for weekly pricing countries)
+                self.subscriptionService.updatePricingConfig(config)
                 self.updateUIWithConfig(config)
             }
         }
 
-        // Also fetch from RevenueCat for actual App Store prices
+        // Listen for offerings loaded notification
+        NotificationCenter.default.addObserver(
+            self,
+            selector: #selector(offeringsDidLoad),
+            name: .offeringsLoaded,
+            object: nil
+        )
+
+        // Fetch from RevenueCat for actual App Store prices
         subscriptionService.fetchOfferings { [weak self] result in
-            switch result {
-            case .success(let offerings):
-                print("Loaded \(offerings.count) offerings from RevenueCat")
-            case .failure(let error):
-                print("Failed to load offerings: \(error.localizedDescription)")
+            DispatchQueue.main.async {
+                switch result {
+                case .success(let offerings):
+                    print("Loaded \(offerings.count) offerings from RevenueCat")
+                    self?.updatePricesFromOfferings(offerings)
+                case .failure(let error):
+                    print("Failed to load offerings: \(error.localizedDescription)")
+                    // Use fallback prices from config
+                    self?.updatePricesWithFallback()
+                }
             }
         }
     }
 
+    @objc private func offeringsDidLoad(_ notification: Notification) {
+        guard let offerings = notification.object as? [SubscriptionOffering] else { return }
+        updatePricesFromOfferings(offerings)
+    }
+
+    private func updatePricesFromOfferings(_ offerings: [SubscriptionOffering]) {
+        // Update Premium price
+        if let premiumOffering = offerings.first(where: { $0.tier == .premium }) {
+            let priceText = subscriptionService.shouldShowWeeklyPricing
+                ? premiumOffering.weeklyPriceString
+                : premiumOffering.localizedPricePerPeriod
+            premiumPriceLabel.text = priceText
+
+            // Update trial info
+            if premiumOffering.trialDays > 0 {
+                premiumTrialLabel.text = "\(premiumOffering.trialDays)-day free trial • Cancel anytime"
+            }
+        }
+
+        // Update Pro price
+        if let proOffering = offerings.first(where: { $0.tier == .pro }) {
+            let priceText = subscriptionService.shouldShowWeeklyPricing
+                ? proOffering.weeklyPriceString
+                : proOffering.localizedPricePerPeriod
+            proPriceLabel.text = priceText
+        }
+
+        // Show weekly billing note if applicable
+        if subscriptionService.shouldShowWeeklyPricing {
+            premiumTrialLabel.text = (premiumTrialLabel.text ?? "") + " • Billed monthly"
+        }
+    }
+
+    private func updatePricesWithFallback() {
+        // Use hardcoded fallback prices if RevenueCat fails
+        premiumPriceLabel.text = pricingConfig.premiumPriceFormatted
+        proPriceLabel.text = pricingConfig.proPriceFormatted
+    }
+
+    deinit {
+        NotificationCenter.default.removeObserver(self)
+    }
+
     private func updateUIWithConfig(_ config: PricingConfig) {
-        // Update price labels
-        premiumPriceLabel.text = config.premiumPriceFormatted
-        proPriceLabel.text = config.proPriceFormatted
-        premiumTrialLabel.text = config.premiumBanner
+        // Only update prices from config if offerings haven't loaded yet
+        // (offerings have real localized App Store prices)
+        if !subscriptionService.hasLoadedOfferings {
+            premiumPriceLabel.text = config.premiumPriceFormatted
+            proPriceLabel.text = config.proPriceFormatted
+            premiumTrialLabel.text = config.premiumBanner
+        }
 
         // Clear and repopulate feature stacks
         freeFeatureStack.arrangedSubviews.forEach { $0.removeFromSuperview() }
