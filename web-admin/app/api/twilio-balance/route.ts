@@ -3,11 +3,18 @@ import { NextResponse } from 'next/server'
 export async function GET(request: Request) {
   // Check authorization
   const referer = request.headers.get('referer') || ''
+  const origin = request.headers.get('origin') || ''
+  const host = request.headers.get('host') || ''
   const authHeader = request.headers.get('authorization')
   const expectedKey = process.env.HEALTH_CHECK_SECRET || 'dev-secret'
 
+  const baseUrl = process.env.NEXT_PUBLIC_BASE_URL || ''
   const isSameOrigin = referer.includes('localhost') ||
-                       referer.includes(process.env.NEXT_PUBLIC_BASE_URL || '')
+                       origin.includes('localhost') ||
+                       referer.includes(baseUrl) ||
+                       origin.includes(baseUrl) ||
+                       host.includes('vercel.app') ||
+                       host.includes('silentseer.com')
   const hasValidToken = authHeader === `Bearer ${expectedKey}`
 
   if (!hasValidToken && !isSameOrigin) {

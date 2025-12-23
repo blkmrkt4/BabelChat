@@ -7,11 +7,18 @@ export async function GET(request: NextRequest) {
     // 2. Request is from same origin (internal admin page)
     const authHeader = request.headers.get('authorization');
     const healthCheckSecret = process.env.HEALTH_CHECK_SECRET;
-    const referer = request.headers.get('referer');
-    const host = request.headers.get('host');
+    const referer = request.headers.get('referer') || '';
+    const origin = request.headers.get('origin') || '';
+    const host = request.headers.get('host') || '';
 
     const isValidToken = healthCheckSecret && authHeader === `Bearer ${healthCheckSecret}`;
-    const isSameOrigin = referer && host && referer.includes(host);
+    const baseUrl = process.env.NEXT_PUBLIC_BASE_URL || '';
+    const isSameOrigin = referer.includes('localhost') ||
+                         origin.includes('localhost') ||
+                         referer.includes(baseUrl) ||
+                         origin.includes(baseUrl) ||
+                         host.includes('vercel.app') ||
+                         host.includes('silentseer.com');
 
     if (!isValidToken && !isSameOrigin) {
       return NextResponse.json(
