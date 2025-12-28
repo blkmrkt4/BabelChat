@@ -22,11 +22,18 @@ class BaseOnboardingViewController: UIViewController {
     // MARK: - Lifecycle
     override func viewDidLoad() {
         super.viewDidLoad()
+        print("📍 BaseOnboardingViewController(\(type(of: self))): viewDidLoad START")
+        print("📍 Adding ripple background...")
         addRippleBackground()
+        print("📍 Setting up views...")
         setupViews()
+        print("📍 Setting up constraints...")
         setupConstraints()
+        print("📍 Setting up keyboard observers...")
         setupKeyboardObservers()
+        print("📍 Calling configure...")
         configure()
+        print("📍 BaseOnboardingViewController(\(type(of: self))): viewDidLoad END")
     }
 
     override func viewWillAppear(_ animated: Bool) {

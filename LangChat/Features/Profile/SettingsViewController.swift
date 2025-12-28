@@ -9,6 +9,7 @@ class SettingsViewController: UIViewController {
     private enum SettingSection: Int, CaseIterable {
         case profileSettings
         case matchingSettings
+        case museSettings
         case social
         #if DEBUG
         case aiSettings
@@ -22,6 +23,7 @@ class SettingsViewController: UIViewController {
             switch self {
             case .profileSettings: return nil  // No header for single profile item
             case .matchingSettings: return nil  // No header for single matching item
+            case .museSettings: return "AI Muse"
             case .social: return "Share"
             #if DEBUG
             case .aiSettings: return "AI Settings"
@@ -42,6 +44,10 @@ class SettingsViewController: UIViewController {
             case .matchingSettings:
                 return [
                     ("Matching Settings", "slider.horizontal.3")
+                ]
+            case .museSettings:
+                return [
+                    ("Muse Languages", "globe")
                 ]
             case .social:
                 return [
@@ -249,6 +255,9 @@ class SettingsViewController: UIViewController {
         case .matchingSettings:
             showMatchingSettings()
 
+        case .museSettings:
+            showMuseLanguages()
+
         case .social:
             showInviteFriends()
 
@@ -369,6 +378,11 @@ class SettingsViewController: UIViewController {
         // This will include: Photos, Bio, Languages, and Matching Preferences
         let matchingPrefsVC = MatchingPreferencesViewController()
         navigationController?.pushViewController(matchingPrefsVC, animated: true)
+    }
+
+    private func showMuseLanguages() {
+        let museLanguagesVC = MuseLanguagesSettingsViewController()
+        navigationController?.pushViewController(museLanguagesVC, animated: true)
     }
 
     private func showInviteFriends() {

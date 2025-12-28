@@ -68,7 +68,9 @@ class SignInWithAppleService: NSObject {
                 var random: UInt8 = 0
                 let errorCode = SecRandomCopyBytes(kSecRandomDefault, 1, &random)
                 if errorCode != errSecSuccess {
-                    fatalError("Unable to generate nonce. SecRandomCopyBytes failed with OSStatus \(errorCode)")
+                    // Fallback to arc4random if SecRandomCopyBytes fails (very rare)
+                    print("⚠️ SecRandomCopyBytes failed with OSStatus \(errorCode), using fallback")
+                    return UInt8(arc4random_uniform(UInt32(UInt8.max)))
                 }
                 return random
             }
@@ -178,13 +180,28 @@ extension SignInWithAppleService: ASAuthorizationControllerDelegate {
 
 extension SignInWithAppleService: ASAuthorizationControllerPresentationContextProviding {
     func presentationAnchor(for controller: ASAuthorizationController) -> ASPresentationAnchor {
-        guard let window = UIApplication.shared.connectedScenes
+        // Try to find the key window
+        if let window = UIApplication.shared.connectedScenes
             .compactMap({ $0 as? UIWindowScene })
             .flatMap({ $0.windows })
-            .first(where: { $0.isKeyWindow }) else {
-            fatalError("No key window found")
+            .first(where: { $0.isKeyWindow }) {
+            return window
         }
-        return window
+
+        // Fallback: return any window
+        if let window = UIApplication.shared.connectedScenes
+            .compactMap({ $0 as? UIWindowScene })
+            .flatMap({ $0.windows })
+            .first {
+            print("⚠️ No key window found, using first available window")
+            return window
+        }
+
+        // Last resort: create a new window (shouldn't happen in practice)
+        print("❌ No windows found, creating fallback window")
+        let fallbackWindow = UIWindow(frame: UIScreen.main.bounds)
+        fallbackWindow.makeKeyAndVisible()
+        return fallbackWindow
     }
 }
 

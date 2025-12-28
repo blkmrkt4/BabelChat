@@ -208,7 +208,14 @@ async function sendAlert(config: any, service: string, modelId: string, failureC
   // Only send SMS for 3+ consecutive failures (service is actually down)
   if (failureCount < 3) return
 
-  const smsMessage = `🚨 Fluenca Alert: ${service} ${modelId} is DOWN (${failureCount} failures). Check your dashboard.`
+  // Look up the model's role (Primary, FB1, FB2, etc.) from ai_config
+  const modelRole = await getModelRole(modelId)
+
+  // Format model name nicely (capitalize provider, keep model name)
+  const formattedModelName = formatModelName(modelId)
+
+  // Build the message
+  const smsMessage = `Fluenca: ${formattedModelName} is ${modelRole} and it's down (${failureCount} failures).`
 
   try {
     // Send SMS via Twilio
@@ -226,7 +233,7 @@ async function sendAlert(config: any, service: string, modelId: string, failureC
         })
       })
 
-      console.log(`📱 SMS sent: ${service}:${modelId} is DOWN`)
+      console.log(`📱 SMS sent: ${modelId} (${modelRole}) is DOWN`)
     }
 
     // Log alert sent
@@ -237,6 +244,7 @@ async function sendAlert(config: any, service: string, modelId: string, failureC
       reason: `${failureCount} consecutive failures - SMS sent`,
       metadata: {
         failure_count: failureCount,
+        model_role: modelRole,
         message: smsMessage,
         sms_sent: true
       }
@@ -245,4 +253,51 @@ async function sendAlert(config: any, service: string, modelId: string, failureC
   } catch (error) {
     console.error('Failed to send SMS alert:', error)
   }
+}
+
+// Look up the model's role across all ai_config categories
+async function getModelRole(modelId: string): Promise<string> {
+  try {
+    const { data: configs } = await supabase
+      .from('ai_config')
+      .select('category, model_id, fallback_model_1_id, fallback_model_2_id, fallback_model_3_id, fallback_model_4_id')
+      .eq('is_active', true)
+
+    if (!configs) return 'a model'
+
+    for (const config of configs) {
+      if (config.model_id === modelId) {
+        return `the Primary model (${config.category})`
+      }
+      if (config.fallback_model_1_id === modelId) {
+        return `FB1 (${config.category})`
+      }
+      if (config.fallback_model_2_id === modelId) {
+        return `FB2 (${config.category})`
+      }
+      if (config.fallback_model_3_id === modelId) {
+        return `FB3 (${config.category})`
+      }
+      if (config.fallback_model_4_id === modelId) {
+        return `FB4 (${config.category})`
+      }
+    }
+
+    return 'a configured model'
+  } catch (error) {
+    console.error('Error looking up model role:', error)
+    return 'a model'
+  }
+}
+
+// Format model ID into a nicer display name
+function formatModelName(modelId: string): string {
+  // modelId format is typically "provider/model-name"
+  const parts = modelId.split('/')
+  if (parts.length === 2) {
+    // Capitalize first letter of provider
+    const provider = parts[0].charAt(0).toUpperCase() + parts[0].slice(1)
+    return `${provider}/${parts[1]}`
+  }
+  return modelId
 }

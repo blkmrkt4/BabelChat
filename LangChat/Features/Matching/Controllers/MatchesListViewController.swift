@@ -12,6 +12,9 @@ class MatchesListViewController: UIViewController {
         return UICollectionView(frame: .zero, collectionViewLayout: layout)
     }()
 
+    private let emptyStateView = UIView()
+    private let emptyStateLabel = UILabel()
+
     private var matches: [Match] = []
 
     override func viewDidLoad() {
@@ -39,11 +42,34 @@ class MatchesListViewController: UIViewController {
         view.addSubview(collectionView)
         collectionView.translatesAutoresizingMaskIntoConstraints = false
 
+        // Empty state view
+        emptyStateView.isHidden = true
+        view.addSubview(emptyStateView)
+        emptyStateView.translatesAutoresizingMaskIntoConstraints = false
+
+        emptyStateLabel.text = "No matches yet\nSwipe right on profiles you like in Discover!"
+        emptyStateLabel.textAlignment = .center
+        emptyStateLabel.numberOfLines = 0
+        emptyStateLabel.font = .systemFont(ofSize: 18, weight: .medium)
+        emptyStateLabel.textColor = .secondaryLabel
+        emptyStateView.addSubview(emptyStateLabel)
+        emptyStateLabel.translatesAutoresizingMaskIntoConstraints = false
+
         NSLayoutConstraint.activate([
             collectionView.topAnchor.constraint(equalTo: view.safeAreaLayoutGuide.topAnchor),
             collectionView.leadingAnchor.constraint(equalTo: view.leadingAnchor),
             collectionView.trailingAnchor.constraint(equalTo: view.trailingAnchor),
-            collectionView.bottomAnchor.constraint(equalTo: view.bottomAnchor)
+            collectionView.bottomAnchor.constraint(equalTo: view.bottomAnchor),
+
+            emptyStateView.centerXAnchor.constraint(equalTo: view.centerXAnchor),
+            emptyStateView.centerYAnchor.constraint(equalTo: view.centerYAnchor, constant: 50),
+            emptyStateView.leadingAnchor.constraint(equalTo: view.leadingAnchor, constant: 40),
+            emptyStateView.trailingAnchor.constraint(equalTo: view.trailingAnchor, constant: -40),
+
+            emptyStateLabel.topAnchor.constraint(equalTo: emptyStateView.topAnchor),
+            emptyStateLabel.leadingAnchor.constraint(equalTo: emptyStateView.leadingAnchor),
+            emptyStateLabel.trailingAnchor.constraint(equalTo: emptyStateView.trailingAnchor),
+            emptyStateLabel.bottomAnchor.constraint(equalTo: emptyStateView.bottomAnchor)
         ])
     }
 
@@ -116,6 +142,7 @@ class MatchesListViewController: UIViewController {
                 await MainActor.run {
                     self.matches = loadedMatches
                     self.collectionView.reloadData()
+                    self.updateEmptyState()
                     print("✅ Displayed \(loadedMatches.count) matches")
                 }
 
@@ -125,6 +152,7 @@ class MatchesListViewController: UIViewController {
                 await MainActor.run {
                     self.matches = []
                     self.collectionView.reloadData()
+                    self.updateEmptyState()
                 }
             }
         }
@@ -195,6 +223,10 @@ class MatchesListViewController: UIViewController {
         case "native": return .native
         default: return nil
         }
+    }
+
+    private func updateEmptyState() {
+        emptyStateView.isHidden = !matches.isEmpty
     }
 
 }

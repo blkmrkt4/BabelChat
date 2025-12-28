@@ -7,14 +7,58 @@ class SubscriptionViewController: UIViewController {
 
     private let currentTierLabel = UILabel()
     private let descriptionLabel = UILabel()
+    private let currencyLabel = UILabel()
 
     private let freeTierView = UIView()
     private let premiumTierView = UIView()
     private let proTierView = UIView()
 
+    // Price labels for dynamic updates
+    private var premiumPriceLabel: UILabel?
+    private var proPriceLabel: UILabel?
+
+    private let subscriptionService = SubscriptionService.shared
+
     override func viewDidLoad() {
         super.viewDidLoad()
         setupViews()
+        loadPrices()
+    }
+
+    private func loadPrices() {
+        // Fetch real App Store prices from RevenueCat
+        subscriptionService.fetchOfferings { [weak self] result in
+            DispatchQueue.main.async {
+                switch result {
+                case .success(let offerings):
+                    self?.updatePricesFromOfferings(offerings)
+                case .failure:
+                    // Keep using default prices
+                    break
+                }
+            }
+        }
+    }
+
+    private func updatePricesFromOfferings(_ offerings: [SubscriptionOffering]) {
+        // Update currency label
+        currencyLabel.text = subscriptionService.pricingRegionDescription
+
+        // Update Premium price
+        if let premiumOffering = offerings.first(where: { $0.tier == .premium }) {
+            let priceText = subscriptionService.shouldShowWeeklyPricing
+                ? premiumOffering.weeklyPriceString
+                : premiumOffering.localizedPricePerPeriod
+            premiumPriceLabel?.text = priceText
+        }
+
+        // Update Pro price
+        if let proOffering = offerings.first(where: { $0.tier == .pro }) {
+            let priceText = subscriptionService.shouldShowWeeklyPricing
+                ? proOffering.weeklyPriceString
+                : proOffering.localizedPricePerPeriod
+            proPriceLabel?.text = priceText
+        }
     }
 
     private func setupViews() {
@@ -50,12 +94,23 @@ class SubscriptionViewController: UIViewController {
         contentView.addSubview(descriptionLabel)
         descriptionLabel.translatesAutoresizingMaskIntoConstraints = false
 
+        // Currency/Region indicator
+        currencyLabel.text = subscriptionService.pricingRegionDescription
+        currencyLabel.font = .systemFont(ofSize: 13, weight: .medium)
+        currencyLabel.textColor = .systemBlue
+        currencyLabel.textAlignment = .center
+        currencyLabel.backgroundColor = .systemBlue.withAlphaComponent(0.1)
+        currencyLabel.layer.cornerRadius = 12
+        currencyLabel.layer.masksToBounds = true
+        contentView.addSubview(currencyLabel)
+        currencyLabel.translatesAutoresizingMaskIntoConstraints = false
+
         // Tier views
-        setupTierView(freeTierView, title: SubscriptionTier.free.displayName, price: SubscriptionTier.free.price, features: SubscriptionTier.free.features, buttonTitle: getCurrentTier() == "Free" ? "Current Plan" : "Downgrade", buttonAction: #selector(selectFreeTier))
+        setupTierView(freeTierView, tier: .free, buttonTitle: getCurrentTier() == "Free" ? "Current Plan" : "Downgrade", buttonAction: #selector(selectFreeTier))
 
-        setupTierView(premiumTierView, title: SubscriptionTier.premium.displayName, price: SubscriptionTier.premium.price, features: SubscriptionTier.premium.features, buttonTitle: getCurrentTier() == "Premium" ? "Current Plan" : "Upgrade", buttonAction: #selector(selectPremiumTier))
+        premiumPriceLabel = setupTierView(premiumTierView, tier: .premium, buttonTitle: getCurrentTier() == "Premium" ? "Current Plan" : "Upgrade", buttonAction: #selector(selectPremiumTier))
 
-        setupTierView(proTierView, title: SubscriptionTier.pro.displayName, price: SubscriptionTier.pro.price, features: SubscriptionTier.pro.features, buttonTitle: getCurrentTier() == "Pro" ? "Current Plan" : "Upgrade", buttonAction: #selector(selectProTier))
+        proPriceLabel = setupTierView(proTierView, tier: .pro, buttonTitle: getCurrentTier() == "Pro" ? "Current Plan" : "Upgrade", buttonAction: #selector(selectProTier))
 
         let stackView = UIStackView(arrangedSubviews: [freeTierView, premiumTierView, proTierView])
         stackView.axis = .vertical
@@ -84,7 +139,12 @@ class SubscriptionViewController: UIViewController {
             descriptionLabel.leadingAnchor.constraint(equalTo: contentView.leadingAnchor, constant: 24),
             descriptionLabel.trailingAnchor.constraint(equalTo: contentView.trailingAnchor, constant: -24),
 
-            stackView.topAnchor.constraint(equalTo: descriptionLabel.bottomAnchor, constant: 32),
+            currencyLabel.topAnchor.constraint(equalTo: descriptionLabel.bottomAnchor, constant: 12),
+            currencyLabel.centerXAnchor.constraint(equalTo: contentView.centerXAnchor),
+            currencyLabel.heightAnchor.constraint(equalToConstant: 28),
+            currencyLabel.widthAnchor.constraint(greaterThanOrEqualToConstant: 180),
+
+            stackView.topAnchor.constraint(equalTo: currencyLabel.bottomAnchor, constant: 20),
             stackView.leadingAnchor.constraint(equalTo: contentView.leadingAnchor, constant: 16),
             stackView.trailingAnchor.constraint(equalTo: contentView.trailingAnchor, constant: -16),
             stackView.bottomAnchor.constraint(equalTo: contentView.bottomAnchor, constant: -24),
@@ -92,21 +152,22 @@ class SubscriptionViewController: UIViewController {
         ])
     }
 
-    private func setupTierView(_ tierView: UIView, title: String, price: String, features: [String], buttonTitle: String, buttonAction: Selector) {
+    @discardableResult
+    private func setupTierView(_ tierView: UIView, tier: SubscriptionTier, buttonTitle: String, buttonAction: Selector) -> UILabel {
         tierView.backgroundColor = .secondarySystemBackground
         tierView.layer.cornerRadius = 12
         tierView.layer.borderWidth = 1
         tierView.layer.borderColor = UIColor.separator.cgColor
 
         let titleLabel = UILabel()
-        titleLabel.text = title
+        titleLabel.text = tier.displayName
         titleLabel.font = .systemFont(ofSize: 22, weight: .bold)
         titleLabel.textAlignment = .center
         tierView.addSubview(titleLabel)
         titleLabel.translatesAutoresizingMaskIntoConstraints = false
 
         let priceLabel = UILabel()
-        priceLabel.text = price
+        priceLabel.text = tier.price
         priceLabel.font = .systemFont(ofSize: 18, weight: .semibold)
         priceLabel.textColor = .systemBlue
         priceLabel.textAlignment = .center
@@ -118,7 +179,7 @@ class SubscriptionViewController: UIViewController {
         featuresStack.spacing = 8
         featuresStack.alignment = .leading
 
-        for feature in features {
+        for feature in tier.features {
             let featureLabel = UILabel()
             featureLabel.text = "• \(feature)"
             featureLabel.font = .systemFont(ofSize: 15)
@@ -131,11 +192,11 @@ class SubscriptionViewController: UIViewController {
 
         let button = UIButton(type: .system)
         button.setTitle(buttonTitle, for: .normal)
-        button.backgroundColor = getCurrentTier() == title ? .systemGray : .systemBlue
+        button.backgroundColor = getCurrentTier() == tier.displayName ? .systemGray : .systemBlue
         button.setTitleColor(.white, for: .normal)
         button.layer.cornerRadius = 8
         button.titleLabel?.font = .systemFont(ofSize: 17, weight: .semibold)
-        button.isEnabled = getCurrentTier() != title
+        button.isEnabled = getCurrentTier() != tier.displayName
         button.addTarget(self, action: buttonAction, for: .touchUpInside)
         tierView.addSubview(button)
         button.translatesAutoresizingMaskIntoConstraints = false
@@ -159,6 +220,8 @@ class SubscriptionViewController: UIViewController {
             button.bottomAnchor.constraint(equalTo: tierView.bottomAnchor, constant: -20),
             button.heightAnchor.constraint(equalToConstant: 50)
         ])
+
+        return priceLabel
     }
 
     private func getCurrentTier() -> String {

@@ -12,10 +12,13 @@ class BirthYearViewController: BaseOnboardingViewController {
 
     // MARK: - Lifecycle
     override func configure() {
+        print("📍 BirthYearViewController: configure() called")
         step = .birthYear
         setTitle("When were you born?",
                 subtitle: "We use this to match you with appropriate language partners")
+        print("📍 BirthYearViewController: About to setup date picker")
         setupDatePicker()
+        print("📍 BirthYearViewController: configure() completed")
     }
 
     // MARK: - Setup

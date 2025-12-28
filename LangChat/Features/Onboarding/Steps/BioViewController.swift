@@ -6,67 +6,35 @@ class BioViewController: BaseOnboardingViewController {
     private let textView = UITextView()
     private let placeholderLabel = UILabel()
     private let characterCountLabel = UILabel()
+    private let promptsHeader = UIButton(type: .system)
     private let promptsContainer = UIView()
-    private let promptButtons: [UIButton] = []
+    private let promptsStack = UIStackView()
+    private var promptsHeightConstraint: NSLayoutConstraint!
+    private let skipLabel = UILabel()
 
     // MARK: - Properties
     private let maxCharacters = 500
+    private var isPromptsExpanded = false
     private let prompts = [
         "What's your language learning story?",
-        "What motivates you to learn languages?",
-        "What do you do for work or study?",
-        "What are your hobbies and interests?",
-        "Describe your personality in 3 words",
-        "What kind of conversations excite you?",
-        "Share a fun fact about yourself",
-        "What's your favorite way to practice languages?"
+        "What motivates you to learn?",
+        "What are your hobbies?",
+        "Describe yourself in 3 words",
+        "Share a fun fact about yourself"
     ]
 
     // MARK: - Lifecycle
     override func configure() {
         step = .bio
-        setTitle("Tell us about yourself",
-                subtitle: "Write anything you'd like! Use the prompts below to get started, or share whatever feels right")
+        setTitle("Tell potential matches about yourself",
+                subtitle: "Optional - share anything you'd like others to know")
         setupViews()
-        setupKeyboardObservers()
+        setupKeyboardToolbar()
     }
 
     // MARK: - Setup
     private func setupViews() {
-        // Prompts container
-        promptsContainer.backgroundColor = .white.withAlphaComponent(0.05)
-        promptsContainer.layer.cornerRadius = 12
-        promptsContainer.layer.borderWidth = 1
-        promptsContainer.layer.borderColor = UIColor.white.withAlphaComponent(0.2).cgColor
-        contentView.addSubview(promptsContainer)
-
-        // Prompts label
-        let promptsLabel = UILabel()
-        promptsLabel.text = "Need inspiration? Tap any question to get started:"
-        promptsLabel.font = .systemFont(ofSize: 14, weight: .medium)
-        promptsLabel.textColor = .white.withAlphaComponent(0.8)
-        promptsLabel.numberOfLines = 0
-        promptsContainer.addSubview(promptsLabel)
-
-        // Prompt buttons stack
-        let promptsStack = UIStackView()
-        promptsStack.axis = .vertical
-        promptsStack.spacing = 8
-        promptsStack.distribution = .fillEqually
-
-        for prompt in prompts {
-            let button = UIButton(type: .system)
-            button.setTitle(prompt, for: .normal)
-            button.titleLabel?.font = .systemFont(ofSize: 13, weight: .regular)
-            button.setTitleColor(.white.withAlphaComponent(0.7), for: .normal)
-            button.contentHorizontalAlignment = .left
-            button.addTarget(self, action: #selector(promptTapped), for: .touchUpInside)
-            promptsStack.addArrangedSubview(button)
-        }
-
-        promptsContainer.addSubview(promptsStack)
-
-        // Text view
+        // Text view - AT THE TOP
         textView.font = .systemFont(ofSize: 16, weight: .regular)
         textView.textColor = .white
         textView.backgroundColor = .white.withAlphaComponent(0.08)
@@ -78,7 +46,7 @@ class BioViewController: BaseOnboardingViewController {
         contentView.addSubview(textView)
 
         // Placeholder
-        placeholderLabel.text = "Share your story, interests, personality... anything you'd like others to know! There are no wrong answers here."
+        placeholderLabel.text = "Share your story, interests, personality..."
         placeholderLabel.font = .systemFont(ofSize: 16, weight: .regular)
         placeholderLabel.textColor = .white.withAlphaComponent(0.4)
         placeholderLabel.numberOfLines = 0
@@ -91,36 +59,74 @@ class BioViewController: BaseOnboardingViewController {
         characterCountLabel.textAlignment = .right
         contentView.addSubview(characterCountLabel)
 
+        // Prompts header (expandable)
+        promptsHeader.setTitle("💡 Need inspiration? Tap for prompts", for: .normal)
+        promptsHeader.setTitleColor(.white.withAlphaComponent(0.7), for: .normal)
+        promptsHeader.titleLabel?.font = .systemFont(ofSize: 14, weight: .medium)
+        promptsHeader.contentHorizontalAlignment = .left
+        promptsHeader.addTarget(self, action: #selector(togglePrompts), for: .touchUpInside)
+        contentView.addSubview(promptsHeader)
+
+        // Chevron indicator
+        let chevron = UIImageView(image: UIImage(systemName: "chevron.down"))
+        chevron.tintColor = .white.withAlphaComponent(0.5)
+        chevron.tag = 999
+        promptsHeader.addSubview(chevron)
+        chevron.translatesAutoresizingMaskIntoConstraints = false
+        NSLayoutConstraint.activate([
+            chevron.trailingAnchor.constraint(equalTo: promptsHeader.trailingAnchor),
+            chevron.centerYAnchor.constraint(equalTo: promptsHeader.centerYAnchor),
+            chevron.widthAnchor.constraint(equalToConstant: 16),
+            chevron.heightAnchor.constraint(equalToConstant: 12)
+        ])
+
+        // Prompts container (collapsible)
+        promptsContainer.backgroundColor = .white.withAlphaComponent(0.05)
+        promptsContainer.layer.cornerRadius = 12
+        promptsContainer.clipsToBounds = true
+        promptsContainer.alpha = 0
+        contentView.addSubview(promptsContainer)
+
+        // Prompts stack
+        promptsStack.axis = .vertical
+        promptsStack.spacing = 4
+        promptsStack.distribution = .fillEqually
+        promptsContainer.addSubview(promptsStack)
+
+        for prompt in prompts {
+            let button = UIButton(type: .system)
+            button.setTitle("• " + prompt, for: .normal)
+            button.titleLabel?.font = .systemFont(ofSize: 14, weight: .regular)
+            button.setTitleColor(.white.withAlphaComponent(0.8), for: .normal)
+            button.contentHorizontalAlignment = .left
+            button.addTarget(self, action: #selector(promptTapped), for: .touchUpInside)
+            promptsStack.addArrangedSubview(button)
+        }
+
+        // Skip label
+        skipLabel.text = "This field is optional - feel free to skip"
+        skipLabel.font = .systemFont(ofSize: 13, weight: .regular)
+        skipLabel.textColor = .white.withAlphaComponent(0.5)
+        skipLabel.textAlignment = .center
+        contentView.addSubview(skipLabel)
+
         // Layout
-        promptsContainer.translatesAutoresizingMaskIntoConstraints = false
-        promptsLabel.translatesAutoresizingMaskIntoConstraints = false
-        promptsStack.translatesAutoresizingMaskIntoConstraints = false
         textView.translatesAutoresizingMaskIntoConstraints = false
         placeholderLabel.translatesAutoresizingMaskIntoConstraints = false
         characterCountLabel.translatesAutoresizingMaskIntoConstraints = false
+        promptsHeader.translatesAutoresizingMaskIntoConstraints = false
+        promptsContainer.translatesAutoresizingMaskIntoConstraints = false
+        promptsStack.translatesAutoresizingMaskIntoConstraints = false
+        skipLabel.translatesAutoresizingMaskIntoConstraints = false
+
+        promptsHeightConstraint = promptsContainer.heightAnchor.constraint(equalToConstant: 0)
 
         NSLayoutConstraint.activate([
-            // Prompts container
-            promptsContainer.topAnchor.constraint(equalTo: contentView.topAnchor, constant: 16),
-            promptsContainer.leadingAnchor.constraint(equalTo: contentView.leadingAnchor),
-            promptsContainer.trailingAnchor.constraint(equalTo: contentView.trailingAnchor),
-
-            // Prompts label
-            promptsLabel.topAnchor.constraint(equalTo: promptsContainer.topAnchor, constant: 16),
-            promptsLabel.leadingAnchor.constraint(equalTo: promptsContainer.leadingAnchor, constant: 16),
-            promptsLabel.trailingAnchor.constraint(equalTo: promptsContainer.trailingAnchor, constant: -16),
-
-            // Prompts stack
-            promptsStack.topAnchor.constraint(equalTo: promptsLabel.bottomAnchor, constant: 12),
-            promptsStack.leadingAnchor.constraint(equalTo: promptsContainer.leadingAnchor, constant: 16),
-            promptsStack.trailingAnchor.constraint(equalTo: promptsContainer.trailingAnchor, constant: -16),
-            promptsStack.bottomAnchor.constraint(equalTo: promptsContainer.bottomAnchor, constant: -16),
-
-            // Text view
-            textView.topAnchor.constraint(equalTo: promptsContainer.bottomAnchor, constant: 20),
+            // Text view - AT THE TOP
+            textView.topAnchor.constraint(equalTo: contentView.topAnchor, constant: 16),
             textView.leadingAnchor.constraint(equalTo: contentView.leadingAnchor),
             textView.trailingAnchor.constraint(equalTo: contentView.trailingAnchor),
-            textView.heightAnchor.constraint(equalToConstant: 150),
+            textView.heightAnchor.constraint(equalToConstant: 140),
 
             // Placeholder
             placeholderLabel.topAnchor.constraint(equalTo: textView.topAnchor, constant: 16),
@@ -129,32 +135,113 @@ class BioViewController: BaseOnboardingViewController {
 
             // Character count
             characterCountLabel.topAnchor.constraint(equalTo: textView.bottomAnchor, constant: 8),
-            characterCountLabel.trailingAnchor.constraint(equalTo: contentView.trailingAnchor)
+            characterCountLabel.trailingAnchor.constraint(equalTo: contentView.trailingAnchor),
+
+            // Prompts header
+            promptsHeader.topAnchor.constraint(equalTo: characterCountLabel.bottomAnchor, constant: 16),
+            promptsHeader.leadingAnchor.constraint(equalTo: contentView.leadingAnchor),
+            promptsHeader.trailingAnchor.constraint(equalTo: contentView.trailingAnchor),
+            promptsHeader.heightAnchor.constraint(equalToConstant: 32),
+
+            // Prompts container (expandable)
+            promptsContainer.topAnchor.constraint(equalTo: promptsHeader.bottomAnchor, constant: 8),
+            promptsContainer.leadingAnchor.constraint(equalTo: contentView.leadingAnchor),
+            promptsContainer.trailingAnchor.constraint(equalTo: contentView.trailingAnchor),
+            promptsHeightConstraint,
+
+            // Prompts stack
+            promptsStack.topAnchor.constraint(equalTo: promptsContainer.topAnchor, constant: 12),
+            promptsStack.leadingAnchor.constraint(equalTo: promptsContainer.leadingAnchor, constant: 12),
+            promptsStack.trailingAnchor.constraint(equalTo: promptsContainer.trailingAnchor, constant: -12),
+            promptsStack.bottomAnchor.constraint(equalTo: promptsContainer.bottomAnchor, constant: -12),
+
+            // Skip label
+            skipLabel.topAnchor.constraint(equalTo: promptsContainer.bottomAnchor, constant: 20),
+            skipLabel.leadingAnchor.constraint(equalTo: contentView.leadingAnchor),
+            skipLabel.trailingAnchor.constraint(equalTo: contentView.trailingAnchor)
         ])
 
-        // Initially disable continue button
-        updateContinueButton(enabled: false)
+        // Bio is OPTIONAL - enable continue button immediately
+        updateContinueButton(enabled: true)
     }
 
-    private func setupKeyboardObservers() {
-        NotificationCenter.default.addObserver(
-            self,
-            selector: #selector(handleKeyboardWillShow),
-            name: UIResponder.keyboardWillShowNotification,
-            object: nil
+    private func setupKeyboardToolbar() {
+        // Create toolbar with "Done" button to dismiss keyboard
+        let toolbar = UIToolbar()
+        toolbar.sizeToFit()
+        toolbar.barStyle = .default
+        toolbar.isTranslucent = true
+        toolbar.tintColor = .systemBlue
+
+        // Flexible space to push button to the right
+        let flexSpace = UIBarButtonItem(barButtonSystemItem: .flexibleSpace, target: nil, action: nil)
+
+        // Lightbulb button to show prompts (dismisses keyboard + expands prompts)
+        let promptsButton = UIBarButtonItem(
+            image: UIImage(systemName: "lightbulb"),
+            style: .plain,
+            target: self,
+            action: #selector(showPromptsFromToolbar)
+        )
+        promptsButton.tintColor = .systemYellow
+
+        // Done button to dismiss keyboard
+        let doneButton = UIBarButtonItem(
+            title: "Done",
+            style: .done,
+            target: self,
+            action: #selector(dismissKeyboard)
         )
 
-        NotificationCenter.default.addObserver(
-            self,
-            selector: #selector(handleKeyboardWillHide),
-            name: UIResponder.keyboardWillHideNotification,
-            object: nil
-        )
+        toolbar.items = [promptsButton, flexSpace, doneButton]
+        textView.inputAccessoryView = toolbar
     }
 
     // MARK: - Actions
+    @objc private func dismissKeyboard() {
+        textView.resignFirstResponder()
+    }
+
+    @objc private func showPromptsFromToolbar() {
+        // Dismiss keyboard first
+        textView.resignFirstResponder()
+
+        // Expand prompts if not already expanded
+        if !isPromptsExpanded {
+            // Small delay to let keyboard dismiss animation start
+            DispatchQueue.main.asyncAfter(deadline: .now() + 0.1) { [weak self] in
+                self?.togglePrompts()
+            }
+        }
+    }
+    @objc private func togglePrompts() {
+        isPromptsExpanded.toggle()
+
+        // Animate expansion/collapse
+        UIView.animate(withDuration: 0.3, delay: 0, options: .curveEaseInOut) {
+            if self.isPromptsExpanded {
+                self.promptsHeightConstraint.constant = CGFloat(self.prompts.count * 32 + 24)
+                self.promptsContainer.alpha = 1
+                // Rotate chevron
+                if let chevron = self.promptsHeader.viewWithTag(999) {
+                    chevron.transform = CGAffineTransform(rotationAngle: .pi)
+                }
+            } else {
+                self.promptsHeightConstraint.constant = 0
+                self.promptsContainer.alpha = 0
+                // Reset chevron
+                if let chevron = self.promptsHeader.viewWithTag(999) {
+                    chevron.transform = .identity
+                }
+            }
+            self.view.layoutIfNeeded()
+        }
+    }
+
     @objc private func promptTapped(_ sender: UIButton) {
-        guard let prompt = sender.titleLabel?.text else { return }
+        guard let promptText = sender.titleLabel?.text else { return }
+        // Remove the bullet point prefix
+        let prompt = promptText.replacingOccurrences(of: "• ", with: "")
 
         if textView.text.isEmpty {
             textView.text = prompt + " "
@@ -166,19 +253,15 @@ class BioViewController: BaseOnboardingViewController {
         updateCharacterCount()
         textView.becomeFirstResponder()
 
+        // Collapse prompts after selection
+        if isPromptsExpanded {
+            togglePrompts()
+        }
+
         // Move cursor to end
         if let endPosition = textView.position(from: textView.endOfDocument, offset: 0) {
             textView.selectedTextRange = textView.textRange(from: endPosition, to: endPosition)
         }
-    }
-
-    @objc private func handleKeyboardWillShow(_ notification: Notification) {
-        // Keyboard handling is done by BaseOnboardingViewController
-        // Just ensure text view is visible
-    }
-
-    @objc private func handleKeyboardWillHide(_ notification: Notification) {
-        // Keyboard handling is done by BaseOnboardingViewController
     }
 
     private func updatePlaceholder() {
@@ -192,20 +275,17 @@ class BioViewController: BaseOnboardingViewController {
         if count > Int(Double(maxCharacters) * 0.9) {
             characterCountLabel.textColor = .systemOrange
         } else {
-            characterCountLabel.textColor = .secondaryLabel
+            characterCountLabel.textColor = .white.withAlphaComponent(0.6)
         }
-
-        // Enable continue if there's at least 20 characters
-        updateContinueButton(enabled: count >= 20)
     }
 
     override func continueButtonTapped() {
+        view.endEditing(true)
         let bio = textView.text?.trimmingCharacters(in: .whitespacesAndNewlines) ?? ""
-        delegate?.didCompleteStep(withData: bio)
-    }
 
-    deinit {
-        NotificationCenter.default.removeObserver(self)
+        DispatchQueue.main.asyncAfter(deadline: .now() + 0.1) { [weak self] in
+            self?.delegate?.didCompleteStep(withData: bio)
+        }
     }
 }
 
@@ -220,5 +300,19 @@ extension BioViewController: UITextViewDelegate {
         let currentText = textView.text ?? ""
         let updatedText = (currentText as NSString).replacingCharacters(in: range, with: text)
         return updatedText.count <= maxCharacters
+    }
+
+    func textViewDidBeginEditing(_ textView: UITextView) {
+        // Collapse prompts when user starts typing
+        if isPromptsExpanded {
+            togglePrompts()
+        }
+        // Hide skip label when editing
+        skipLabel.isHidden = true
+    }
+
+    func textViewDidEndEditing(_ textView: UITextView) {
+        // Show skip label again if empty
+        skipLabel.isHidden = !textView.text.isEmpty
     }
 }

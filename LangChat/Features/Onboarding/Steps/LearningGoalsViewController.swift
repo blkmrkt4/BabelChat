@@ -3,209 +3,218 @@ import UIKit
 class LearningGoalsViewController: BaseOnboardingViewController {
 
     // MARK: - UI Components
-    private let collectionView: UICollectionView = {
-        let layout = UICollectionViewFlowLayout()
-        layout.scrollDirection = .vertical
-        layout.minimumInteritemSpacing = 12
-        layout.minimumLineSpacing = 12
-        layout.sectionInset = UIEdgeInsets(top: 0, left: 0, bottom: 20, right: 0)
-        let collectionView = UICollectionView(frame: .zero, collectionViewLayout: layout)
-        collectionView.alwaysBounceVertical = true
-        collectionView.showsVerticalScrollIndicator = true
-        return collectionView
-    }()
-
-    private let selectionCountLabel = UILabel()
+    private let scrollView = UIScrollView()
+    private let stackView = UIStackView()
+    private let introLabel = UILabel()
+    private let skipLabel = UILabel()
 
     // MARK: - Properties
-    private let goals: [(emoji: String, title: String, description: String)] = [
-        ("💼", "Business/Professional", "Advance your career with language skills"),
-        ("😄", "Casual", "Make friends and chat naturally"),
-        ("👨‍👩‍👧", "Family", "Connect with family and heritage"),
-        ("💑", "Relationships", "Meet new people and build connections"),
-        ("📚", "Academic", "Support your studies and research")
+    private let learningStyles: [(id: String, emoji: String, title: String, description: String)] = [
+        ("formal", "👔", "Formal / Professional", "Business meetings, presentations, formal writing"),
+        ("casual", "😊", "Casual / Conversational", "Everyday chat, making friends, natural speech"),
+        ("academic", "📚", "Academic / Literary", "Essays, literature, advanced grammar"),
+        ("slang", "🔥", "Slang / Street Talk", "Modern expressions, youth language, pop culture"),
+        ("travel", "✈️", "Travel / Survival", "Ordering food, directions, basic phrases"),
+        ("technical", "💻", "Technical / Specialized", "Industry-specific vocabulary, jargon")
     ]
 
-    private var selectedGoals: Set<Int> = []
+    private var selectedStyles: Set<String> = []
 
     // MARK: - Lifecycle
     override func configure() {
         step = .learningGoals
-        setTitle("What brings you here?",
-                subtitle: "This helps others understand your language learning style")
+        setTitle("What style are you learning?",
+                subtitle: "Check all that apply - or skip if you're open to all styles")
         setupViews()
+        // Optional - enable continue immediately
+        updateContinueButton(enabled: true)
     }
 
     // MARK: - Setup
     private func setupViews() {
-        // Selection count label
-        selectionCountLabel.font = .systemFont(ofSize: 14, weight: .medium)
-        selectionCountLabel.textAlignment = .center
-        updateSelectionLabel()
-        contentView.addSubview(selectionCountLabel)
+        // Intro label
+        introLabel.text = "Matching you with partners who share your learning focus helps you practice what matters most."
+        introLabel.font = .systemFont(ofSize: 14, weight: .regular)
+        introLabel.textColor = .secondaryLabel
+        introLabel.numberOfLines = 0
+        introLabel.textAlignment = .center
+        contentView.addSubview(introLabel)
 
-        // Collection view
-        collectionView.backgroundColor = .clear
-        collectionView.delegate = self
-        collectionView.dataSource = self
-        collectionView.register(GoalCell.self, forCellWithReuseIdentifier: "GoalCell")
-        collectionView.allowsMultipleSelection = true
-        contentView.addSubview(collectionView)
+        // Scroll view for styles
+        scrollView.showsVerticalScrollIndicator = false
+        contentView.addSubview(scrollView)
+
+        // Stack view
+        stackView.axis = .vertical
+        stackView.spacing = 12
+        stackView.alignment = .fill
+        scrollView.addSubview(stackView)
+
+        // Create style option buttons
+        for style in learningStyles {
+            let optionView = createStyleOption(style)
+            stackView.addArrangedSubview(optionView)
+        }
+
+        // Skip label
+        skipLabel.text = "Leave empty if you're open to practicing all styles"
+        skipLabel.font = .systemFont(ofSize: 13, weight: .regular)
+        skipLabel.textColor = .tertiaryLabel
+        skipLabel.textAlignment = .center
+        skipLabel.numberOfLines = 0
+        contentView.addSubview(skipLabel)
 
         // Layout
-        selectionCountLabel.translatesAutoresizingMaskIntoConstraints = false
-        collectionView.translatesAutoresizingMaskIntoConstraints = false
+        introLabel.translatesAutoresizingMaskIntoConstraints = false
+        scrollView.translatesAutoresizingMaskIntoConstraints = false
+        stackView.translatesAutoresizingMaskIntoConstraints = false
+        skipLabel.translatesAutoresizingMaskIntoConstraints = false
 
         NSLayoutConstraint.activate([
-            selectionCountLabel.topAnchor.constraint(equalTo: contentView.topAnchor),
-            selectionCountLabel.leadingAnchor.constraint(equalTo: contentView.leadingAnchor),
-            selectionCountLabel.trailingAnchor.constraint(equalTo: contentView.trailingAnchor),
-            selectionCountLabel.heightAnchor.constraint(equalToConstant: 30),
+            introLabel.topAnchor.constraint(equalTo: contentView.topAnchor),
+            introLabel.leadingAnchor.constraint(equalTo: contentView.leadingAnchor),
+            introLabel.trailingAnchor.constraint(equalTo: contentView.trailingAnchor),
 
-            collectionView.topAnchor.constraint(equalTo: selectionCountLabel.bottomAnchor, constant: 16),
-            collectionView.leadingAnchor.constraint(equalTo: contentView.leadingAnchor),
-            collectionView.trailingAnchor.constraint(equalTo: contentView.trailingAnchor),
-            collectionView.bottomAnchor.constraint(equalTo: contentView.bottomAnchor)
+            scrollView.topAnchor.constraint(equalTo: introLabel.bottomAnchor, constant: 20),
+            scrollView.leadingAnchor.constraint(equalTo: contentView.leadingAnchor),
+            scrollView.trailingAnchor.constraint(equalTo: contentView.trailingAnchor),
+            scrollView.bottomAnchor.constraint(equalTo: skipLabel.topAnchor, constant: -16),
+
+            stackView.topAnchor.constraint(equalTo: scrollView.topAnchor),
+            stackView.leadingAnchor.constraint(equalTo: scrollView.leadingAnchor),
+            stackView.trailingAnchor.constraint(equalTo: scrollView.trailingAnchor),
+            stackView.bottomAnchor.constraint(equalTo: scrollView.bottomAnchor),
+            stackView.widthAnchor.constraint(equalTo: scrollView.widthAnchor),
+
+            skipLabel.leadingAnchor.constraint(equalTo: contentView.leadingAnchor),
+            skipLabel.trailingAnchor.constraint(equalTo: contentView.trailingAnchor),
+            skipLabel.bottomAnchor.constraint(equalTo: contentView.bottomAnchor, constant: -8)
         ])
     }
 
-    private func updateSelectionLabel() {
-        let count = selectedGoals.count
-        if count == 0 {
-            selectionCountLabel.text = "Select at least one goal"
-            selectionCountLabel.textColor = .secondaryLabel
-        } else if count == 1 {
-            selectionCountLabel.text = "1 goal selected"
-            selectionCountLabel.textColor = .systemBlue
+    private func createStyleOption(_ style: (id: String, emoji: String, title: String, description: String)) -> UIView {
+        let container = UIView()
+        container.backgroundColor = .secondarySystemBackground
+        container.layer.cornerRadius = 12
+        container.layer.borderWidth = 2
+        container.layer.borderColor = UIColor.clear.cgColor
+        container.tag = learningStyles.firstIndex(where: { $0.id == style.id }) ?? 0
+
+        // Tap gesture
+        let tap = UITapGestureRecognizer(target: self, action: #selector(styleTapped(_:)))
+        container.addGestureRecognizer(tap)
+        container.isUserInteractionEnabled = true
+
+        // Emoji
+        let emojiLabel = UILabel()
+        emojiLabel.text = style.emoji
+        emojiLabel.font = .systemFont(ofSize: 28)
+        container.addSubview(emojiLabel)
+
+        // Title
+        let titleLabel = UILabel()
+        titleLabel.text = style.title
+        titleLabel.font = .systemFont(ofSize: 16, weight: .semibold)
+        titleLabel.textColor = .label
+        titleLabel.tag = 1
+        container.addSubview(titleLabel)
+
+        // Description
+        let descLabel = UILabel()
+        descLabel.text = style.description
+        descLabel.font = .systemFont(ofSize: 13, weight: .regular)
+        descLabel.textColor = .secondaryLabel
+        descLabel.numberOfLines = 0
+        container.addSubview(descLabel)
+
+        // Checkbox
+        let checkbox = UIImageView()
+        checkbox.image = UIImage(systemName: "circle")
+        checkbox.tintColor = .systemGray3
+        checkbox.tag = 2
+        container.addSubview(checkbox)
+
+        // Layout
+        emojiLabel.translatesAutoresizingMaskIntoConstraints = false
+        titleLabel.translatesAutoresizingMaskIntoConstraints = false
+        descLabel.translatesAutoresizingMaskIntoConstraints = false
+        checkbox.translatesAutoresizingMaskIntoConstraints = false
+
+        NSLayoutConstraint.activate([
+            container.heightAnchor.constraint(greaterThanOrEqualToConstant: 70),
+
+            emojiLabel.leadingAnchor.constraint(equalTo: container.leadingAnchor, constant: 16),
+            emojiLabel.centerYAnchor.constraint(equalTo: container.centerYAnchor),
+            emojiLabel.widthAnchor.constraint(equalToConstant: 36),
+
+            checkbox.trailingAnchor.constraint(equalTo: container.trailingAnchor, constant: -16),
+            checkbox.centerYAnchor.constraint(equalTo: container.centerYAnchor),
+            checkbox.widthAnchor.constraint(equalToConstant: 24),
+            checkbox.heightAnchor.constraint(equalToConstant: 24),
+
+            titleLabel.leadingAnchor.constraint(equalTo: emojiLabel.trailingAnchor, constant: 12),
+            titleLabel.trailingAnchor.constraint(equalTo: checkbox.leadingAnchor, constant: -12),
+            titleLabel.topAnchor.constraint(equalTo: container.topAnchor, constant: 14),
+
+            descLabel.leadingAnchor.constraint(equalTo: emojiLabel.trailingAnchor, constant: 12),
+            descLabel.trailingAnchor.constraint(equalTo: checkbox.leadingAnchor, constant: -12),
+            descLabel.topAnchor.constraint(equalTo: titleLabel.bottomAnchor, constant: 2),
+            descLabel.bottomAnchor.constraint(equalTo: container.bottomAnchor, constant: -14)
+        ])
+
+        return container
+    }
+
+    // MARK: - Actions
+    @objc private func styleTapped(_ gesture: UITapGestureRecognizer) {
+        guard let container = gesture.view else { return }
+        let index = container.tag
+        let styleId = learningStyles[index].id
+
+        // Toggle selection
+        if selectedStyles.contains(styleId) {
+            selectedStyles.remove(styleId)
+            updateOptionAppearance(container, selected: false)
         } else {
-            selectionCountLabel.text = "\(count) goals selected"
-            selectionCountLabel.textColor = .systemBlue
+            selectedStyles.insert(styleId)
+            updateOptionAppearance(container, selected: true)
+        }
+
+        // Haptic feedback
+        let generator = UIImpactFeedbackGenerator(style: .light)
+        generator.impactOccurred()
+
+        // Update skip label visibility
+        skipLabel.isHidden = !selectedStyles.isEmpty
+    }
+
+    private func updateOptionAppearance(_ container: UIView, selected: Bool) {
+        if selected {
+            container.backgroundColor = UIColor.systemBlue.withAlphaComponent(0.1)
+            container.layer.borderColor = UIColor.systemBlue.cgColor
+            if let checkbox = container.viewWithTag(2) as? UIImageView {
+                checkbox.image = UIImage(systemName: "checkmark.circle.fill")
+                checkbox.tintColor = .systemBlue
+            }
+            if let title = container.viewWithTag(1) as? UILabel {
+                title.textColor = .systemBlue
+            }
+        } else {
+            container.backgroundColor = .secondarySystemBackground
+            container.layer.borderColor = UIColor.clear.cgColor
+            if let checkbox = container.viewWithTag(2) as? UIImageView {
+                checkbox.image = UIImage(systemName: "circle")
+                checkbox.tintColor = .systemGray3
+            }
+            if let title = container.viewWithTag(1) as? UILabel {
+                title.textColor = .label
+            }
         }
     }
 
     override func continueButtonTapped() {
-        let selectedGoalStrings = selectedGoals.map { goals[$0].title }
-        delegate?.didCompleteStep(withData: selectedGoalStrings)
-    }
-}
-
-// MARK: - UICollectionViewDataSource
-extension LearningGoalsViewController: UICollectionViewDataSource {
-    func collectionView(_ collectionView: UICollectionView, numberOfItemsInSection section: Int) -> Int {
-        return goals.count
-    }
-
-    func collectionView(_ collectionView: UICollectionView, cellForItemAt indexPath: IndexPath) -> UICollectionViewCell {
-        let cell = collectionView.dequeueReusableCell(withReuseIdentifier: "GoalCell", for: indexPath) as! GoalCell
-        let goal = goals[indexPath.item]
-        let isSelected = selectedGoals.contains(indexPath.item)
-        cell.configure(emoji: goal.emoji, title: goal.title, isSelected: isSelected)
-        return cell
-    }
-}
-
-// MARK: - UICollectionViewDelegate
-extension LearningGoalsViewController: UICollectionViewDelegate {
-    func collectionView(_ collectionView: UICollectionView, didSelectItemAt indexPath: IndexPath) {
-        if selectedGoals.contains(indexPath.item) {
-            selectedGoals.remove(indexPath.item)
-        } else {
-            selectedGoals.insert(indexPath.item)
-        }
-
-        collectionView.reloadItems(at: [indexPath])
-        updateSelectionLabel()
-        updateContinueButton(enabled: !selectedGoals.isEmpty)
-    }
-}
-
-// MARK: - UICollectionViewDelegateFlowLayout
-extension LearningGoalsViewController: UICollectionViewDelegateFlowLayout {
-    func collectionView(_ collectionView: UICollectionView, layout collectionViewLayout: UICollectionViewLayout, sizeForItemAt indexPath: IndexPath) -> CGSize {
-        let width = (collectionView.frame.width - 12) / 2
-        return CGSize(width: width, height: 120)
-    }
-}
-
-// MARK: - Goal Cell
-private class GoalCell: UICollectionViewCell {
-    private let containerView = UIView()
-    private let emojiLabel = UILabel()
-    private let titleLabel = UILabel()
-    private let checkmarkImageView = UIImageView()
-
-    override init(frame: CGRect) {
-        super.init(frame: frame)
-        setupViews()
-    }
-
-    required init?(coder: NSCoder) {
-        fatalError("init(coder:) has not been implemented")
-    }
-
-    private func setupViews() {
-        // Container
-        containerView.layer.cornerRadius = 12
-        containerView.layer.borderWidth = 2
-        contentView.addSubview(containerView)
-
-        // Emoji
-        emojiLabel.font = .systemFont(ofSize: 36)
-        emojiLabel.textAlignment = .center
-        containerView.addSubview(emojiLabel)
-
-        // Title
-        titleLabel.font = .systemFont(ofSize: 15, weight: .medium)
-        titleLabel.textAlignment = .center
-        titleLabel.numberOfLines = 2
-        containerView.addSubview(titleLabel)
-
-        // Checkmark
-        checkmarkImageView.image = UIImage(systemName: "checkmark.circle.fill")
-        checkmarkImageView.tintColor = .systemBlue
-        checkmarkImageView.isHidden = true
-        containerView.addSubview(checkmarkImageView)
-
-        // Layout
-        containerView.translatesAutoresizingMaskIntoConstraints = false
-        emojiLabel.translatesAutoresizingMaskIntoConstraints = false
-        titleLabel.translatesAutoresizingMaskIntoConstraints = false
-        checkmarkImageView.translatesAutoresizingMaskIntoConstraints = false
-
-        NSLayoutConstraint.activate([
-            containerView.topAnchor.constraint(equalTo: contentView.topAnchor),
-            containerView.leadingAnchor.constraint(equalTo: contentView.leadingAnchor),
-            containerView.trailingAnchor.constraint(equalTo: contentView.trailingAnchor),
-            containerView.bottomAnchor.constraint(equalTo: contentView.bottomAnchor),
-
-            emojiLabel.centerXAnchor.constraint(equalTo: containerView.centerXAnchor),
-            emojiLabel.topAnchor.constraint(equalTo: containerView.topAnchor, constant: 24),
-
-            titleLabel.leadingAnchor.constraint(equalTo: containerView.leadingAnchor, constant: 8),
-            titleLabel.trailingAnchor.constraint(equalTo: containerView.trailingAnchor, constant: -8),
-            titleLabel.topAnchor.constraint(equalTo: emojiLabel.bottomAnchor, constant: 12),
-
-            checkmarkImageView.topAnchor.constraint(equalTo: containerView.topAnchor, constant: 8),
-            checkmarkImageView.trailingAnchor.constraint(equalTo: containerView.trailingAnchor, constant: -8),
-            checkmarkImageView.widthAnchor.constraint(equalToConstant: 20),
-            checkmarkImageView.heightAnchor.constraint(equalToConstant: 20)
-        ])
-    }
-
-    func configure(emoji: String, title: String, isSelected: Bool) {
-        emojiLabel.text = emoji
-        titleLabel.text = title
-
-        if isSelected {
-            containerView.backgroundColor = .systemBlue.withAlphaComponent(0.1)
-            containerView.layer.borderColor = UIColor.systemBlue.cgColor
-            titleLabel.textColor = .systemBlue
-            checkmarkImageView.isHidden = false
-        } else {
-            containerView.backgroundColor = .secondarySystemBackground
-            containerView.layer.borderColor = UIColor.systemGray4.cgColor
-            titleLabel.textColor = .label
-            checkmarkImageView.isHidden = true
-        }
+        // Convert string IDs to LearningContext enum values
+        let selectedContexts = selectedStyles.compactMap { LearningContext(rawValue: $0) }
+        delegate?.didCompleteStep(withData: selectedContexts)
     }
 }

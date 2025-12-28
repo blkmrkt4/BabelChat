@@ -53,37 +53,39 @@ enum GenderPreference: String, CaseIterable, Codable {
 // MARK: - Location Enums
 
 enum LocationPreference: String, CaseIterable, Codable {
-    case local25km = "local_25km"
-    case regional100km = "regional_100km"
+    case localRegional = "local_regional"  // Customizable distance 10-200km
     case country = "country"
     case specificCountries = "specific_countries"
+    case excludeCountries = "exclude_countries"  // Anywhere except selected countries
     case anywhere = "anywhere"
 
     var displayName: String {
         switch self {
-        case .local25km: return "Local (25km/15mi)"
-        case .regional100km: return "Regional (100km/60mi)"
+        case .localRegional: return "Local / Regional"
         case .country: return "My country"
         case .specificCountries: return "Specific countries"
+        case .excludeCountries: return "Anywhere except specific countries"
         case .anywhere: return "Anywhere in the world"
         }
     }
 
     var subtitle: String {
         switch self {
-        case .local25km: return "Find language partners nearby for in-person meetups"
-        case .regional100km: return "Expand your search to a wider area"
+        case .localRegional: return "Find partners within a specific distance"
         case .country: return "Match with people from your country"
-        case .specificCountries: return "Choose countries where you want to find partners"
+        case .specificCountries: return "Choose which countries to include"
+        case .excludeCountries: return "Exclude certain countries from matching"
         case .anywhere: return "Connect with language learners globally"
         }
     }
 
-    var maxDistanceKm: Int? {
+    var icon: String {
         switch self {
-        case .local25km: return 25
-        case .regional100km: return 100
-        case .country, .specificCountries, .anywhere: return nil
+        case .localRegional: return "location.circle"
+        case .country: return "flag"
+        case .specificCountries: return "globe.americas"
+        case .excludeCountries: return "globe.badge.chevron.backward"
+        case .anywhere: return "globe"
         }
     }
 }
@@ -123,32 +125,32 @@ enum RelationshipIntent: String, CaseIterable, Codable {
 // MARK: - Learning Context
 
 enum LearningContext: String, CaseIterable, Codable {
-    case travel = "travel"
-    case work = "work"
-    case cultural = "cultural"
-    case family = "family"
+    case formal = "formal"
+    case casual = "casual"
     case academic = "academic"
-    case fun = "fun"
+    case slang = "slang"
+    case travel = "travel"
+    case technical = "technical"
 
     var displayName: String {
         switch self {
-        case .travel: return "Travel"
-        case .work: return "Work/Business"
-        case .cultural: return "Cultural interest"
-        case .family: return "Family/Heritage"
-        case .academic: return "Academic"
-        case .fun: return "Just for fun"
+        case .formal: return "Formal / Professional"
+        case .casual: return "Casual / Conversational"
+        case .academic: return "Academic / Literary"
+        case .slang: return "Slang / Street Talk"
+        case .travel: return "Travel / Survival"
+        case .technical: return "Technical / Specialized"
         }
     }
 
     var icon: String {
         switch self {
+        case .formal: return "briefcase.fill"
+        case .casual: return "face.smiling.fill"
+        case .academic: return "book.fill"
+        case .slang: return "flame.fill"
         case .travel: return "airplane"
-        case .work: return "briefcase.fill"
-        case .cultural: return "globe"
-        case .family: return "house.fill"
-        case .academic: return "graduationcap.fill"
-        case .fun: return "star.fill"
+        case .technical: return "laptopcomputer"
         }
     }
 }
@@ -219,6 +221,14 @@ struct MatchingPreferences: Codable {
     /// Used when locationPreference is .specificCountries
     let preferredCountries: [String]?
 
+    /// List of excluded country codes (ISO)
+    /// Used when locationPreference is .excludeCountries
+    let excludedCountries: [String]?
+
+    /// Custom maximum distance in km for local/regional matching
+    /// Used when locationPreference is .localRegional
+    let customMaxDistanceKm: Int?
+
     // MARK: - Travel
 
     /// Travel destination if user is planning a trip
@@ -226,8 +236,8 @@ struct MatchingPreferences: Codable {
 
     // MARK: - Intent & Context
 
-    /// What the user is looking for (can select multiple)
-    let relationshipIntents: [RelationshipIntent]
+    /// What the user is looking for (single selection)
+    let relationshipIntent: RelationshipIntent
 
     /// Why the user is learning languages (can select multiple)
     let learningContexts: [LearningContext]
@@ -254,9 +264,11 @@ struct MatchingPreferences: Codable {
         latitude: Double? = nil,
         longitude: Double? = nil,
         preferredCountries: [String]? = nil,
+        excludedCountries: [String]? = nil,
+        customMaxDistanceKm: Int? = nil,
         travelDestination: TravelDestination? = nil,
-        relationshipIntents: [RelationshipIntent] = [.languagePracticeOnly],
-        learningContexts: [LearningContext] = [.fun],
+        relationshipIntent: RelationshipIntent = .languagePracticeOnly,
+        learningContexts: [LearningContext] = [],  // Empty = open to all styles
         allowNonNativeMatches: Bool = false,
         minProficiencyLevel: LanguageProficiency = .beginner,
         maxProficiencyLevel: LanguageProficiency = .advanced
@@ -269,8 +281,10 @@ struct MatchingPreferences: Codable {
         self.latitude = latitude
         self.longitude = longitude
         self.preferredCountries = preferredCountries
+        self.excludedCountries = excludedCountries
+        self.customMaxDistanceKm = customMaxDistanceKm
         self.travelDestination = travelDestination
-        self.relationshipIntents = relationshipIntents
+        self.relationshipIntent = relationshipIntent
         self.learningContexts = learningContexts
         self.allowNonNativeMatches = allowNonNativeMatches
         self.minProficiencyLevel = minProficiencyLevel
@@ -281,7 +295,12 @@ struct MatchingPreferences: Codable {
 
     /// Get maximum distance in kilometers based on location preference
     var maxDistanceKm: Int? {
-        return locationPreference.maxDistanceKm
+        switch locationPreference {
+        case .localRegional:
+            return customMaxDistanceKm ?? 50 // Default to 50km if not set
+        case .country, .specificCountries, .excludeCountries, .anywhere:
+            return nil
+        }
     }
 
     /// Check if user has active travel plans
@@ -291,7 +310,7 @@ struct MatchingPreferences: Codable {
 
     /// Check if user is open to any form of social connection beyond language practice
     var openToSocializing: Bool {
-        return relationshipIntents.contains(.friendship) || relationshipIntents.contains(.openToDating)
+        return relationshipIntent == .friendship || relationshipIntent == .openToDating
     }
 }
 

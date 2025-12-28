@@ -52,7 +52,7 @@ class DiscoverViewController: UIViewController {
         view.addSubview(cardStackView)
         cardStackView.translatesAutoresizingMaskIntoConstraints = false
 
-        emptyStateLabel.text = "No more profiles to show.\nCheck back later!"
+        emptyStateLabel.text = "No profiles available\nNew users are joining daily!"
         emptyStateLabel.textAlignment = .center
         emptyStateLabel.numberOfLines = 0
         emptyStateLabel.font = .systemFont(ofSize: 18, weight: .medium)

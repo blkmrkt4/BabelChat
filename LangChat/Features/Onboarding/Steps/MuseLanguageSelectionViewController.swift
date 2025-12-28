@@ -20,8 +20,8 @@ class MuseLanguageSelectionViewController: BaseOnboardingViewController {
     // MARK: - Lifecycle
     override func configure() {
         step = .museLanguages
-        setTitle("Explore More Languages",
-                subtitle: "Select additional languages to practice with your AI Muse")
+        setTitle("Choose Muse Languages",
+                subtitle: "Select languages that will appear when you message your AI Muse. You can change this anytime in Profile → Settings → Muse Languages.")
         setupViews()
         loadAvailableLanguages()
     }
@@ -38,7 +38,7 @@ class MuseLanguageSelectionViewController: BaseOnboardingViewController {
     // MARK: - Setup
     private func setupViews() {
         // Info label explaining what this is for
-        infoLabel.text = "Your Muse already speaks English and your learning languages. Select any additional languages you'd like to explore."
+        infoLabel.text = "Your Muse already speaks your native and learning languages. Select additional languages you'd like to explore with your AI companion."
         infoLabel.font = .systemFont(ofSize: 14)
         infoLabel.textColor = .secondaryLabel
         infoLabel.numberOfLines = 0

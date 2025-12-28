@@ -14,12 +14,8 @@ class SubscriptionService: NSObject {
     // MARK: - Properties
     /// Set to true during development when RevenueCat is not yet configured
     /// This allows the app to work without requiring RevenueCat dashboard setup
-    /// ⚠️ WARNING: Must be set to FALSE before production release
-    #if DEBUG
-    var isDevelopmentMode: Bool = true // Development mode enabled for testing - RevenueCat disabled
-    #else
-    var isDevelopmentMode: Bool = false // Production mode - uses real RevenueCat
-    #endif
+    /// ⚠️ Set to FALSE to test real App Store pricing from RevenueCat
+    var isDevelopmentMode: Bool = false // Uses real RevenueCat for actual App Store prices
 
     private let userDefaultsKey = "user_subscription_status"
     private(set) var currentStatus: SubscriptionStatus {
@@ -39,6 +35,34 @@ class SubscriptionService: NSObject {
         guard let regionCode = Locale.current.region?.identifier else { return false }
         let config = cachedPricingConfig ?? PricingConfig.defaultConfig
         return config.shouldShowWeeklyPricing(for: regionCode)
+    }
+
+    /// Returns the currency code from cached offerings (e.g., "USD", "EUR", "INR")
+    var currentCurrencyCode: String {
+        cachedOfferings.first?.currencyCode ?? Locale.current.currency?.identifier ?? "USD"
+    }
+
+    /// Returns a user-friendly string describing the pricing region
+    /// e.g., "Prices in USD" or "Prices for United States (USD)"
+    var pricingRegionDescription: String {
+        let currencyCode = currentCurrencyCode
+
+        // Get country name from region code
+        if let regionCode = Locale.current.region?.identifier,
+           let countryName = Locale.current.localizedString(forRegionCode: regionCode) {
+            return "Prices for \(countryName) (\(currencyCode))"
+        }
+
+        return "Prices in \(currencyCode)"
+    }
+
+    /// Returns just the country name for shorter displays
+    var currentCountryName: String {
+        if let regionCode = Locale.current.region?.identifier,
+           let countryName = Locale.current.localizedString(forRegionCode: regionCode) {
+            return countryName
+        }
+        return currentCurrencyCode
     }
 
     /// Update the cached pricing config (called when config is fetched)

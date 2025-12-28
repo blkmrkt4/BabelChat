@@ -108,8 +108,7 @@ export default function AIModelConfiguration() {
         setFallback1(config.fallback_model_1_id || '')
         setFallback2(config.fallback_model_2_id || '')
         setFallback3(config.fallback_model_3_id || '')
-        // Note: fallback_model_4 may not exist in DB yet
-        setFallback4('')
+        setFallback4(config.fallback_model_4_id || '')
         setTemperature(config.temperature)
         setMaxTokens(config.max_tokens)
 
@@ -200,6 +199,7 @@ export default function AIModelConfiguration() {
       const fallback1Data = modelsWithScores.find(m => m.modelId === fallback1)
       const fallback2Data = modelsWithScores.find(m => m.modelId === fallback2)
       const fallback3Data = modelsWithScores.find(m => m.modelId === fallback3)
+      const fallback4Data = modelsWithScores.find(m => m.modelId === fallback4)
 
       const updates: Partial<AIConfig> = {
         model_id: primaryModel,
@@ -211,6 +211,8 @@ export default function AIModelConfiguration() {
         fallback_model_2_name: fallback2Data?.modelName || null,
         fallback_model_3_id: fallback3 || null,
         fallback_model_3_name: fallback3Data?.modelName || null,
+        fallback_model_4_id: fallback4 || null,
+        fallback_model_4_name: fallback4Data?.modelName || null,
         temperature,
         max_tokens: maxTokens,
       }

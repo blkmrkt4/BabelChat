@@ -71,9 +71,21 @@ class NameInputViewController: BaseOnboardingViewController {
     }
 
     override func continueButtonTapped() {
+        print("📝 NameInputViewController: continueButtonTapped called")
+
+        // Dismiss keyboard first to prevent animation conflicts
+        view.endEditing(true)
+
         let firstName = firstNameTextField.text?.trimmingCharacters(in: .whitespacesAndNewlines) ?? ""
         let lastName = lastNameTextField.text?.trimmingCharacters(in: .whitespacesAndNewlines) ?? ""
-        delegate?.didCompleteStep(withData: (firstName, lastName))
+
+        print("📝 NameInputViewController: Calling delegate with name: \(firstName) \(lastName)")
+
+        // Small delay to let keyboard dismiss animation complete
+        DispatchQueue.main.asyncAfter(deadline: .now() + 0.1) { [weak self] in
+            print("📝 NameInputViewController: Dispatching to delegate")
+            self?.delegate?.didCompleteStep(withData: (firstName, lastName))
+        }
     }
 }
 

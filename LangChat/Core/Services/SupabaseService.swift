@@ -11,18 +11,39 @@ class SupabaseService {
     // MARK: - Supabase Client
     let client: SupabaseClient
 
+    // MARK: - Configuration Status
+    private(set) var isConfigured: Bool = false
+
     // MARK: - Initialization
     private init() {
         // Initialize Supabase client with credentials from Config.swift
         // Config.swift loads from environment variables (Xcode scheme or .env file)
+        if Config.supabaseURL.isEmpty || Config.supabaseAnonKey.isEmpty {
+            print("⚠️ Supabase credentials not configured - using placeholder URL")
+            // Use a placeholder URL - operations will fail gracefully
+            self.client = SupabaseClient(
+                supabaseURL: URL(string: "https://placeholder.supabase.co")!,
+                supabaseKey: "placeholder"
+            )
+            self.isConfigured = false
+            return
+        }
+
         guard let url = URL(string: Config.supabaseURL) else {
-            fatalError("❌ Invalid Supabase URL in Config.swift")
+            print("❌ Invalid Supabase URL in Config.swift: \(Config.supabaseURL)")
+            self.client = SupabaseClient(
+                supabaseURL: URL(string: "https://placeholder.supabase.co")!,
+                supabaseKey: "placeholder"
+            )
+            self.isConfigured = false
+            return
         }
 
         self.client = SupabaseClient(
             supabaseURL: url,
             supabaseKey: Config.supabaseAnonKey
         )
+        self.isConfigured = true
 
         print("✅ Supabase initialized: \(Config.supabaseURL)")
     }
@@ -958,6 +979,8 @@ struct ProfileResponse: Codable {
     let granularityLevel: Int
     let onboardingCompleted: Bool
     let location: String?
+    let city: String?
+    let country: String?
     let lastActive: String?
     let allowNonNativeMatches: Bool?
     let minProficiencyLevel: String?
@@ -981,7 +1004,7 @@ struct ProfileResponse: Codable {
     let blurPhotosUntilMatch: Bool?
 
     enum CodingKeys: String, CodingKey {
-        case id, email, bio, location, latitude, longitude
+        case id, email, bio, location, city, country, latitude, longitude
         case firstName = "first_name"
         case lastName = "last_name"
         case birthYear = "birth_year"
@@ -1099,17 +1122,17 @@ struct ProfileResponse: Codable {
         // Parse location preference
         let userLocationPreference = LocationPreference.allCases.first(where: { $0.rawValue == locationPreference }) ?? .anywhere
 
-        // Parse relationship intents
+        // Parse relationship intent (single selection, take first from array)
         let userRelationshipIntents = (relationshipIntents ?? []).compactMap { intentString in
             RelationshipIntent.allCases.first(where: { $0.rawValue == intentString })
         }
-        let finalIntents = userRelationshipIntents.isEmpty ? [.languagePracticeOnly] : userRelationshipIntents
+        let finalIntent = userRelationshipIntents.first ?? .languagePracticeOnly
 
-        // Parse learning contexts
+        // Parse learning contexts (empty array = open to all styles)
         let userLearningContexts = (learningContexts ?? []).compactMap { contextString in
             LearningContext.allCases.first(where: { $0.rawValue == contextString })
         }
-        let finalContexts = userLearningContexts.isEmpty ? [.fun] : userLearningContexts
+        let finalContexts = userLearningContexts
 
         // Convert travel destination
         let userTravelDestination = travelDestination?.toModel()
@@ -1128,7 +1151,7 @@ struct ProfileResponse: Codable {
             longitude: longitude,
             preferredCountries: preferredCountries,
             travelDestination: userTravelDestination,
-            relationshipIntents: finalIntents,
+            relationshipIntent: finalIntent,
             learningContexts: finalContexts,
             allowNonNativeMatches: allowNonNativeMatches ?? false,
             minProficiencyLevel: minProf,
@@ -1155,6 +1178,10 @@ struct ProfileUpdate: Codable {
     var lastName: String?
     var bio: String?
     var location: String?
+    var city: String?
+    var country: String?
+    var latitude: Double?
+    var longitude: Double?
     var learningLanguages: [String]?
     var granularityLevel: Int?
     var strictlyPlatonic: Bool?
@@ -1163,7 +1190,7 @@ struct ProfileUpdate: Codable {
     var maxProficiencyLevel: String?
 
     enum CodingKeys: String, CodingKey {
-        case bio, location
+        case bio, location, city, country, latitude, longitude
         case firstName = "first_name"
         case lastName = "last_name"
         case learningLanguages = "learning_languages"

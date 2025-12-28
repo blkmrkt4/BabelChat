@@ -22,12 +22,14 @@ class PricingViewController: UIViewController {
 
     private let titleLabel = UILabel()
     private let subtitleLabel = UILabel()
+    private let currencyLabel = UILabel()
 
     // Free tier card
     private let freeCard = UIView()
     private let freeTierLabel = UILabel()
     private let freePriceLabel = UILabel()
     private let freeFeatureStack = UIStackView()
+    private let freeButton = UIButton(type: .system)
 
     // Premium tier card
     private let premiumCard = UIView()
@@ -44,8 +46,6 @@ class PricingViewController: UIViewController {
     private let proPriceLabel = UILabel()
     private let proFeatureStack = UIStackView()
     private let proButton = UIButton(type: .system)
-
-    private let skipButton = UIButton(type: .system)
 
     // MARK: - Properties
     weak var delegate: PricingViewControllerDelegate?
@@ -99,21 +99,24 @@ class PricingViewController: UIViewController {
         subtitleLabel.numberOfLines = 0
         contentStack.addArrangedSubview(subtitleLabel)
 
+        // Currency/Region indicator
+        currencyLabel.text = subscriptionService.pricingRegionDescription
+        currencyLabel.font = .systemFont(ofSize: 12, weight: .medium)
+        currencyLabel.textColor = .systemBlue.withAlphaComponent(0.9)
+        currencyLabel.textAlignment = .center
+        currencyLabel.backgroundColor = .white.withAlphaComponent(0.1)
+        currencyLabel.layer.cornerRadius = 12
+        currencyLabel.layer.masksToBounds = true
+        contentStack.addArrangedSubview(currencyLabel)
+
+        // Add padding to currency label
+        currencyLabel.translatesAutoresizingMaskIntoConstraints = false
+        currencyLabel.heightAnchor.constraint(equalToConstant: 28).isActive = true
+
         // Setup pricing cards
         setupFreeCard()
         setupPremiumCard()
         setupProCard()
-
-        // Skip button
-        skipButton.setTitle("Continue with Free", for: .normal)
-        skipButton.titleLabel?.font = .systemFont(ofSize: 16, weight: .semibold)
-        skipButton.setTitleColor(.white, for: .normal)
-        skipButton.backgroundColor = .white.withAlphaComponent(0.15)
-        skipButton.layer.cornerRadius = 22
-        skipButton.layer.borderWidth = 1
-        skipButton.layer.borderColor = UIColor.white.withAlphaComponent(0.3).cgColor
-        skipButton.addTarget(self, action: #selector(skipTapped), for: .touchUpInside)
-        view.addSubview(skipButton)
     }
 
     private func setupFreeCard() {
@@ -152,13 +155,29 @@ class PricingViewController: UIViewController {
         freeFeatureStack.alignment = .leading
         cardStack.addArrangedSubview(freeFeatureStack)
 
+        // Continue with Free button
+        freeButton.setTitle("Continue with Free", for: .normal)
+        freeButton.titleLabel?.font = .systemFont(ofSize: 16, weight: .bold)
+        freeButton.setTitleColor(.white, for: .normal)
+        freeButton.backgroundColor = .white.withAlphaComponent(0.2)
+        freeButton.layer.cornerRadius = 22
+        freeButton.layer.borderWidth = 1
+        freeButton.layer.borderColor = UIColor.white.withAlphaComponent(0.3).cgColor
+        freeButton.addTarget(self, action: #selector(freeTapped), for: .touchUpInside)
+        freeButton.translatesAutoresizingMaskIntoConstraints = false
+        cardStack.addArrangedSubview(freeButton)
+
         // Layout
         cardStack.translatesAutoresizingMaskIntoConstraints = false
         NSLayoutConstraint.activate([
             cardStack.topAnchor.constraint(equalTo: freeCard.topAnchor, constant: 16),
             cardStack.leadingAnchor.constraint(equalTo: freeCard.leadingAnchor, constant: 16),
             cardStack.trailingAnchor.constraint(equalTo: freeCard.trailingAnchor, constant: -16),
-            cardStack.bottomAnchor.constraint(equalTo: freeCard.bottomAnchor, constant: -16)
+            cardStack.bottomAnchor.constraint(equalTo: freeCard.bottomAnchor, constant: -16),
+
+            freeButton.heightAnchor.constraint(equalToConstant: 44),
+            freeButton.leadingAnchor.constraint(equalTo: cardStack.leadingAnchor),
+            freeButton.trailingAnchor.constraint(equalTo: cardStack.trailingAnchor)
         ])
     }
 
@@ -318,24 +337,18 @@ class PricingViewController: UIViewController {
     private func setupConstraints() {
         scrollView.translatesAutoresizingMaskIntoConstraints = false
         contentStack.translatesAutoresizingMaskIntoConstraints = false
-        skipButton.translatesAutoresizingMaskIntoConstraints = false
 
         NSLayoutConstraint.activate([
             scrollView.topAnchor.constraint(equalTo: view.safeAreaLayoutGuide.topAnchor),
             scrollView.leadingAnchor.constraint(equalTo: view.leadingAnchor),
             scrollView.trailingAnchor.constraint(equalTo: view.trailingAnchor),
-            scrollView.bottomAnchor.constraint(equalTo: skipButton.topAnchor, constant: -8),
+            scrollView.bottomAnchor.constraint(equalTo: view.safeAreaLayoutGuide.bottomAnchor),
 
             contentStack.topAnchor.constraint(equalTo: scrollView.topAnchor, constant: 8),
             contentStack.leadingAnchor.constraint(equalTo: scrollView.leadingAnchor, constant: 20),
             contentStack.trailingAnchor.constraint(equalTo: scrollView.trailingAnchor, constant: -20),
-            contentStack.bottomAnchor.constraint(equalTo: scrollView.bottomAnchor, constant: -8),
-            contentStack.widthAnchor.constraint(equalTo: scrollView.widthAnchor, constant: -40),
-
-            skipButton.leadingAnchor.constraint(equalTo: view.leadingAnchor, constant: 20),
-            skipButton.trailingAnchor.constraint(equalTo: view.trailingAnchor, constant: -20),
-            skipButton.bottomAnchor.constraint(equalTo: view.safeAreaLayoutGuide.bottomAnchor, constant: -12),
-            skipButton.heightAnchor.constraint(equalToConstant: 50)
+            contentStack.bottomAnchor.constraint(equalTo: scrollView.bottomAnchor, constant: -20),
+            contentStack.widthAnchor.constraint(equalTo: scrollView.widthAnchor, constant: -40)
         ])
     }
 
@@ -389,6 +402,9 @@ class PricingViewController: UIViewController {
     }
 
     private func updatePricesFromOfferings(_ offerings: [SubscriptionOffering]) {
+        // Update currency/region label with actual currency from App Store
+        currencyLabel.text = subscriptionService.pricingRegionDescription
+
         // Update Premium price
         if let premiumOffering = offerings.first(where: { $0.tier == .premium }) {
             let priceText = subscriptionService.shouldShowWeeklyPricing
@@ -506,8 +522,8 @@ class PricingViewController: UIViewController {
         }
     }
 
-    @objc private func skipTapped() {
-        delegate?.didSkipPricing()
+    @objc private func freeTapped() {
+        delegate?.didSelectFreeTier()
     }
 
     private func showError(_ error: Error) {

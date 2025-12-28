@@ -392,19 +392,26 @@ class LandingViewController: UIViewController {
         // Authenticate first, then navigate
         Task {
             do {
-                #if DEBUG
-                // DEVELOPMENT ONLY: Auto-login with test credentials
-                // Credentials are in DebugConfig.swift
-                print("🔐 [DEBUG] Attempting to sign in with: \(DebugConfig.testEmail)")
+                // Auto-login disabled - use Sign in with Apple for proper testing
+                // To re-enable debug auto-login, set this to true:
+                let useDebugAutoLogin = false
 
-                // Just try to sign in - don't attempt sign up
-                try await SupabaseService.shared.signIn(email: DebugConfig.testEmail, password: DebugConfig.testPassword)
-                print("✅ [DEBUG] Signed in successfully!")
-                #else
-                // PRODUCTION: User must sign in manually
-                print("⚠️ Auto-login disabled in production build")
-                return
-                #endif
+                if useDebugAutoLogin {
+                    #if DEBUG
+                    // DEVELOPMENT ONLY: Auto-login with test credentials
+                    print("🔐 [DEBUG] Attempting to sign in with: \(DebugConfig.testEmail)")
+                    try await SupabaseService.shared.signIn(email: DebugConfig.testEmail, password: DebugConfig.testPassword)
+                    print("✅ [DEBUG] Signed in successfully!")
+                    #endif
+                } else {
+                    // Show Sign in with Apple - user must authenticate properly
+                    print("⚠️ Debug auto-login disabled - use Sign in with Apple")
+                    await MainActor.run {
+                        self.signInButton.isEnabled = true
+                        self.signInButton.alpha = 1.0
+                    }
+                    return
+                }
 
                 // Get the authenticated user's ID from Supabase
                 guard let userId = SupabaseService.shared.currentUserId else {

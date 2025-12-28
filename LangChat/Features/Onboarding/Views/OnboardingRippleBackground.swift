@@ -52,6 +52,9 @@ struct OnboardingRippleBackground: View {
     // MARK: - Ripple Generation
 
     private func startRippleGeneration(in size: CGSize) {
+        // Don't start if size is invalid
+        guard size.width > 0 && size.height > 0 else { return }
+
         // Create initial ripples
         createRipple(in: size)
 
@@ -74,8 +77,17 @@ struct OnboardingRippleBackground: View {
             ripples.removeFirst()
         }
 
-        // Random position (avoid edges for better visual)
+        // Guard against invalid size (can happen during view transitions)
         let margin: CGFloat = 50
+        let minWidth = margin * 2 + 10
+        let minHeight = margin * 2 + 10
+
+        guard size.width >= minWidth && size.height >= minHeight else {
+            // Size too small, skip creating ripple
+            return
+        }
+
+        // Random position (avoid edges for better visual)
         let x = CGFloat.random(in: margin...(size.width - margin))
         let y = CGFloat.random(in: margin...(size.height - margin))
 

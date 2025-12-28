@@ -76,7 +76,9 @@ class AIConfigService {
             fallbackModel2Id: response.fallbackModel2Id,
             fallbackModel2Name: response.fallbackModel2Name,
             fallbackModel3Id: response.fallbackModel3Id,
-            fallbackModel3Name: response.fallbackModel3Name
+            fallbackModel3Name: response.fallbackModel3Name,
+            fallbackModel4Id: response.fallbackModel4Id,
+            fallbackModel4Name: response.fallbackModel4Name
         )
 
         // Cache it
@@ -197,6 +199,8 @@ struct AIConfig {
     let fallbackModel2Name: String?
     let fallbackModel3Id: String?
     let fallbackModel3Name: String?
+    let fallbackModel4Id: String?
+    let fallbackModel4Name: String?
 
     init(
         category: AICategory,
@@ -214,7 +218,9 @@ struct AIConfig {
         fallbackModel2Id: String? = nil,
         fallbackModel2Name: String? = nil,
         fallbackModel3Id: String? = nil,
-        fallbackModel3Name: String? = nil
+        fallbackModel3Name: String? = nil,
+        fallbackModel4Id: String? = nil,
+        fallbackModel4Name: String? = nil
     ) {
         self.category = category
         self.modelId = modelId
@@ -232,6 +238,8 @@ struct AIConfig {
         self.fallbackModel2Name = fallbackModel2Name
         self.fallbackModel3Id = fallbackModel3Id
         self.fallbackModel3Name = fallbackModel3Name
+        self.fallbackModel4Id = fallbackModel4Id
+        self.fallbackModel4Name = fallbackModel4Name
     }
 }
 
@@ -257,6 +265,8 @@ struct AIConfigResponse: Codable {
     let fallbackModel2Name: String?
     let fallbackModel3Id: String?
     let fallbackModel3Name: String?
+    let fallbackModel4Id: String?
+    let fallbackModel4Name: String?
 
     enum CodingKeys: String, CodingKey {
         case id, category, temperature
@@ -275,5 +285,7 @@ struct AIConfigResponse: Codable {
         case fallbackModel2Name = "fallback_model_2_name"
         case fallbackModel3Id = "fallback_model_3_id"
         case fallbackModel3Name = "fallback_model_3_name"
+        case fallbackModel4Id = "fallback_model_4_id"
+        case fallbackModel4Name = "fallback_model_4_name"
     }
 }

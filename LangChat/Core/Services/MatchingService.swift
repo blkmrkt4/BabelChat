@@ -140,13 +140,10 @@ class MatchingService {
         return true
     }
 
-    /// Check if relationship intents have any overlap
+    /// Check if relationship intents match
     private func hasRelationshipIntentOverlap(_ user1: User, _ user2: User) -> Bool {
-        let intents1 = Set(user1.matchingPreferences.relationshipIntents)
-        let intents2 = Set(user2.matchingPreferences.relationshipIntents)
-
-        // Must have at least one intent in common
-        return !intents1.intersection(intents2).isEmpty
+        // Both users must have the same relationship intent
+        return user1.matchingPreferences.relationshipIntent == user2.matchingPreferences.relationshipIntent
     }
 
     /// Determine if two users are compatible for matching (language-based)
@@ -328,6 +325,10 @@ class MatchingService {
         let regionalScore = calculateRegionalScore(user1, user2, reasons: &reasons)
         score += regionalScore
 
+        // 9. Learning Style Compatibility (5 points)
+        let learningStyleScore = calculateLearningStyleScore(user1, user2, reasons: &reasons)
+        score += learningStyleScore
+
         return (min(score, 100), reasons)
     }
 
@@ -437,26 +438,23 @@ class MatchingService {
 
     /// 5. Relationship Intent Score (0-10 points)
     private func calculateIntentScore(_ user1: User, _ user2: User, reasons: inout [String]) -> Int {
-        let intents1 = Set(user1.matchingPreferences.relationshipIntents)
-        let intents2 = Set(user2.matchingPreferences.relationshipIntents)
-        let overlap = intents1.intersection(intents2)
+        let intent1 = user1.matchingPreferences.relationshipIntent
+        let intent2 = user2.matchingPreferences.relationshipIntent
 
-        guard !overlap.isEmpty else { return 0 }
+        // Must have matching intent
+        guard intent1 == intent2 else { return 0 }
 
-        if overlap.contains(.openToDating) {
+        switch intent1 {
+        case .openToDating:
             reasons.append("Both open to dating")
             return 10
-        }
-        if overlap.contains(.friendship) {
+        case .friendship:
             reasons.append("Both want friendship")
             return 8
-        }
-        if overlap.contains(.languagePracticeOnly) {
+        case .languagePracticeOnly:
             reasons.append("Focused on language practice")
             return 5
         }
-
-        return 0
     }
 
     /// 6. Gender Preference Score (0-5 points)
@@ -561,6 +559,60 @@ class MatchingService {
 
         return min(score, 5)
         */
+    }
+
+    /// 9. Learning Style Score (1-5 points)
+    /// Matches users who want to practice similar language styles
+    /// This is a SOFT preference - no one is excluded, but matching styles are prioritized
+    private func calculateLearningStyleScore(_ user1: User, _ user2: User, reasons: inout [String]) -> Int {
+        let contexts1 = Set(user1.matchingPreferences.learningContexts)
+        let contexts2 = Set(user2.matchingPreferences.learningContexts)
+
+        // If either user has no preferences (empty = open to all styles), give good neutral score
+        // These users are flexible and compatible with anyone
+        if contexts1.isEmpty && contexts2.isEmpty {
+            return 3 // Both open to all - neutral compatibility
+        }
+
+        if contexts1.isEmpty || contexts2.isEmpty {
+            // One user is open to all, the other has preferences
+            // Good compatibility - the flexible user can match anyone
+            return 3
+        }
+
+        // Both users have specific preferences - check for overlap
+        let overlap = contexts1.intersection(contexts2)
+
+        if overlap.isEmpty {
+            // No common learning styles, but DON'T exclude them
+            // They might still have a great language match
+            // Give a small base score so they're deprioritized but not excluded
+            return 1
+        }
+
+        // Calculate score based on overlap quality
+        // More shared styles = higher score
+        let overlapCount = overlap.count
+        let totalUnique = contexts1.union(contexts2).count
+
+        // Calculate overlap ratio (how much do they have in common vs total preferences)
+        let overlapRatio = Double(overlapCount) / Double(totalUnique)
+
+        // Build reason string with specific styles
+        let styleNames = overlap.map { $0.displayName }
+        if styleNames.count == 1 {
+            reasons.append("Both want \(styleNames[0]) practice")
+        } else if styleNames.count == 2 {
+            reasons.append("Both want \(styleNames[0]) & \(styleNames[1])")
+        } else {
+            reasons.append("\(styleNames.count) shared learning styles")
+        }
+
+        // Score: 2 base + up to 3 bonus based on overlap
+        // Perfect overlap (100%) = 5 points
+        // Partial overlap = 2-4 points
+        let bonusPoints = Int(ceil(overlapRatio * 3.0))
+        return min(2 + bonusPoints, 5)
     }
 
     // MARK: - Helper Methods

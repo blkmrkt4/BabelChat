@@ -4,6 +4,7 @@ class TutorialViewController: UIViewController {
 
     // MARK: - Pricing Config
     private var pricingConfig: PricingConfig = PricingConfig.defaultConfig
+    private let subscriptionService = SubscriptionService.shared
 
     // Pricing UI references for dynamic updates
     private var freePriceLabel: UILabel?
@@ -12,6 +13,7 @@ class TutorialViewController: UIViewController {
     private var freeFeaturesLabel: UILabel?
     private var premiumFeaturesLabel: UILabel?
     private var proFeaturesLabel: UILabel?
+    private var currencyLabel: UILabel?
 
     // MARK: - UI Components
     private let scrollView = UIScrollView()
@@ -195,8 +197,43 @@ class TutorialViewController: UIViewController {
             let config = await PricingConfigManager.shared.getConfig()
             await MainActor.run {
                 self.pricingConfig = config
+                self.subscriptionService.updatePricingConfig(config)
                 self.updatePricingCards(with: config)
             }
+        }
+
+        // Fetch real App Store prices from RevenueCat
+        subscriptionService.fetchOfferings { [weak self] result in
+            DispatchQueue.main.async {
+                switch result {
+                case .success(let offerings):
+                    self?.updatePricesFromOfferings(offerings)
+                case .failure:
+                    // Keep using config prices as fallback
+                    break
+                }
+            }
+        }
+    }
+
+    private func updatePricesFromOfferings(_ offerings: [SubscriptionOffering]) {
+        // Update currency label
+        currencyLabel?.text = subscriptionService.pricingRegionDescription
+
+        // Update Premium price
+        if let premiumOffering = offerings.first(where: { $0.tier == .premium }) {
+            let priceText = subscriptionService.shouldShowWeeklyPricing
+                ? premiumOffering.weeklyPriceString
+                : premiumOffering.localizedPricePerPeriod
+            premiumPriceLabel?.text = priceText
+        }
+
+        // Update Pro price
+        if let proOffering = offerings.first(where: { $0.tier == .pro }) {
+            let priceText = subscriptionService.shouldShowWeeklyPricing
+                ? proOffering.weeklyPriceString
+                : proOffering.localizedPricePerPeriod
+            proPriceLabel?.text = priceText
         }
     }
 
@@ -420,6 +457,32 @@ class TutorialViewController: UIViewController {
             pricingStack.spacing = 8
             pricingStack.translatesAutoresizingMaskIntoConstraints = false
             tipsContainer.addSubview(pricingStack)
+
+            // Currency/Region indicator at top
+            let currencyContainer = UIView()
+            currencyContainer.backgroundColor = goldColor.withAlphaComponent(0.15)
+            currencyContainer.layer.cornerRadius = 12
+            currencyContainer.layer.borderWidth = 1
+            currencyContainer.layer.borderColor = goldColor.withAlphaComponent(0.4).cgColor
+            currencyContainer.translatesAutoresizingMaskIntoConstraints = false
+
+            let currencyIndicator = UILabel()
+            currencyIndicator.text = subscriptionService.pricingRegionDescription
+            currencyIndicator.font = .systemFont(ofSize: 12, weight: .semibold)
+            currencyIndicator.textColor = goldColor
+            currencyIndicator.textAlignment = .center
+            currencyIndicator.translatesAutoresizingMaskIntoConstraints = false
+            currencyContainer.addSubview(currencyIndicator)
+
+            NSLayoutConstraint.activate([
+                currencyIndicator.topAnchor.constraint(equalTo: currencyContainer.topAnchor, constant: 6),
+                currencyIndicator.bottomAnchor.constraint(equalTo: currencyContainer.bottomAnchor, constant: -6),
+                currencyIndicator.leadingAnchor.constraint(equalTo: currencyContainer.leadingAnchor, constant: 12),
+                currencyIndicator.trailingAnchor.constraint(equalTo: currencyContainer.trailingAnchor, constant: -12)
+            ])
+
+            pricingStack.addArrangedSubview(currencyContainer)
+            self.currencyLabel = currencyIndicator
 
             // Add all 3 tiers
             let tiers: [SubscriptionTier] = [.free, .premium, .pro]

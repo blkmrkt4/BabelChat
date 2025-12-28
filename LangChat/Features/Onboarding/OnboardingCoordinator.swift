@@ -7,16 +7,15 @@ enum OnboardingStep: Int, CaseIterable {
     case nativeLanguage
     case learningLanguages
     case languageProficiency
-    case proficiencyRange  // NEW: Match proficiency preference
+    case proficiencyRange  // Match proficiency preference
     case museLanguages     // Additional languages for AI Muse (beyond matching languages)
     case learningGoals
     case bio
-    case gender
-    case genderPreference
     case ageRange
     case locationPreference
     case travelPlans
     case relationshipIntent
+    case datingPreferences  // Only shown if user selects "Open to dating"
     case privacyPreferences
     case profilePhoto
     case notifications
@@ -30,16 +29,15 @@ enum OnboardingStep: Int, CaseIterable {
         case .learningLanguages: return "Languages to Learn"
         case .languageProficiency: return "Language Skills"
         case .proficiencyRange: return "Match Preferences"
-        case .museLanguages: return "Explore Languages"
+        case .museLanguages: return "Muse Languages"
         case .learningGoals: return "Learning Goals"
         case .profilePhoto: return "Add Photos"
         case .bio: return "About You"
-        case .gender: return "Your Gender"
-        case .genderPreference: return "Match Preferences"
         case .ageRange: return "Age Preference"
         case .locationPreference: return "Location Range"
         case .travelPlans: return "Travel Plans"
         case .relationshipIntent: return "What You're Looking For"
+        case .datingPreferences: return "Dating Preferences"
         case .privacyPreferences: return "Privacy Settings"
         case .notifications: return "Stay Connected"
         }
@@ -65,7 +63,8 @@ class OnboardingCoordinator {
     }
 
     func showStep(_ step: OnboardingStep) {
-        print("OnboardingCoordinator: Showing step \(step)")
+        print("📍 OnboardingCoordinator: showStep(\(step)) called")
+        print("📍 OnboardingCoordinator: Navigation controller: \(navigationController != nil ? "exists" : "NIL!")")
         currentStep = step
 
         let viewController: UIViewController
@@ -130,16 +129,6 @@ class OnboardingCoordinator {
             vc.delegate = self
             viewController = vc
 
-        case .gender:
-            let vc = GenderSelectionViewController()
-            vc.delegate = self
-            viewController = vc
-
-        case .genderPreference:
-            let vc = GenderPreferenceViewController()
-            vc.delegate = self
-            viewController = vc
-
         case .ageRange:
             let vc = AgeRangeViewController()
             vc.delegate = self
@@ -160,6 +149,11 @@ class OnboardingCoordinator {
             vc.delegate = self
             viewController = vc
 
+        case .datingPreferences:
+            let vc = DatingPreferencesViewController()
+            vc.delegate = self
+            viewController = vc
+
         case .privacyPreferences:
             let vc = PrivacyPreferencesViewController()
             vc.delegate = self
@@ -171,22 +165,78 @@ class OnboardingCoordinator {
             viewController = vc
         }
 
+        print("📍 OnboardingCoordinator: About to push \(type(of: viewController))")
         navigationController?.pushViewController(viewController, animated: true)
+        print("📍 OnboardingCoordinator: Push completed for \(type(of: viewController))")
     }
 
     func nextStep() {
-        guard let nextStep = OnboardingStep(rawValue: currentStep.rawValue + 1) else {
+        print("📍 OnboardingCoordinator: nextStep() called from step \(currentStep)")
+        guard var nextStep = OnboardingStep(rawValue: currentStep.rawValue + 1) else {
+            print("📍 OnboardingCoordinator: No more steps, completing onboarding")
             completeOnboarding()
             return
         }
+
+        // Skip datingPreferences if user didn't select "Open to dating"
+        if nextStep == .datingPreferences {
+            let isOpenToDating = userData.relationshipIntent == .openToDating
+            if !isOpenToDating {
+                print("📍 OnboardingCoordinator: Skipping datingPreferences (not open to dating)")
+                // Skip to next step after datingPreferences
+                if let skipToStep = OnboardingStep(rawValue: nextStep.rawValue + 1) {
+                    nextStep = skipToStep
+                } else {
+                    completeOnboarding()
+                    return
+                }
+            }
+        }
+
+        // Skip privacyPreferences if user selected "Language Practice Only" (they already saw privacy options)
+        if nextStep == .privacyPreferences {
+            let hasLanguagePracticeOnly = userData.relationshipIntent == .languagePracticeOnly
+            if hasLanguagePracticeOnly {
+                print("📍 OnboardingCoordinator: Skipping privacyPreferences (already shown with language practice)")
+                if let skipToStep = OnboardingStep(rawValue: nextStep.rawValue + 1) {
+                    nextStep = skipToStep
+                } else {
+                    completeOnboarding()
+                    return
+                }
+            }
+        }
+
+        print("📍 OnboardingCoordinator: Moving to step \(nextStep)")
         showStep(nextStep)
     }
 
     func previousStep() {
         guard currentStep.rawValue > 0,
-              let previousStep = OnboardingStep(rawValue: currentStep.rawValue - 1) else {
+              var previousStep = OnboardingStep(rawValue: currentStep.rawValue - 1) else {
             return
         }
+
+        // Skip datingPreferences when going back if user didn't select "Open to dating"
+        if previousStep == .datingPreferences {
+            let isOpenToDating = userData.relationshipIntent == .openToDating
+            if !isOpenToDating {
+                if let skipToStep = OnboardingStep(rawValue: previousStep.rawValue - 1) {
+                    previousStep = skipToStep
+                }
+            }
+        }
+
+        // Skip privacyPreferences when going back if user selected "Language Practice Only"
+        if previousStep == .privacyPreferences {
+            let hasLanguagePracticeOnly = userData.relationshipIntent == .languagePracticeOnly
+            if hasLanguagePracticeOnly {
+                if let skipToStep = OnboardingStep(rawValue: previousStep.rawValue - 1) {
+                    previousStep = skipToStep
+                }
+            }
+        }
+
         navigationController?.popViewController(animated: true)
         currentStep = previousStep
     }
@@ -254,6 +304,14 @@ class OnboardingCoordinator {
         UserDefaults.standard.set(userData.email, forKey: "email")
         UserDefaults.standard.set(userData.birthYear, forKey: "birthYear")
         UserDefaults.standard.set(userData.hometown, forKey: "location")
+        UserDefaults.standard.set(userData.city, forKey: "city")
+        UserDefaults.standard.set(userData.country, forKey: "country")
+        if let lat = userData.latitude {
+            UserDefaults.standard.set(lat, forKey: "latitude")
+        }
+        if let lon = userData.longitude {
+            UserDefaults.standard.set(lon, forKey: "longitude")
+        }
         UserDefaults.standard.set(userData.bio, forKey: "bio")
 
         // Save language data
@@ -272,8 +330,16 @@ class OnboardingCoordinator {
         UserDefaults.standard.set(userData.maxAge, forKey: "maxAge")
         UserDefaults.standard.set(userData.locationPreference.rawValue, forKey: "locationPreference")
 
+        if let customDistanceKm = userData.customDistanceKm {
+            UserDefaults.standard.set(customDistanceKm, forKey: "customDistanceKm")
+        }
+
         if let preferredCountries = userData.preferredCountries {
             UserDefaults.standard.set(preferredCountries, forKey: "preferredCountries")
+        }
+
+        if let excludedCountries = userData.excludedCountries {
+            UserDefaults.standard.set(excludedCountries, forKey: "excludedCountries")
         }
 
         if let travelDestination = userData.travelDestination,
@@ -281,8 +347,7 @@ class OnboardingCoordinator {
             UserDefaults.standard.set(encoded, forKey: "travelDestination")
         }
 
-        let intentRawValues = userData.relationshipIntents.map { $0.rawValue }
-        UserDefaults.standard.set(intentRawValues, forKey: "relationshipIntents")
+        UserDefaults.standard.set(userData.relationshipIntent.rawValue, forKey: "relationshipIntent")
 
         // Save proficiency range preference
         userData.matchProficiencyRange.saveToDefaults(
@@ -303,7 +368,9 @@ class OnboardingCoordinator {
 // MARK: - Delegate Extensions
 extension OnboardingCoordinator: OnboardingStepDelegate {
     func didCompleteStep(withData data: Any?) {
-        print("OnboardingCoordinator: didCompleteStep called for \(currentStep) with data: \(String(describing: data))")
+        print("📍 OnboardingCoordinator: didCompleteStep START for \(currentStep)")
+        print("📍 OnboardingCoordinator: Data received: \(String(describing: data))")
+        print("📍 OnboardingCoordinator: Navigation controller exists: \(navigationController != nil)")
         // Store data based on current step
         switch currentStep {
         case .name:
@@ -316,7 +383,15 @@ extension OnboardingCoordinator: OnboardingStepDelegate {
                 userData.birthYear = year
             }
         case .hometown:
-            if let hometown = data as? String {
+            if let locationData = data as? [String: Any] {
+                userData.hometown = locationData["name"] as? String
+                userData.city = locationData["city"] as? String
+                userData.country = locationData["country"] as? String
+                userData.latitude = locationData["latitude"] as? Double
+                userData.longitude = locationData["longitude"] as? Double
+                print("📍 Location stored: \(userData.hometown ?? "nil"), coords: (\(userData.latitude ?? 0), \(userData.longitude ?? 0))")
+            } else if let hometown = data as? String {
+                // Legacy fallback for string-only location
                 userData.hometown = hometown
             }
         case .nativeLanguage:
@@ -340,8 +415,11 @@ extension OnboardingCoordinator: OnboardingStepDelegate {
                 userData.museLanguages = languages
             }
         case .learningGoals:
-            if let goals = data as? [String] {
-                userData.learningGoals = goals
+            if let contexts = data as? [LearningContext] {
+                userData.learningContexts = contexts
+            } else if let goals = data as? [String] {
+                // Legacy fallback - convert strings to LearningContext
+                userData.learningContexts = goals.compactMap { LearningContext(rawValue: $0) }
             }
         case .profilePhoto:
             if let photos = data as? [UIImage] {
@@ -351,21 +429,21 @@ extension OnboardingCoordinator: OnboardingStepDelegate {
             if let bio = data as? String {
                 userData.bio = bio
             }
-        case .gender:
-            if let gender = data as? Gender {
-                userData.gender = gender
-            }
-        case .genderPreference:
-            if let preference = data as? GenderPreference {
-                userData.genderPreference = preference
-            }
         case .ageRange:
             if let ageRange = data as? (Int, Int) {
                 userData.minAge = ageRange.0
                 userData.maxAge = ageRange.1
             }
         case .locationPreference:
-            if let locationPref = data as? (LocationPreference, [String]?) {
+            if let locationData = data as? [String: Any] {
+                if let preference = locationData["preference"] as? LocationPreference {
+                    userData.locationPreference = preference
+                }
+                userData.customDistanceKm = locationData["customDistanceKm"] as? Int
+                userData.preferredCountries = locationData["preferredCountries"] as? [String]
+                userData.excludedCountries = locationData["excludedCountries"] as? [String]
+            } else if let locationPref = data as? (LocationPreference, [String]?) {
+                // Legacy fallback
                 userData.locationPreference = locationPref.0
                 userData.preferredCountries = locationPref.1
             }
@@ -374,8 +452,26 @@ extension OnboardingCoordinator: OnboardingStepDelegate {
                 userData.travelDestination = travel
             }
         case .relationshipIntent:
-            if let intents = data as? [RelationshipIntent] {
-                userData.relationshipIntents = intents
+            if let intentData = data as? [String: Any] {
+                // New format with privacy options included
+                if let intent = intentData["intent"] as? RelationshipIntent {
+                    userData.relationshipIntent = intent
+                }
+                if let strictlyPlatonic = intentData["strictlyPlatonic"] as? Bool {
+                    userData.strictlyPlatonic = strictlyPlatonic
+                }
+                if let blurPhotos = intentData["blurPhotosUntilMatch"] as? Bool {
+                    userData.blurPhotosUntilMatch = blurPhotos
+                }
+            } else if let intent = data as? RelationshipIntent {
+                // Legacy format fallback
+                userData.relationshipIntent = intent
+            }
+        case .datingPreferences:
+            // Combined gender + preference from dating preferences screen
+            if let prefs = data as? (Gender, GenderPreference) {
+                userData.gender = prefs.0
+                userData.genderPreference = prefs.1
             }
         case .privacyPreferences:
             if let prefs = data as? (strictlyPlatonic: Bool, blurPhotosUntilMatch: Bool) {
@@ -387,7 +483,9 @@ extension OnboardingCoordinator: OnboardingStepDelegate {
             break
         }
 
+        print("📍 OnboardingCoordinator: About to call nextStep()")
         nextStep()
+        print("📍 OnboardingCoordinator: didCompleteStep END")
     }
 
     func didRequestPreviousStep() {
@@ -401,12 +499,16 @@ struct OnboardingUserData {
     var lastName: String?
     var email: String? // Populated from authentication (Apple Sign In or email login)
     var birthYear: Int?
-    var hometown: String?
+    var hometown: String?        // Full location name (e.g., "Toronto, ON, Canada")
+    var city: String?            // City name (e.g., "Toronto")
+    var country: String?         // Country name (e.g., "Canada")
+    var latitude: Double?        // GPS latitude for distance matching
+    var longitude: Double?       // GPS longitude for distance matching
     var nativeLanguage: Language?
     var learningLanguages: [Language] = []
     var languageProficiencies: [(Language, LanguageProficiency)] = []
     var museLanguages: [Language] = []  // Additional languages for AI Muse exploration
-    var learningGoals: [String] = []
+    var learningContexts: [LearningContext] = []  // Learning style preferences
     var profilePhotos: [UIImage] = []
     var bio: String?
 
@@ -416,9 +518,11 @@ struct OnboardingUserData {
     var minAge: Int = 18
     var maxAge: Int = 80
     var locationPreference: LocationPreference = .anywhere
-    var preferredCountries: [String]?
+    var customDistanceKm: Int?        // For localRegional option (10-200km)
+    var preferredCountries: [String]? // For specificCountries option
+    var excludedCountries: [String]?  // For excludeCountries option
     var travelDestination: TravelDestination?
-    var relationshipIntents: [RelationshipIntent] = [.languagePracticeOnly]
+    var relationshipIntent: RelationshipIntent = .languagePracticeOnly
     var matchProficiencyRange: ProficiencyRange = .all
 
     // Privacy preferences

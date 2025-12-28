@@ -25,6 +25,8 @@ export type AIConfig = {
   fallback_model_2_name?: string | null
   fallback_model_3_id?: string | null
   fallback_model_3_name?: string | null
+  fallback_model_4_id?: string | null
+  fallback_model_4_name?: string | null
   created_at: string
   updated_at: string
 }
@@ -83,6 +85,8 @@ export async function createAIConfig(
     fallback_model_2_name?: string
     fallback_model_3_id?: string
     fallback_model_3_name?: string
+    fallback_model_4_id?: string
+    fallback_model_4_name?: string
   }
 ): Promise<AIConfig> {
   const { data, error } = await supabase
@@ -104,6 +108,8 @@ export async function createAIConfig(
       fallback_model_2_name: config.fallback_model_2_name,
       fallback_model_3_id: config.fallback_model_3_id,
       fallback_model_3_name: config.fallback_model_3_name,
+      fallback_model_4_id: config.fallback_model_4_id,
+      fallback_model_4_name: config.fallback_model_4_name,
       is_active: true,
     }])
     .select()
