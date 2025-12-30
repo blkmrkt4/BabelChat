@@ -20,6 +20,7 @@ export default function RootLayout({
     { href: '/evaluation', label: 'Model/Prompt Testing' },
     { href: '/round-robin', label: 'Round Robin Results' },
     { href: '/monitoring', label: 'Monitoring' },
+    { href: '/users', label: 'Users' },
     { href: '/moderation', label: 'Moderation' },
     { href: '/pricing', label: 'Pricing' },
     { href: '/voices', label: 'TTS Voices' },
