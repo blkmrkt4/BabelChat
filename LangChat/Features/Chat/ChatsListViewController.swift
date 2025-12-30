@@ -362,8 +362,8 @@ class ChatsListViewController: UIViewController {
                 continue
             }
 
-            // Get last message
-            let lastMessage = messages.last!
+            // Get last message (safe - we already checked !messages.isEmpty above)
+            guard let lastMessage = messages.last else { continue }
 
             // Try to load saved user data for this conversation
             if let savedUser = loadSavedUser(userId: userId) {
@@ -427,7 +427,9 @@ extension ChatsListViewController: UITableViewDataSource {
     }
 
     func tableView(_ tableView: UITableView, cellForRowAt indexPath: IndexPath) -> UITableViewCell {
-        let cell = tableView.dequeueReusableCell(withIdentifier: "ChatCell", for: indexPath) as! ChatTableViewCell
+        guard let cell = tableView.dequeueReusableCell(withIdentifier: "ChatCell", for: indexPath) as? ChatTableViewCell else {
+            return UITableViewCell()
+        }
         cell.configure(with: chats[indexPath.row])
         return cell
     }

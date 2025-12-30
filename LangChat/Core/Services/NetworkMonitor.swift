@@ -75,7 +75,7 @@ final class NetworkMonitor {
         }
 
         // NWPathMonitor says we're connected - try a lightweight request to verify Supabase
-        guard let url = URL(string: "\(SupabaseConfig.supabaseURL)/rest/v1/") else {
+        guard let url = URL(string: "\(Config.supabaseURL)/rest/v1/") else {
             // If URL is invalid, but we have network, proceed anyway
             print("⚠️ Invalid Supabase URL, but network is available - proceeding")
             return true
@@ -84,7 +84,7 @@ final class NetworkMonitor {
         var request = URLRequest(url: url)
         request.httpMethod = "HEAD"
         request.timeoutInterval = 10.0 // Increased timeout
-        request.setValue(SupabaseConfig.supabaseAnonKey, forHTTPHeaderField: "apikey")
+        request.setValue(Config.supabaseAnonKey, forHTTPHeaderField: "apikey")
 
         do {
             let (_, response) = try await URLSession.shared.data(for: request)

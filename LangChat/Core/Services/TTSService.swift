@@ -366,7 +366,11 @@ class TTSService: NSObject {
         gender: String,
         completion: @escaping (Bool) -> Void
     ) async {
-        let url = URL(string: "https://texttospeech.googleapis.com/v1/text:synthesize?key=\(apiKey)")!
+        guard let url = URL(string: "https://texttospeech.googleapis.com/v1/text:synthesize?key=\(apiKey)") else {
+            print("❌ Failed to create Google TTS URL")
+            completion(false)
+            return
+        }
 
         let requestBody: [String: Any] = [
             "input": ["text": text],

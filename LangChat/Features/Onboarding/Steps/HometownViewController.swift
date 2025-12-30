@@ -400,7 +400,9 @@ extension HometownViewController: UITableViewDelegate, UITableViewDataSource {
     }
 
     func tableView(_ tableView: UITableView, cellForRowAt indexPath: IndexPath) -> UITableViewCell {
-        let cell = tableView.dequeueReusableCell(withIdentifier: "SuggestionCell", for: indexPath) as! LocationSuggestionCell
+        guard let cell = tableView.dequeueReusableCell(withIdentifier: "SuggestionCell", for: indexPath) as? LocationSuggestionCell else {
+            return UITableViewCell()
+        }
         let result = searchResults[indexPath.row]
         cell.configure(with: result)
         return cell

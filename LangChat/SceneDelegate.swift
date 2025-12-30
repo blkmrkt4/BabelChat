@@ -111,7 +111,11 @@ class SceneDelegate: UIResponder, UIWindowSceneDelegate {
 
                     if result.success, let inviterName = result.inviterName {
                         // Show success and navigate to chat
-                        self.showMatchSuccessAlert(inviterName: inviterName, matchId: result.matchId)
+                        self.showMatchSuccessAlert(
+                            inviterName: inviterName,
+                            matchId: result.matchId,
+                            inviterId: result.inviterId
+                        )
                     } else {
                         self.showInviteErrorAlert(error: result.error ?? "Unknown error")
                     }
@@ -124,7 +128,7 @@ class SceneDelegate: UIResponder, UIWindowSceneDelegate {
         }
     }
 
-    private func showMatchSuccessAlert(inviterName: String, matchId: String?) {
+    private func showMatchSuccessAlert(inviterName: String, matchId: String?, inviterId: String?) {
         guard let rootVC = window?.rootViewController else { return }
 
         let alert = UIAlertController(
@@ -133,15 +137,82 @@ class SceneDelegate: UIResponder, UIWindowSceneDelegate {
             preferredStyle: .alert
         )
 
-        alert.addAction(UIAlertAction(title: "OK", style: .default) { _ in
-            // TODO: Navigate to the chat with this match
-            // For now, just refresh the matches tab
+        alert.addAction(UIAlertAction(title: "Start Chatting", style: .default) { [weak self] _ in
+            self?.navigateToChat(matchId: matchId, inviterId: inviterId, inviterName: inviterName)
+        })
+
+        alert.addAction(UIAlertAction(title: "Later", style: .cancel) { _ in
+            // Just switch to Matches tab
             if let tabBar = rootVC as? MainTabBarController {
                 tabBar.selectedIndex = 1 // Switch to Matches tab
             }
         })
 
         rootVC.present(alert, animated: true)
+    }
+
+    private func navigateToChat(matchId: String?, inviterId: String?, inviterName: String) {
+        guard let rootVC = window?.rootViewController,
+              let tabBar = rootVC as? MainTabBarController,
+              let matchId = matchId,
+              let inviterId = inviterId else {
+            // Fallback: just switch to matches tab
+            if let tabBar = (window?.rootViewController as? MainTabBarController) {
+                tabBar.selectedIndex = 1
+            }
+            return
+        }
+
+        // Load the inviter's profile and navigate to chat
+        Task {
+            do {
+                let profile = try await SupabaseService.shared.getProfile(userId: inviterId)
+
+                await MainActor.run {
+                    // Create User from profile
+                    let user = User(
+                        id: profile.id,
+                        username: profile.email,
+                        firstName: profile.firstName,
+                        lastName: profile.lastName,
+                        bio: profile.bio,
+                        photoURLs: profile.profilePhotos ?? [],
+                        nativeLanguage: UserLanguage(
+                            language: Language(rawValue: profile.nativeLanguage) ?? .english,
+                            proficiency: .native,
+                            isNative: true
+                        ),
+                        learningLanguages: [],
+                        openToLanguages: [],
+                        location: profile.location ?? profile.city,
+                        birthYear: profile.birthYear,
+                        gender: profile.gender
+                    )
+
+                    // Create Match
+                    let match = Match(
+                        id: matchId,
+                        user: user,
+                        matchedAt: Date(),
+                        hasNewMessage: false,
+                        lastMessage: nil,
+                        lastMessageTime: nil
+                    )
+
+                    // Navigate to chat
+                    tabBar.selectedIndex = 2 // Switch to Chats tab
+                    if let navController = tabBar.selectedViewController as? UINavigationController {
+                        let chatVC = ChatViewController(user: user, match: match)
+                        navController.pushViewController(chatVC, animated: true)
+                    }
+                }
+            } catch {
+                print("❌ Failed to load inviter profile: \(error)")
+                await MainActor.run {
+                    tabBar.selectedIndex = 1 // Fallback to Matches tab
+                }
+            }
+        }
     }
 
     private func showInviteErrorAlert(error: String) {
@@ -177,7 +248,7 @@ class SceneDelegate: UIResponder, UIWindowSceneDelegate {
 
                         // Show success alert after a short delay to let the UI settle
                         DispatchQueue.main.asyncAfter(deadline: .now() + 0.5) {
-                            self.showMatchSuccessAlert(inviterName: inviterName, matchId: result.matchId)
+                            self.showMatchSuccessAlert(inviterName: inviterName, matchId: result.matchId, inviterId: result.inviterId)
                         }
                     } else if let error = result.error {
                         print("⚠️ Invite processing failed: \(error)")

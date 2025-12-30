@@ -34,8 +34,8 @@ BEGIN
     headers := jsonb_build_object(
       'Authorization', 'Bearer ' || p_api_key,
       'Content-Type', 'application/json',
-      'HTTP-Referer', 'https://langchat.app',
-      'X-Title', 'LangChat Health Check'
+      'HTTP-Referer', 'https://ByZyB.ai',
+      'X-Title', 'Fluenca Health Check'
     ),
     body := jsonb_build_object(
       'model', p_model_id,

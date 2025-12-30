@@ -706,7 +706,9 @@ extension SettingsViewController: UITableViewDataSource {
         if settingSection == .privacy {
             switch indexPath.row {
             case 1: // Notifications
-                let cell = tableView.dequeueReusableCell(withIdentifier: "SwitchCell", for: indexPath) as! SwitchTableViewCell
+                guard let cell = tableView.dequeueReusableCell(withIdentifier: "SwitchCell", for: indexPath) as? SwitchTableViewCell else {
+                    return UITableViewCell()
+                }
                 let isEnabled = UserDefaults.standard.object(forKey: "notificationsEnabled") as? Bool ?? true
                 cell.configure(title: item.title, icon: item.icon, isOn: isEnabled)
                 cell.switchValueChanged = { isOn in

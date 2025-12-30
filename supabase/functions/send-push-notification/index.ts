@@ -10,7 +10,7 @@ const APNS_ENDPOINT_PRODUCTION = "https://api.push.apple.com"
 // APNs configuration from environment variables
 const APNS_KEY_ID = Deno.env.get('APNS_KEY_ID')
 const APNS_TEAM_ID = Deno.env.get('APNS_TEAM_ID')
-const APNS_BUNDLE_ID = Deno.env.get('APNS_BUNDLE_ID') || 'com.langchat.app'
+const APNS_BUNDLE_ID = Deno.env.get('APNS_BUNDLE_ID') || 'com.painkillerlabs.fluenca'
 const APNS_PRIVATE_KEY = Deno.env.get('APNS_PRIVATE_KEY')
 
 interface NotificationPayload {

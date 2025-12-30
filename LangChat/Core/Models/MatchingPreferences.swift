@@ -50,6 +50,33 @@ enum GenderPreference: String, CaseIterable, Codable {
     }
 }
 
+/// Preferred gender for AI Muse assistants
+enum MuseGenderPreference: String, CaseIterable, Codable {
+    case male = "male"
+    case female = "female"
+
+    var displayName: String {
+        switch self {
+        case .male: return "Male Muse"
+        case .female: return "Female Muse"
+        }
+    }
+
+    var subtitle: String {
+        switch self {
+        case .male: return "Your Muse will have a male name and voice"
+        case .female: return "Your Muse will have a female name and voice"
+        }
+    }
+
+    var icon: String {
+        switch self {
+        case .male: return "person.fill"
+        case .female: return "person.fill"
+        }
+    }
+}
+
 // MARK: - Location Enums
 
 enum LocationPreference: String, CaseIterable, Codable {
@@ -200,6 +227,9 @@ struct MatchingPreferences: Codable {
     /// Preferred genders to match with
     let genderPreference: GenderPreference
 
+    /// Preferred gender for AI Muse assistants (male or female)
+    let preferredMuseGender: MuseGenderPreference
+
     /// Minimum age preference
     let minAge: Int
 
@@ -258,6 +288,7 @@ struct MatchingPreferences: Codable {
     init(
         gender: Gender = .preferNotToSay,
         genderPreference: GenderPreference = .all,
+        preferredMuseGender: MuseGenderPreference = .female,
         minAge: Int = 18,
         maxAge: Int = 80,
         locationPreference: LocationPreference = .anywhere,
@@ -275,6 +306,7 @@ struct MatchingPreferences: Codable {
     ) {
         self.gender = gender
         self.genderPreference = genderPreference
+        self.preferredMuseGender = preferredMuseGender
         self.minAge = minAge
         self.maxAge = maxAge
         self.locationPreference = locationPreference

@@ -12,6 +12,97 @@ interface Voice {
   pitch: number
   enabled: boolean
   updated_at?: string
+  // Gendered voice options
+  male_voice_name?: string
+  female_voice_name?: string
+  // Muse configuration
+  male_muse_name?: string
+  female_muse_name?: string
+  is_muse_language?: boolean
+}
+
+// Popular names by country/language for Muse selection
+const POPULAR_NAMES: Record<string, { male: string[]; female: string[] }> = {
+  'en': {
+    male: ['James', 'William', 'Oliver', 'Benjamin', 'Henry', 'Alexander', 'Michael', 'Daniel'],
+    female: ['Emma', 'Olivia', 'Charlotte', 'Sophia', 'Isabella', 'Amelia', 'Emily', 'Grace']
+  },
+  'es': {
+    male: ['Carlos', 'Miguel', 'Diego', 'Alejandro', 'Pablo', 'Javier', 'Antonio', 'Luis'],
+    female: ['Maria', 'Sofia', 'Valentina', 'Isabella', 'Camila', 'Lucia', 'Elena', 'Carmen']
+  },
+  'fr': {
+    male: ['Pierre', 'Jean', 'Louis', 'Gabriel', 'Hugo', 'Lucas', 'Antoine', 'Mathieu'],
+    female: ['Sophie', 'Marie', 'Camille', 'Chloe', 'Emma', 'Lea', 'Manon', 'Juliette']
+  },
+  'de': {
+    male: ['Max', 'Felix', 'Paul', 'Leon', 'Lukas', 'Jonas', 'Finn', 'Noah'],
+    female: ['Anna', 'Emma', 'Mia', 'Sophie', 'Marie', 'Lena', 'Hannah', 'Laura']
+  },
+  'it': {
+    male: ['Marco', 'Alessandro', 'Francesco', 'Lorenzo', 'Leonardo', 'Matteo', 'Andrea', 'Luca'],
+    female: ['Giulia', 'Sofia', 'Aurora', 'Chiara', 'Francesca', 'Valentina', 'Alessia', 'Martina']
+  },
+  'pt': {
+    male: ['Lucas', 'Gabriel', 'Miguel', 'Davi', 'Pedro', 'Rafael', 'Bernardo', 'Arthur'],
+    female: ['Racquel', 'Maria', 'Julia', 'Sofia', 'Isabella', 'Valentina', 'Laura', 'Helena']
+  },
+  'ja': {
+    male: ['Kenji', 'Hiroshi', 'Takeshi', 'Yuki', 'Haruto', 'Sota', 'Ren', 'Kaito'],
+    female: ['Yuki', 'Sakura', 'Hana', 'Aoi', 'Himari', 'Mei', 'Rin', 'Yuna']
+  },
+  'ko': {
+    male: ['Minho', 'Joon', 'Jihoon', 'Seojun', 'Dohyun', 'Hajun', 'Juwon', 'Siwoo'],
+    female: ['Jiwoo', 'Somi', 'Yuna', 'Minji', 'Soyeon', 'Hayeon', 'Jiyeon', 'Eunji']
+  },
+  'zh': {
+    male: ['Wei', 'Ming', 'Chen', 'Jian', 'Hao', 'Yu', 'Lei', 'Feng'],
+    female: ['Lin', 'Mei', 'Xiao', 'Yan', 'Li', 'Ying', 'Hui', 'Fang']
+  },
+  'ru': {
+    male: ['Dmitri', 'Alexei', 'Ivan', 'Mikhail', 'Nikolai', 'Sergei', 'Andrei', 'Pavel'],
+    female: ['Natasha', 'Anastasia', 'Olga', 'Svetlana', 'Ekaterina', 'Maria', 'Irina', 'Elena']
+  },
+  'ar': {
+    male: ['Omar', 'Ahmed', 'Mohammed', 'Ali', 'Hassan', 'Yusuf', 'Ibrahim', 'Khalid'],
+    female: ['Layla', 'Fatima', 'Aisha', 'Maryam', 'Noor', 'Sara', 'Rania', 'Amira']
+  },
+  'hi': {
+    male: ['Arjun', 'Rahul', 'Amit', 'Vikram', 'Rohan', 'Aditya', 'Sanjay', 'Raj'],
+    female: ['Poonam', 'Priya', 'Anjali', 'Sunita', 'Neha', 'Divya', 'Pooja', 'Meera']
+  },
+  'nl': {
+    male: ['Lars', 'Daan', 'Sem', 'Luuk', 'Finn', 'Jesse', 'Noah', 'Bram'],
+    female: ['Emma', 'Julia', 'Sophie', 'Lotte', 'Anna', 'Eva', 'Sara', 'Fleur']
+  },
+  'sv': {
+    male: ['Erik', 'Oscar', 'William', 'Lucas', 'Hugo', 'Oliver', 'Liam', 'Alexander'],
+    female: ['Astrid', 'Elsa', 'Alice', 'Maja', 'Ella', 'Wilma', 'Ebba', 'Saga']
+  },
+  'da': {
+    male: ['Magnus', 'William', 'Noah', 'Oscar', 'Lucas', 'Victor', 'Emil', 'Frederik'],
+    female: ['Freja', 'Ida', 'Emma', 'Sofia', 'Alma', 'Ella', 'Clara', 'Anna']
+  },
+  'fi': {
+    male: ['Mikko', 'Juhani', 'Antti', 'Matti', 'Eero', 'Ville', 'Tuomas', 'Aleksi'],
+    female: ['Aino', 'Elina', 'Emma', 'Sofia', 'Helmi', 'Aada', 'Lilja', 'Saara']
+  },
+  'no': {
+    male: ['Lars', 'Magnus', 'Erik', 'Olav', 'Henrik', 'Jonas', 'Emil', 'Oscar'],
+    female: ['Ingrid', 'Emma', 'Nora', 'Sofie', 'Olivia', 'Ella', 'Maja', 'Ida']
+  },
+  'pl': {
+    male: ['Jakub', 'Antoni', 'Jan', 'Szymon', 'Franciszek', 'Filip', 'Aleksander', 'Mikołaj'],
+    female: ['Kasia', 'Zofia', 'Hanna', 'Maja', 'Lena', 'Alicja', 'Maria', 'Amelia']
+  },
+  'id': {
+    male: ['Budi', 'Agus', 'Dimas', 'Rizky', 'Arif', 'Hendra', 'Yusuf', 'Andi'],
+    female: ['Dewi', 'Siti', 'Putri', 'Indah', 'Rina', 'Maya', 'Sari', 'Fitri']
+  },
+  'tl': {
+    male: ['Miguel', 'Jose', 'Juan', 'Carlos', 'Antonio', 'Rafael', 'Gabriel', 'Marco'],
+    female: ['Evangeline', 'Maria', 'Sofia', 'Isabella', 'Angela', 'Patricia', 'Grace', 'Faith']
+  }
 }
 
 // Common Google TTS voice options grouped by language
@@ -64,13 +155,12 @@ const GOOGLE_VOICES: Record<string, { code: string; voices: { name: string; gend
     // Chirp voices
     { name: 'es-ES-Chirp-HD-F', gender: 'FEMALE', type: 'Chirp HD' },
     { name: 'es-ES-Chirp-HD-D', gender: 'MALE', type: 'Chirp HD' },
-    // Neural2 voices
+    // Neural2 voices (A, E, F, G, H exist)
     { name: 'es-ES-Neural2-A', gender: 'FEMALE', type: 'Neural2' },
-    { name: 'es-ES-Neural2-B', gender: 'MALE', type: 'Neural2' },
-    { name: 'es-ES-Neural2-C', gender: 'FEMALE', type: 'Neural2' },
-    { name: 'es-ES-Neural2-D', gender: 'FEMALE', type: 'Neural2' },
     { name: 'es-ES-Neural2-E', gender: 'FEMALE', type: 'Neural2' },
     { name: 'es-ES-Neural2-F', gender: 'MALE', type: 'Neural2' },
+    { name: 'es-ES-Neural2-G', gender: 'FEMALE', type: 'Neural2' },
+    { name: 'es-ES-Neural2-H', gender: 'FEMALE', type: 'Neural2' },
   ]},
   'Spanish (US)': { code: 'es-US', voices: [
     // Chirp voices
@@ -137,14 +227,12 @@ const GOOGLE_VOICES: Record<string, { code: string; voices: { name: string; gend
     { name: 'pt-BR-Neural2-C', gender: 'FEMALE', type: 'Neural2' },
   ]},
   'Portuguese (Portugal)': { code: 'pt-PT', voices: [
-    // Chirp voices
-    { name: 'pt-PT-Chirp-HD-F', gender: 'FEMALE', type: 'Chirp HD' },
-    { name: 'pt-PT-Chirp-HD-D', gender: 'MALE', type: 'Chirp HD' },
-    // Neural2 voices
-    { name: 'pt-PT-Neural2-A', gender: 'FEMALE', type: 'Neural2' },
-    { name: 'pt-PT-Neural2-B', gender: 'MALE', type: 'Neural2' },
-    { name: 'pt-PT-Neural2-C', gender: 'MALE', type: 'Neural2' },
-    { name: 'pt-PT-Neural2-D', gender: 'FEMALE', type: 'Neural2' },
+    // Wavenet voices (best quality available for pt-PT)
+    { name: 'pt-PT-Wavenet-F', gender: 'FEMALE', type: 'Wavenet' },
+    { name: 'pt-PT-Wavenet-E', gender: 'MALE', type: 'Wavenet' },
+    // Standard voices
+    { name: 'pt-PT-Standard-F', gender: 'FEMALE', type: 'Standard' },
+    { name: 'pt-PT-Standard-E', gender: 'MALE', type: 'Standard' },
   ]},
   'Japanese': { code: 'ja-JP', voices: [
     // Chirp voices
@@ -385,6 +473,14 @@ const DEFAULT_PHRASES: Record<string, string> = {
   'ru-RU': 'Privet! Kak dela?',
   'ar-XA': 'Marhaba! Kaif halak?',
   'hi-IN': 'Namaste! Aap kaise hain?',
+  'nl-NL': 'Hallo! Hoe gaat het met je vandaag?',
+  'pl-PL': 'Czesc! Jak sie dzisiaj masz?',
+  'id-ID': 'Halo! Apa kabar hari ini?',
+  'fil-PH': 'Kamusta! Kumusta ka ngayon?',
+  'sv-SE': 'Hej! Hur mar du idag?',
+  'da-DK': 'Hej! Hvordan har du det i dag?',
+  'fi-FI': 'Hei! Mita kuuluu tanaan?',
+  'nb-NO': 'Hei! Hvordan har du det i dag?',
 }
 
 export default function VoicesPage() {
@@ -590,11 +686,23 @@ export default function VoicesPage() {
     await saveVoice({ ...voice, enabled: !voice.enabled })
   }
 
-  const filteredVoices = voices.filter(v =>
-    v.language_name.toLowerCase().includes(filter.toLowerCase()) ||
-    v.language_code.toLowerCase().includes(filter.toLowerCase()) ||
-    v.google_voice_name.toLowerCase().includes(filter.toLowerCase())
-  )
+  // Filter and sort voices: Muse languages first, then others alphabetically
+  const filteredVoices = voices
+    .filter(v =>
+      v.language_name.toLowerCase().includes(filter.toLowerCase()) ||
+      v.language_code.toLowerCase().includes(filter.toLowerCase()) ||
+      v.google_voice_name.toLowerCase().includes(filter.toLowerCase())
+    )
+    .sort((a, b) => {
+      // Muse languages come first
+      if (a.is_muse_language && !b.is_muse_language) return -1
+      if (!a.is_muse_language && b.is_muse_language) return 1
+      // Then sort alphabetically
+      return a.language_name.localeCompare(b.language_name)
+    })
+
+  const museVoices = filteredVoices.filter(v => v.is_muse_language)
+  const otherVoices = filteredVoices.filter(v => !v.is_muse_language)
 
   const previewVoices = GOOGLE_VOICES[previewLang]?.voices || []
 
@@ -752,96 +860,228 @@ export default function VoicesPage() {
         />
       )}
 
-      {/* Voice List */}
-      <div className="grid gap-4">
-        {filteredVoices.map((voice) => (
-          <div key={voice.language_code} className={`border rounded-lg p-4 ${voice.enabled ? 'bg-white' : 'bg-gray-100'}`}>
-            {editingVoice?.language_code === voice.language_code ? (
-              <VoiceForm
-                voice={editingVoice}
-                onSave={saveVoice}
-                onCancel={() => setEditingVoice(null)}
-                saving={saving === voice.language_code}
-                existingCodes={voices.map(v => v.language_code)}
-                onPreview={playPreview}
-              />
-            ) : (
-              <div className="flex justify-between items-start">
-                <div className="flex-1">
-                  <div className="flex items-center gap-3">
-                    <h3 className="text-lg font-semibold">{voice.language_name}</h3>
-                    <span className="text-sm bg-gray-200 px-2 py-0.5 rounded">{voice.language_code}</span>
-                    <span className={`text-sm px-2 py-0.5 rounded ${
-                      voice.voice_gender === 'MALE' ? 'bg-blue-100 text-blue-700' :
-                      voice.voice_gender === 'FEMALE' ? 'bg-pink-100 text-pink-700' :
-                      'bg-gray-100 text-gray-700'
-                    }`}>
-                      {voice.voice_gender === 'MALE' ? '♂ Male' : voice.voice_gender === 'FEMALE' ? '♀ Female' : '⚪ Neutral'}
-                    </span>
-                    {!voice.enabled && (
-                      <span className="text-sm bg-red-100 text-red-700 px-2 py-0.5 rounded">Disabled</span>
-                    )}
+      {/* Muse Languages Section */}
+      {museVoices.length > 0 && (
+        <div className="space-y-4">
+          <h3 className="text-xl font-bold flex items-center gap-2">
+            <span className="text-2xl">🎭</span> Muse Languages
+            <span className="text-sm font-normal text-gray-500">({museVoices.length})</span>
+          </h3>
+          <div className="grid gap-4">
+            {museVoices.map((voice) => (
+              <div key={voice.language_code} className={`border-2 border-purple-200 rounded-lg p-4 ${voice.enabled ? 'bg-purple-50' : 'bg-gray-100'}`}>
+                {editingVoice?.language_code === voice.language_code ? (
+                  <VoiceForm
+                    voice={editingVoice}
+                    onSave={saveVoice}
+                    onCancel={() => setEditingVoice(null)}
+                    saving={saving === voice.language_code}
+                    existingCodes={voices.map(v => v.language_code)}
+                    onPreview={playPreview}
+                  />
+                ) : (
+                  <div>
+                    <div className="flex justify-between items-start mb-4">
+                      <div className="flex items-center gap-3">
+                        <h3 className="text-lg font-semibold">{voice.language_name}</h3>
+                        <span className="text-sm bg-purple-200 text-purple-800 px-2 py-0.5 rounded">🎭 Muse</span>
+                        <span className="text-sm bg-gray-200 px-2 py-0.5 rounded">{voice.language_code}</span>
+                        {!voice.enabled && (
+                          <span className="text-sm bg-red-100 text-red-700 px-2 py-0.5 rounded">Disabled</span>
+                        )}
+                      </div>
+                      <div className="flex gap-2">
+                        <button
+                          onClick={() => toggleEnabled(voice)}
+                          disabled={saving === voice.language_code}
+                          className={`px-3 py-1 rounded text-sm ${
+                            voice.enabled
+                              ? 'bg-yellow-100 text-yellow-700 hover:bg-yellow-200'
+                              : 'bg-green-100 text-green-700 hover:bg-green-200'
+                          }`}
+                        >
+                          {voice.enabled ? 'Disable' : 'Enable'}
+                        </button>
+                        <button
+                          onClick={() => setEditingVoice(voice)}
+                          disabled={saving === voice.language_code}
+                          className="bg-blue-100 text-blue-700 px-3 py-1 rounded text-sm hover:bg-blue-200"
+                        >
+                          Edit
+                        </button>
+                      </div>
+                    </div>
+
+                    {/* Male/Female Muse Configuration */}
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                      {/* Male Muse */}
+                      <div className="bg-blue-50 border border-blue-200 rounded-lg p-3">
+                        <div className="flex items-center gap-2 mb-2">
+                          <span className="text-blue-600 font-semibold">♂ Male Muse</span>
+                        </div>
+                        <div className="grid grid-cols-2 gap-2 text-sm">
+                          <div>
+                            <span className="text-gray-500">Name:</span>
+                            <div className="font-semibold">{voice.male_muse_name || 'Not set'}</div>
+                          </div>
+                          <div>
+                            <span className="text-gray-500">Voice:</span>
+                            <div className="font-mono text-xs">{voice.male_voice_name || voice.google_voice_name}</div>
+                          </div>
+                        </div>
+                        <button
+                          onClick={() => playPreview(
+                            DEFAULT_PHRASES[voice.google_language_code] || 'Hello, how are you?',
+                            voice.male_voice_name || voice.google_voice_name,
+                            voice.google_language_code,
+                            voice.speaking_rate
+                          )}
+                          disabled={previewPlaying}
+                          className="mt-2 bg-blue-100 text-blue-700 px-3 py-1 rounded text-sm hover:bg-blue-200 disabled:opacity-50"
+                        >
+                          ▶ Test Male Voice
+                        </button>
+                      </div>
+
+                      {/* Female Muse */}
+                      <div className="bg-pink-50 border border-pink-200 rounded-lg p-3">
+                        <div className="flex items-center gap-2 mb-2">
+                          <span className="text-pink-600 font-semibold">♀ Female Muse</span>
+                        </div>
+                        <div className="grid grid-cols-2 gap-2 text-sm">
+                          <div>
+                            <span className="text-gray-500">Name:</span>
+                            <div className="font-semibold">{voice.female_muse_name || 'Not set'}</div>
+                          </div>
+                          <div>
+                            <span className="text-gray-500">Voice:</span>
+                            <div className="font-mono text-xs">{voice.female_voice_name || voice.google_voice_name}</div>
+                          </div>
+                        </div>
+                        <button
+                          onClick={() => playPreview(
+                            DEFAULT_PHRASES[voice.google_language_code] || 'Hello, how are you?',
+                            voice.female_voice_name || voice.google_voice_name,
+                            voice.google_language_code,
+                            voice.speaking_rate
+                          )}
+                          disabled={previewPlaying}
+                          className="mt-2 bg-pink-100 text-pink-700 px-3 py-1 rounded text-sm hover:bg-pink-200 disabled:opacity-50"
+                        >
+                          ▶ Test Female Voice
+                        </button>
+                      </div>
+                    </div>
+
+                    <div className="mt-3 text-sm text-gray-500">
+                      Speed: {voice.speaking_rate}x | Google Code: {voice.google_language_code}
+                    </div>
                   </div>
-                  <div className="mt-2 grid grid-cols-2 md:grid-cols-4 gap-4 text-sm">
-                    <div>
-                      <span className="text-gray-500">Voice:</span>
-                      <div className="font-mono">{voice.google_voice_name}</div>
-                    </div>
-                    <div>
-                      <span className="text-gray-500">Language Code:</span>
-                      <div className="font-mono">{voice.google_language_code}</div>
-                    </div>
-                    <div>
-                      <span className="text-gray-500">Speed:</span>
-                      <div>{voice.speaking_rate}x</div>
-                    </div>
-                  </div>
-                </div>
-                <div className="flex gap-2">
-                  <button
-                    onClick={() => playPreview(
-                      DEFAULT_PHRASES[voice.google_language_code] || 'Hello, how are you?',
-                      voice.google_voice_name,
-                      voice.google_language_code,
-                      voice.speaking_rate
-                    )}
-                    disabled={previewPlaying}
-                    className="bg-purple-100 text-purple-700 px-3 py-1 rounded text-sm hover:bg-purple-200 disabled:opacity-50"
-                    title="Preview this voice"
-                  >
-                    ▶ Test
-                  </button>
-                  <button
-                    onClick={() => toggleEnabled(voice)}
-                    disabled={saving === voice.language_code}
-                    className={`px-3 py-1 rounded text-sm ${
-                      voice.enabled
-                        ? 'bg-yellow-100 text-yellow-700 hover:bg-yellow-200'
-                        : 'bg-green-100 text-green-700 hover:bg-green-200'
-                    }`}
-                  >
-                    {voice.enabled ? 'Disable' : 'Enable'}
-                  </button>
-                  <button
-                    onClick={() => setEditingVoice(voice)}
-                    disabled={saving === voice.language_code}
-                    className="bg-blue-100 text-blue-700 px-3 py-1 rounded text-sm hover:bg-blue-200"
-                  >
-                    Edit
-                  </button>
-                  <button
-                    onClick={() => deleteVoice(voice.language_code)}
-                    disabled={saving === voice.language_code}
-                    className="bg-red-100 text-red-700 px-3 py-1 rounded text-sm hover:bg-red-200"
-                  >
-                    Delete
-                  </button>
-                </div>
+                )}
               </div>
-            )}
+            ))}
           </div>
-        ))}
-      </div>
+        </div>
+      )}
+
+      {/* Other Languages Section */}
+      {otherVoices.length > 0 && (
+        <div className="space-y-4">
+          <h3 className="text-xl font-bold flex items-center gap-2">
+            <span className="text-2xl">🌐</span> Other Languages
+            <span className="text-sm font-normal text-gray-500">({otherVoices.length})</span>
+          </h3>
+          <div className="grid gap-4">
+            {otherVoices.map((voice) => (
+              <div key={voice.language_code} className={`border rounded-lg p-4 ${voice.enabled ? 'bg-white' : 'bg-gray-100'}`}>
+                {editingVoice?.language_code === voice.language_code ? (
+                  <VoiceForm
+                    voice={editingVoice}
+                    onSave={saveVoice}
+                    onCancel={() => setEditingVoice(null)}
+                    saving={saving === voice.language_code}
+                    existingCodes={voices.map(v => v.language_code)}
+                    onPreview={playPreview}
+                  />
+                ) : (
+                  <div className="flex justify-between items-start">
+                    <div className="flex-1">
+                      <div className="flex items-center gap-3">
+                        <h3 className="text-lg font-semibold">{voice.language_name}</h3>
+                        <span className="text-sm bg-gray-200 px-2 py-0.5 rounded">{voice.language_code}</span>
+                        <span className={`text-sm px-2 py-0.5 rounded ${
+                          voice.voice_gender === 'MALE' ? 'bg-blue-100 text-blue-700' :
+                          voice.voice_gender === 'FEMALE' ? 'bg-pink-100 text-pink-700' :
+                          'bg-gray-100 text-gray-700'
+                        }`}>
+                          {voice.voice_gender === 'MALE' ? '♂ Male' : voice.voice_gender === 'FEMALE' ? '♀ Female' : '⚪ Neutral'}
+                        </span>
+                        {!voice.enabled && (
+                          <span className="text-sm bg-red-100 text-red-700 px-2 py-0.5 rounded">Disabled</span>
+                        )}
+                      </div>
+                      <div className="mt-2 grid grid-cols-2 md:grid-cols-4 gap-4 text-sm">
+                        <div>
+                          <span className="text-gray-500">Voice:</span>
+                          <div className="font-mono">{voice.google_voice_name}</div>
+                        </div>
+                        <div>
+                          <span className="text-gray-500">Language Code:</span>
+                          <div className="font-mono">{voice.google_language_code}</div>
+                        </div>
+                        <div>
+                          <span className="text-gray-500">Speed:</span>
+                          <div>{voice.speaking_rate}x</div>
+                        </div>
+                      </div>
+                    </div>
+                    <div className="flex gap-2">
+                      <button
+                        onClick={() => playPreview(
+                          DEFAULT_PHRASES[voice.google_language_code] || 'Hello, how are you?',
+                          voice.google_voice_name,
+                          voice.google_language_code,
+                          voice.speaking_rate
+                        )}
+                        disabled={previewPlaying}
+                        className="bg-purple-100 text-purple-700 px-3 py-1 rounded text-sm hover:bg-purple-200 disabled:opacity-50"
+                        title="Preview this voice"
+                      >
+                        ▶ Test
+                      </button>
+                      <button
+                        onClick={() => toggleEnabled(voice)}
+                        disabled={saving === voice.language_code}
+                        className={`px-3 py-1 rounded text-sm ${
+                          voice.enabled
+                            ? 'bg-yellow-100 text-yellow-700 hover:bg-yellow-200'
+                            : 'bg-green-100 text-green-700 hover:bg-green-200'
+                        }`}
+                      >
+                        {voice.enabled ? 'Disable' : 'Enable'}
+                      </button>
+                      <button
+                        onClick={() => setEditingVoice(voice)}
+                        disabled={saving === voice.language_code}
+                        className="bg-blue-100 text-blue-700 px-3 py-1 rounded text-sm hover:bg-blue-200"
+                      >
+                        Edit
+                      </button>
+                      <button
+                        onClick={() => deleteVoice(voice.language_code)}
+                        disabled={saving === voice.language_code}
+                        className="bg-red-100 text-red-700 px-3 py-1 rounded text-sm hover:bg-red-200"
+                      >
+                        Delete
+                      </button>
+                    </div>
+                  </div>
+                )}
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
 
       {filteredVoices.length === 0 && !showAddForm && (
         <div className="text-center py-8 text-gray-500">
@@ -877,8 +1117,35 @@ function VoiceForm({
     voice_gender: 'NEUTRAL',
     speaking_rate: 0.85,
     pitch: 0,
-    enabled: true
+    enabled: true,
+    is_muse_language: false,
+    male_voice_name: '',
+    female_voice_name: '',
+    male_muse_name: '',
+    female_muse_name: ''
   })
+
+  // State for custom name inputs
+  const [useCustomMaleName, setUseCustomMaleName] = useState(false)
+  const [useCustomFemaleName, setUseCustomFemaleName] = useState(false)
+  const [customMaleName, setCustomMaleName] = useState('')
+  const [customFemaleName, setCustomFemaleName] = useState('')
+
+  // Check if current name is a popular name or custom
+  useEffect(() => {
+    const langCode = form.language_code
+    const popularNames = POPULAR_NAMES[langCode]
+    if (popularNames && form.male_muse_name) {
+      const isPopular = popularNames.male.includes(form.male_muse_name)
+      setUseCustomMaleName(!isPopular && form.male_muse_name !== '')
+      if (!isPopular) setCustomMaleName(form.male_muse_name)
+    }
+    if (popularNames && form.female_muse_name) {
+      const isPopular = popularNames.female.includes(form.female_muse_name)
+      setUseCustomFemaleName(!isPopular && form.female_muse_name !== '')
+      if (!isPopular) setCustomFemaleName(form.female_muse_name)
+    }
+  }, [form.language_code])
 
   const [selectedGoogleLang, setSelectedGoogleLang] = useState(() => {
     for (const [name, info] of Object.entries(GOOGLE_VOICES)) {
@@ -1039,6 +1306,217 @@ function VoiceForm({
           </div>
         </div>
       </div>
+
+      {/* Is Muse Language Toggle */}
+      <div className="mt-4 flex items-center gap-2">
+        <input
+          type="checkbox"
+          id="is_muse_language"
+          checked={form.is_muse_language || false}
+          onChange={(e) => setForm(prev => ({ ...prev, is_muse_language: e.target.checked }))}
+          className="h-4 w-4 text-blue-600 rounded border-gray-300"
+        />
+        <label htmlFor="is_muse_language" className="text-sm font-medium text-gray-700">
+          This is a Muse Language (has an AI Muse bot)
+        </label>
+      </div>
+
+      {/* Muse Configuration (only shown when is_muse_language is true) */}
+      {form.is_muse_language && (
+        <div className="mt-4 p-4 bg-blue-50 rounded-lg border border-blue-200">
+          <h5 className="font-medium text-blue-900 mb-3">Muse Configuration</h5>
+
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+            {/* Male Muse Section */}
+            <div className="space-y-3">
+              <h6 className="text-sm font-semibold text-gray-700 flex items-center gap-2">
+                <span className="text-blue-600">♂</span> Male Muse
+              </h6>
+
+              {/* Male Voice Selection */}
+              <div>
+                <label className="block text-xs font-medium text-gray-600 mb-1">
+                  Voice
+                </label>
+                <select
+                  value={form.male_voice_name || ''}
+                  onChange={(e) => setForm(prev => ({ ...prev, male_voice_name: e.target.value }))}
+                  className="w-full border rounded px-3 py-2 text-sm"
+                >
+                  <option value="">Select voice...</option>
+                  {availableVoices.filter(v => v.gender === 'MALE').map(v => (
+                    <option key={v.name} value={v.name}>
+                      {v.type ? `[${v.type}] ` : ''}{v.name.split('-').slice(-1)[0]}
+                    </option>
+                  ))}
+                </select>
+              </div>
+
+              {/* Male Muse Name Selection */}
+              <div>
+                <label className="block text-xs font-medium text-gray-600 mb-1">
+                  Muse Name
+                </label>
+                {!useCustomMaleName ? (
+                  <div className="space-y-2">
+                    <select
+                      value={form.male_muse_name || ''}
+                      onChange={(e) => {
+                        if (e.target.value === '__custom__') {
+                          setUseCustomMaleName(true)
+                        } else {
+                          setForm(prev => ({ ...prev, male_muse_name: e.target.value }))
+                        }
+                      }}
+                      className="w-full border rounded px-3 py-2 text-sm"
+                    >
+                      <option value="">Select name...</option>
+                      {(POPULAR_NAMES[form.language_code]?.male || []).map(name => (
+                        <option key={name} value={name}>{name}</option>
+                      ))}
+                      <option value="__custom__">✏️ Custom name...</option>
+                    </select>
+                  </div>
+                ) : (
+                  <div className="flex gap-2">
+                    <input
+                      type="text"
+                      value={customMaleName}
+                      onChange={(e) => {
+                        setCustomMaleName(e.target.value)
+                        setForm(prev => ({ ...prev, male_muse_name: e.target.value }))
+                      }}
+                      placeholder="Enter custom name"
+                      className="flex-1 border rounded px-3 py-2 text-sm"
+                    />
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setUseCustomMaleName(false)
+                        setCustomMaleName('')
+                        setForm(prev => ({ ...prev, male_muse_name: '' }))
+                      }}
+                      className="text-sm text-blue-600 hover:text-blue-800"
+                    >
+                      Popular
+                    </button>
+                  </div>
+                )}
+              </div>
+            </div>
+
+            {/* Female Muse Section */}
+            <div className="space-y-3">
+              <h6 className="text-sm font-semibold text-gray-700 flex items-center gap-2">
+                <span className="text-pink-600">♀</span> Female Muse
+              </h6>
+
+              {/* Female Voice Selection */}
+              <div>
+                <label className="block text-xs font-medium text-gray-600 mb-1">
+                  Voice
+                </label>
+                <select
+                  value={form.female_voice_name || ''}
+                  onChange={(e) => setForm(prev => ({ ...prev, female_voice_name: e.target.value }))}
+                  className="w-full border rounded px-3 py-2 text-sm"
+                >
+                  <option value="">Select voice...</option>
+                  {availableVoices.filter(v => v.gender === 'FEMALE').map(v => (
+                    <option key={v.name} value={v.name}>
+                      {v.type ? `[${v.type}] ` : ''}{v.name.split('-').slice(-1)[0]}
+                    </option>
+                  ))}
+                </select>
+              </div>
+
+              {/* Female Muse Name Selection */}
+              <div>
+                <label className="block text-xs font-medium text-gray-600 mb-1">
+                  Muse Name
+                </label>
+                {!useCustomFemaleName ? (
+                  <div className="space-y-2">
+                    <select
+                      value={form.female_muse_name || ''}
+                      onChange={(e) => {
+                        if (e.target.value === '__custom__') {
+                          setUseCustomFemaleName(true)
+                        } else {
+                          setForm(prev => ({ ...prev, female_muse_name: e.target.value }))
+                        }
+                      }}
+                      className="w-full border rounded px-3 py-2 text-sm"
+                    >
+                      <option value="">Select name...</option>
+                      {(POPULAR_NAMES[form.language_code]?.female || []).map(name => (
+                        <option key={name} value={name}>{name}</option>
+                      ))}
+                      <option value="__custom__">✏️ Custom name...</option>
+                    </select>
+                  </div>
+                ) : (
+                  <div className="flex gap-2">
+                    <input
+                      type="text"
+                      value={customFemaleName}
+                      onChange={(e) => {
+                        setCustomFemaleName(e.target.value)
+                        setForm(prev => ({ ...prev, female_muse_name: e.target.value }))
+                      }}
+                      placeholder="Enter custom name"
+                      className="flex-1 border rounded px-3 py-2 text-sm"
+                    />
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setUseCustomFemaleName(false)
+                        setCustomFemaleName('')
+                        setForm(prev => ({ ...prev, female_muse_name: '' }))
+                      }}
+                      className="text-sm text-pink-600 hover:text-pink-800"
+                    >
+                      Popular
+                    </button>
+                  </div>
+                )}
+              </div>
+            </div>
+          </div>
+
+          {/* Preview buttons for Muse voices */}
+          <div className="mt-4 flex gap-2">
+            {form.male_voice_name && (
+              <button
+                type="button"
+                onClick={() => onPreview(
+                  DEFAULT_PHRASES[form.google_language_code] || 'Hello, how are you?',
+                  form.male_voice_name,
+                  form.google_language_code,
+                  form.speaking_rate
+                )}
+                className="text-sm bg-blue-100 text-blue-700 px-3 py-1 rounded hover:bg-blue-200"
+              >
+                ▶ Preview Male Voice
+              </button>
+            )}
+            {form.female_voice_name && (
+              <button
+                type="button"
+                onClick={() => onPreview(
+                  DEFAULT_PHRASES[form.google_language_code] || 'Hello, how are you?',
+                  form.female_voice_name,
+                  form.google_language_code,
+                  form.speaking_rate
+                )}
+                className="text-sm bg-pink-100 text-pink-700 px-3 py-1 rounded hover:bg-pink-200"
+              >
+                ▶ Preview Female Voice
+              </button>
+            )}
+          </div>
+        </div>
+      )}
 
       {/* Actions */}
       <div className="flex gap-2 mt-4">

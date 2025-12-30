@@ -27,17 +27,17 @@
 	</array>
 	<!-- Privacy Permission Strings (Required for App Store) -->
 	<key>NSPhotoLibraryUsageDescription</key>
-	<string>LangChat needs access to your photo library so you can choose a profile picture and share photos with your language learning partners.</string>
+	<string>Fluenca needs access to your photo library so you can choose a profile picture and share photos with your language learning partners.</string>
 	<key>NSPhotoLibraryAddUsageDescription</key>
-	<string>LangChat needs permission to save photos to your library.</string>
+	<string>Fluenca needs permission to save photos to your library.</string>
 	<key>NSCameraUsageDescription</key>
-	<string>LangChat needs camera access so you can take profile photos and share moments with your language partners.</string>
+	<string>Fluenca needs camera access so you can take profile photos and share moments with your language partners.</string>
 	<key>NSLocationWhenInUseUsageDescription</key>
-	<string>LangChat uses your location to show your hometown on your profile and help you find nearby language learning partners.</string>
+	<string>Fluenca uses your location to show your hometown on your profile and help you find nearby language learning partners.</string>
 	<key>NSMicrophoneUsageDescription</key>
-	<string>LangChat needs microphone access for voice messages and pronunciation practice with your language partners.</string>
+	<string>Fluenca needs microphone access for voice messages and pronunciation practice with your language partners.</string>
 	<key>NSContactsUsageDescription</key>
-	<string>LangChat would like to access your contacts to help you find friends who also use the app.</string>
+	<string>Fluenca would like to access your contacts to help you find friends who also use the app.</string>
 
 	<key>NSAppTransportSecurity</key>
 	<dict>

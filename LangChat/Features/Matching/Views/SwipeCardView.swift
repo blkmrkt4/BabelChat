@@ -409,7 +409,8 @@ class SwipeCardView: UIView {
             center = CGPoint(x: initialCenter.x + translation.x,
                            y: initialCenter.y + translation.y)
 
-            let rotationAngle = translation.x / (superview!.frame.width / 2) * 0.3
+            let containerWidth = superview?.frame.width ?? 300
+            let rotationAngle = translation.x / (containerWidth / 2) * 0.3
             transform = CGAffineTransform(rotationAngle: rotationAngle)
 
             updateSwipeIndicators(translation: translation)

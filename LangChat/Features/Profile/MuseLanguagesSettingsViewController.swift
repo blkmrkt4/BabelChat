@@ -145,7 +145,9 @@ extension MuseLanguagesSettingsViewController: UITableViewDataSource {
     }
 
     func tableView(_ tableView: UITableView, cellForRowAt indexPath: IndexPath) -> UITableViewCell {
-        let cell = tableView.dequeueReusableCell(withIdentifier: "LanguageCell", for: indexPath) as! MuseLanguageSettingsCell
+        guard let cell = tableView.dequeueReusableCell(withIdentifier: "LanguageCell", for: indexPath) as? MuseLanguageSettingsCell else {
+            return UITableViewCell()
+        }
 
         if indexPath.section == 0 {
             // Always included languages

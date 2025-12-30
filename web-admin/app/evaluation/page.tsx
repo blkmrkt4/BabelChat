@@ -12,7 +12,6 @@ import {
   stripMarkdownJson,
   type ModelWithScore
 } from '@/lib/openrouter'
-import { translateWithGoogle, GOOGLE_LANG_CODES } from '@/lib/googleTranslate'
 import { saveEvaluation, getEvaluationsByCategory } from '@/lib/evaluationStorage'
 import { getModelScore } from '@/lib/modelStorage'
 import {
@@ -23,7 +22,27 @@ import {
 } from '@/lib/promptTemplateStorage'
 import { createAIConfig, getAIConfigs } from '@/lib/supabase'
 
-const LANGUAGES = Object.keys(GOOGLE_LANG_CODES)
+
+const LANGUAGES = [
+  'English',
+  'Spanish',
+  'French',
+  'German',
+  'Italian',
+  'Portuguese',
+  'Russian',
+  'Japanese',
+  'Chinese',
+  'Korean',
+  'Hindi',
+  'Arabic',
+  'Dutch',
+  'Polish',
+  'Turkish',
+  'Vietnamese',
+  'Thai',
+  'Indonesian'
+].sort()
 
 const DEFAULT_CATEGORIES = ['translation', 'grammar', 'scoring'] as const
 type DefaultCategory = typeof DEFAULT_CATEGORIES[number]

@@ -27,6 +27,7 @@ enum Language: String, CaseIterable, Codable, Equatable {
     case french = "FR"
     case german = "DE"
     case portuguese = "PT"      // Brazilian Portuguese
+    case portuguesePortugal = "PT-PT"  // European Portuguese
     case italian = "IT"
     case japanese = "JA"
     case korean = "KO"
@@ -54,6 +55,7 @@ enum Language: String, CaseIterable, Codable, Equatable {
         case .french: return "French"
         case .german: return "German"
         case .portuguese: return "Portuguese (BR)"
+        case .portuguesePortugal: return "Portuguese (PT)"
         case .italian: return "Italian"
         case .japanese: return "Japanese"
         case .korean: return "Korean"
@@ -78,7 +80,8 @@ enum Language: String, CaseIterable, Codable, Equatable {
         case .spanish: return "Español"
         case .french: return "Français"
         case .german: return "Deutsch"
-        case .portuguese: return "Português"
+        case .portuguese: return "Português (BR)"
+        case .portuguesePortugal: return "Português (PT)"
         case .italian: return "Italiano"
         case .japanese: return "日本語"
         case .korean: return "한국어"
@@ -104,6 +107,7 @@ enum Language: String, CaseIterable, Codable, Equatable {
         case .french: return "🇫🇷"
         case .german: return "🇩🇪"
         case .portuguese: return "🇧🇷"
+        case .portuguesePortugal: return "🇵🇹"
         case .italian: return "🇮🇹"
         case .japanese: return "🇯🇵"
         case .korean: return "🇰🇷"
@@ -125,7 +129,7 @@ enum Language: String, CaseIterable, Codable, Equatable {
     /// Languages available for Muse (AI language tutors)
     static var museLanguages: [Language] {
         return [
-            .spanish, .french, .german, .portuguese, .italian,
+            .spanish, .french, .german, .portuguese, .portuguesePortugal, .italian,
             .japanese, .korean, .dutch, .chinese, .russian,
             .polish, .hindi, .indonesian, .filipino,
             .swedish, .danish, .finnish, .norwegian, .arabic
@@ -158,6 +162,7 @@ enum Language: String, CaseIterable, Codable, Equatable {
         case "fr": return .french
         case "de": return .german
         case "pt", "pt-br": return .portuguese
+        case "pt-pt": return .portuguesePortugal
         case "it": return .italian
         case "ja": return .japanese
         case "ko": return .korean
@@ -187,6 +192,7 @@ enum Language: String, CaseIterable, Codable, Equatable {
         case "french": return .french
         case "german": return .german
         case "portuguese", "portuguese (br)", "brazilian portuguese": return .portuguese
+        case "portuguese (pt)", "portuguese (portugal)", "european portuguese": return .portuguesePortugal
         case "italian": return .italian
         case "japanese": return .japanese
         case "korean": return .korean

@@ -104,7 +104,9 @@ extension LearningLanguagesViewController: UITableViewDataSource {
     }
 
     func tableView(_ tableView: UITableView, cellForRowAt indexPath: IndexPath) -> UITableViewCell {
-        let cell = tableView.dequeueReusableCell(withIdentifier: "LanguageCell", for: indexPath) as! LanguageSelectionCell
+        guard let cell = tableView.dequeueReusableCell(withIdentifier: "LanguageCell", for: indexPath) as? LanguageSelectionCell else {
+            return UITableViewCell()
+        }
         let language = filteredLanguages[indexPath.row]
         let isSelected = selectedLanguages.contains(language)
         let isEnabled = isSelected || selectedLanguages.count < maxLanguages

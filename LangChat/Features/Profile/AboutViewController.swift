@@ -145,13 +145,13 @@ class AboutViewController: UIViewController {
     }
 
     @objc private func showTerms() {
-        if let url = URL(string: "https://langchat.app/terms") {
+        if let url = URL(string: "https://ByZyB.ai/terms") {
             UIApplication.shared.open(url)
         }
     }
 
     @objc private func showPrivacy() {
-        if let url = URL(string: "https://langchat.app/privacy") {
+        if let url = URL(string: "https://ByZyB.ai/privacy") {
             UIApplication.shared.open(url)
         }
     }
@@ -174,7 +174,7 @@ class AboutViewController: UIViewController {
     }
 
     @objc private func contactSupport() {
-        let email = "support@langchat.app"
+        let email = "support@ByZyB.ai"
         if let url = URL(string: "mailto:\(email)") {
             UIApplication.shared.open(url)
         }

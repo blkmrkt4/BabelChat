@@ -903,7 +903,9 @@ extension AISetupViewController: UITableViewDataSource {
     }
 
     func tableView(_ tableView: UITableView, cellForRowAt indexPath: IndexPath) -> UITableViewCell {
-        let cell = tableView.dequeueReusableCell(withIdentifier: "AIModelCell", for: indexPath) as! AIModelCell
+        guard let cell = tableView.dequeueReusableCell(withIdentifier: "AIModelCell", for: indexPath) as? AIModelCell else {
+            return UITableViewCell()
+        }
         let model = models[indexPath.row]
         let userScore = modelScores[model.id]
         cell.configure(with: model, score: userScore)
@@ -915,19 +917,20 @@ extension AISetupViewController: UITableViewDataSource {
 extension AISetupViewController: UITableViewDelegate {
     func tableView(_ tableView: UITableView, didSelectRowAt indexPath: IndexPath) {
         tableView.deselectRow(at: indexPath, animated: true)
-        selectedModel = models[indexPath.row]
+        let model = models[indexPath.row]
+        selectedModel = model
 
         // Show card, hide no selection label
         selectedModelCard.isHidden = false
         noSelectionLabel.isHidden = true
 
         // Populate card with model info
-        selectedModelNameLabel.text = selectedModel!.name
-        selectedModelProviderLabel.text = selectedModel!.provider
-        selectedModelCostLabel.text = selectedModel!.costDisplay
+        selectedModelNameLabel.text = model.name
+        selectedModelProviderLabel.text = model.provider
+        selectedModelCostLabel.text = model.costDisplay
 
         // Show score
-        if let score = modelScores[selectedModel!.id] {
+        if let score = modelScores[model.id] {
             selectedModelScoreLabel.text = String(format: "%.1f", score)
             selectedModelScoreLabel.textColor = .systemBlue
         } else {
@@ -936,7 +939,7 @@ extension AISetupViewController: UITableViewDelegate {
         }
 
         // Update score slider with saved score for this model
-        if let score = modelScores[selectedModel!.id] {
+        if let score = modelScores[model.id] {
             scoreSlider.value = score
             scoreValueLabel.text = String(format: "%.1f", score)
         } else {
@@ -946,7 +949,7 @@ extension AISetupViewController: UITableViewDelegate {
 
         // Check if this is the active default model for this category
         if let activeConfig = savedConfigs[currentCategory],
-           activeConfig.modelId == selectedModel!.id {
+           activeConfig.modelId == model.id {
             setAsDefaultSwitch.isOn = true
         } else {
             setAsDefaultSwitch.isOn = false

@@ -14,6 +14,10 @@ class SupabaseService {
     // MARK: - Configuration Status
     private(set) var isConfigured: Bool = false
 
+    // MARK: - Placeholder URL (safe, guaranteed to parse)
+    // swiftlint:disable:next force_unwrapping
+    private static let placeholderURL = URL(string: "https://placeholder.supabase.co")!
+
     // MARK: - Initialization
     private init() {
         // Initialize Supabase client with credentials from Config.swift
@@ -22,7 +26,7 @@ class SupabaseService {
             print("⚠️ Supabase credentials not configured - using placeholder URL")
             // Use a placeholder URL - operations will fail gracefully
             self.client = SupabaseClient(
-                supabaseURL: URL(string: "https://placeholder.supabase.co")!,
+                supabaseURL: Self.placeholderURL,
                 supabaseKey: "placeholder"
             )
             self.isConfigured = false
@@ -32,7 +36,7 @@ class SupabaseService {
         guard let url = URL(string: Config.supabaseURL) else {
             print("❌ Invalid Supabase URL in Config.swift: \(Config.supabaseURL)")
             self.client = SupabaseClient(
-                supabaseURL: URL(string: "https://placeholder.supabase.co")!,
+                supabaseURL: Self.placeholderURL,
                 supabaseKey: "placeholder"
             )
             self.isConfigured = false
@@ -134,7 +138,9 @@ extension SupabaseService {
 extension SupabaseService {
 
     /// Base URL for public storage bucket
-    private static let publicStorageBaseURL = "https://ckhukylfoeofvoxvwwin.supabase.co/storage/v1/object/public/user-photos"
+    private static var publicStorageBaseURL: String {
+        return "\(Config.supabaseURL)/storage/v1/object/public/user-photos"
+    }
 
     /// Upload a photo to Supabase Storage (PUBLIC bucket)
     /// Returns the permanent public URL that never expires
@@ -442,6 +448,19 @@ extension SupabaseService {
         print("✅ Profile created")
     }
 
+    /// Get a specific profile by user ID
+    func getProfile(userId: String) async throws -> ProfileResponse {
+        let response: ProfileResponse = try await client.database
+            .from("profiles")
+            .select()
+            .eq("id", value: userId)
+            .single()
+            .execute()
+            .value
+
+        return response
+    }
+
     /// Get profiles for discovery (with filters)
     func getDiscoveryProfiles(limit: Int = 20) async throws -> [ProfileResponse] {
         guard let userId = currentUserId else {
@@ -539,7 +558,8 @@ extension SupabaseService {
         // Track first match for welcome screen logic
         UserEngagementTracker.shared.markFirstMatch()
 
-        // TODO: Send push notification about match
+        // Note: Push notifications are handled server-side via database trigger
+        // See: supabase/migrations/add_push_notification_triggers.sql
     }
 
     /// Get all matches for current user
@@ -1767,6 +1787,15 @@ extension SupabaseService {
         let enabled: Bool
         let maleVoiceName: String?
         let femaleVoiceName: String?
+        // Muse configuration
+        let maleMuseName: String?
+        let femaleMuseName: String?
+        let isMuseLanguage: Bool?
+
+        /// Whether this is a Muse language (defaults to false if nil)
+        var isMuseLanguageEnabled: Bool {
+            return isMuseLanguage ?? false
+        }
 
         enum CodingKeys: String, CodingKey {
             case languageCode = "language_code"
@@ -1779,6 +1808,9 @@ extension SupabaseService {
             case enabled = "enabled"
             case maleVoiceName = "male_voice_name"
             case femaleVoiceName = "female_voice_name"
+            case maleMuseName = "male_muse_name"
+            case femaleMuseName = "female_muse_name"
+            case isMuseLanguage = "is_muse_language"
         }
 
         /// Get the appropriate voice name based on speaker gender
@@ -1790,6 +1822,16 @@ extension SupabaseService {
                 return femaleVoiceName ?? googleVoiceName
             default:
                 return googleVoiceName
+            }
+        }
+
+        /// Get the Muse name based on gender preference
+        func museName(forGender gender: MuseGenderPreference) -> String? {
+            switch gender {
+            case .male:
+                return maleMuseName
+            case .female:
+                return femaleMuseName
             }
         }
     }
@@ -1834,6 +1876,19 @@ extension SupabaseService {
             .value
 
         return nameMatch.first
+    }
+
+    /// Alias for fetchTTSVoiceConfigs - used by AIBotFactory for Muse configuration
+    func getTTSVoices() async throws -> [TTSVoiceConfig] {
+        // Include all voices (not just enabled) so we can get Muse configurations
+        let response: [TTSVoiceConfig] = try await client.database
+            .from("tts_voices")
+            .select("*")
+            .execute()
+            .value
+
+        print("✅ Loaded \(response.count) TTS voices for Muse configuration")
+        return response
     }
 }
 
@@ -1988,15 +2043,14 @@ extension SupabaseService {
     /// Build a shareable invite link with fallback web URL
     func buildShareableInviteText(code: String, inviterName: String) -> String {
         let appLink = "fluenca://invite/\(code)"
-        // TODO: Add web fallback URL when website is ready
-        // let webLink = "https://fluenca.app/invite/\(code)"
+        let webLink = "https://ByZyB.ai/invite/\(code)"
 
         return """
         \(inviterName) has invited you to connect on Fluenca!
 
         Open this link to connect: \(appLink)
 
-        Don't have Fluenca? Download it from the App Store first, then tap the link above.
+        Or visit: \(webLink)
 
         Invite code: \(code)
         """

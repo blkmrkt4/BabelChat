@@ -67,6 +67,10 @@ export async function PUT(request: Request) {
         enabled: voice.enabled ?? true,
         male_voice_name: voice.male_voice_name || genderedVoices.male,
         female_voice_name: voice.female_voice_name || genderedVoices.female,
+        // Muse configuration
+        male_muse_name: voice.male_muse_name || null,
+        female_muse_name: voice.female_muse_name || null,
+        is_muse_language: voice.is_muse_language ?? false,
         updated_at: new Date().toISOString()
       })
       .select()
@@ -103,7 +107,11 @@ export async function POST(request: Request) {
         pitch: voice.pitch || 0,
         enabled: voice.enabled ?? true,
         male_voice_name: voice.male_voice_name || genderedVoices.male,
-        female_voice_name: voice.female_voice_name || genderedVoices.female
+        female_voice_name: voice.female_voice_name || genderedVoices.female,
+        // Muse configuration
+        male_muse_name: voice.male_muse_name || null,
+        female_muse_name: voice.female_muse_name || null,
+        is_muse_language: voice.is_muse_language ?? false
       })
       .select()
       .single()

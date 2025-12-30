@@ -99,7 +99,9 @@ extension PreferencesViewController: UITableViewDataSource {
         case .discovery:
             switch indexPath.row {
             case 0: // Age range
-                let cell = tableView.dequeueReusableCell(withIdentifier: "SliderCell", for: indexPath) as! SliderTableViewCell
+                guard let cell = tableView.dequeueReusableCell(withIdentifier: "SliderCell", for: indexPath) as? SliderTableViewCell else {
+                    return UITableViewCell()
+                }
                 cell.configure(
                     title: "Age Range",
                     minValue: 18,
@@ -114,7 +116,9 @@ extension PreferencesViewController: UITableViewDataSource {
                 return cell
 
             case 1: // Distance
-                let cell = tableView.dequeueReusableCell(withIdentifier: "SliderCell", for: indexPath) as! SliderTableViewCell
+                guard let cell = tableView.dequeueReusableCell(withIdentifier: "SliderCell", for: indexPath) as? SliderTableViewCell else {
+                    return UITableViewCell()
+                }
                 cell.configure(
                     title: "Maximum Distance",
                     minValue: 1,
@@ -144,7 +148,9 @@ extension PreferencesViewController: UITableViewDataSource {
         case .matching:
             switch indexPath.row {
             case 0: // Auto-match
-                let cell = tableView.dequeueReusableCell(withIdentifier: "SwitchCell", for: indexPath) as! SwitchTableViewCell
+                guard let cell = tableView.dequeueReusableCell(withIdentifier: "SwitchCell", for: indexPath) as? SwitchTableViewCell else {
+                    return UITableViewCell()
+                }
                 cell.configure(
                     title: "Auto-match Similar Proficiency",
                     icon: "sparkles",
@@ -156,7 +162,9 @@ extension PreferencesViewController: UITableViewDataSource {
                 return cell
 
             case 1: // Prioritize active
-                let cell = tableView.dequeueReusableCell(withIdentifier: "SwitchCell", for: indexPath) as! SwitchTableViewCell
+                guard let cell = tableView.dequeueReusableCell(withIdentifier: "SwitchCell", for: indexPath) as? SwitchTableViewCell else {
+                    return UITableViewCell()
+                }
                 cell.configure(
                     title: "Prioritize Active Users",
                     icon: "clock",
@@ -174,7 +182,9 @@ extension PreferencesViewController: UITableViewDataSource {
         case .communication:
             switch indexPath.row {
             case 0: // Online status
-                let cell = tableView.dequeueReusableCell(withIdentifier: "SwitchCell", for: indexPath) as! SwitchTableViewCell
+                guard let cell = tableView.dequeueReusableCell(withIdentifier: "SwitchCell", for: indexPath) as? SwitchTableViewCell else {
+                    return UITableViewCell()
+                }
                 cell.configure(
                     title: "Show Online Status",
                     icon: "circle.fill",
@@ -186,7 +196,9 @@ extension PreferencesViewController: UITableViewDataSource {
                 return cell
 
             case 1: // Read receipts
-                let cell = tableView.dequeueReusableCell(withIdentifier: "SwitchCell", for: indexPath) as! SwitchTableViewCell
+                guard let cell = tableView.dequeueReusableCell(withIdentifier: "SwitchCell", for: indexPath) as? SwitchTableViewCell else {
+                    return UITableViewCell()
+                }
                 cell.configure(
                     title: "Read Receipts",
                     icon: "checkmark.message",
@@ -198,7 +210,9 @@ extension PreferencesViewController: UITableViewDataSource {
                 return cell
 
             case 2: // Typing indicators
-                let cell = tableView.dequeueReusableCell(withIdentifier: "SwitchCell", for: indexPath) as! SwitchTableViewCell
+                guard let cell = tableView.dequeueReusableCell(withIdentifier: "SwitchCell", for: indexPath) as? SwitchTableViewCell else {
+                    return UITableViewCell()
+                }
                 cell.configure(
                     title: "Typing Indicators",
                     icon: "ellipsis.bubble",

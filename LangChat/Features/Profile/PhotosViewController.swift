@@ -93,16 +93,16 @@ extension PhotosViewController: UICollectionViewDataSource {
     }
 
     func collectionView(_ collectionView: UICollectionView, cellForItemAt indexPath: IndexPath) -> UICollectionViewCell {
+        guard let cell = collectionView.dequeueReusableCell(withReuseIdentifier: "PhotoCell", for: indexPath) as? PhotoCollectionCell else {
+            return UICollectionViewCell()
+        }
         if indexPath.item < photos.count {
-            let cell = collectionView.dequeueReusableCell(withReuseIdentifier: "PhotoCell", for: indexPath) as! PhotoCollectionCell
             cell.configure(with: photos[indexPath.item])
-            return cell
         } else {
             // Add photo cell
-            let cell = collectionView.dequeueReusableCell(withReuseIdentifier: "PhotoCell", for: indexPath) as! PhotoCollectionCell
             cell.configureAsAddButton()
-            return cell
         }
+        return cell
     }
 }
 

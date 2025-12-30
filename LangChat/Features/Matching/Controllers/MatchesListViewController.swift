@@ -122,11 +122,14 @@ class MatchesListViewController: UIViewController {
                         print("👤 Converted to User: \(user.firstName) - ID: \(user.id)")
 
                         // Create Match
+                        // Note: hasNewMessage requires last_read_at tracking in database
+                        // For proper implementation: add user1_last_read_at, user2_last_read_at to matches table
+                        // Then compare with most recent message timestamp
                         let match = Match(
                             id: matchResponse.id,
                             user: user,
                             matchedAt: ISO8601DateFormatter().date(from: matchResponse.matchedAt) ?? Date(),
-                            hasNewMessage: false, // TODO: Check for unread messages
+                            hasNewMessage: false,
                             lastMessage: "Start chatting!",
                             lastMessageTime: ISO8601DateFormatter().date(from: matchResponse.matchedAt) ?? Date()
                         )
@@ -241,14 +244,18 @@ extension MatchesListViewController: UICollectionViewDataSource {
     }
 
     func collectionView(_ collectionView: UICollectionView, cellForItemAt indexPath: IndexPath) -> UICollectionViewCell {
-        let cell = collectionView.dequeueReusableCell(withReuseIdentifier: "MatchCell", for: indexPath) as! MatchCollectionViewCell
+        guard let cell = collectionView.dequeueReusableCell(withReuseIdentifier: "MatchCell", for: indexPath) as? MatchCollectionViewCell else {
+            return UICollectionViewCell()
+        }
         cell.configure(with: matches[indexPath.item])
         return cell
     }
 
     func collectionView(_ collectionView: UICollectionView, viewForSupplementaryElementOfKind kind: String, at indexPath: IndexPath) -> UICollectionReusableView {
         if kind == UICollectionView.elementKindSectionHeader {
-            let header = collectionView.dequeueReusableSupplementaryView(ofKind: kind, withReuseIdentifier: "MuseHeader", for: indexPath) as! MuseHeaderView
+            guard let header = collectionView.dequeueReusableSupplementaryView(ofKind: kind, withReuseIdentifier: "MuseHeader", for: indexPath) as? MuseHeaderView else {
+                return UICollectionReusableView()
+            }
             header.onMuseTapped = { [weak self] in
                 self?.showBotSelection()
             }
@@ -280,10 +287,10 @@ extension MatchesListViewController: UICollectionViewDelegate {
             preferredStyle: .actionSheet
         )
 
-        let muses = AIBotFactory.createAIBots()
-        for muse in muses {
+        let availableMuses = getAvailableMuses()
+        for muse in availableMuses {
             let action = UIAlertAction(
-                title: "\(muse.firstName) - \(muse.nativeLanguage.language.name)",
+                title: "\(muse.nativeLanguage.language.flag) \(muse.firstName) - \(muse.nativeLanguage.language.name)",
                 style: .default
             ) { [weak self] _ in
                 self?.startChatWithBot(muse)
@@ -299,6 +306,43 @@ extension MatchesListViewController: UICollectionViewDelegate {
         }
 
         present(alert, animated: true)
+    }
+
+    /// Get the Muses available to the user based on their language preferences
+    /// Includes: English (always), learning languages, and additional Muse languages from onboarding
+    private func getAvailableMuses() -> [User] {
+        var availableLanguages = Set<Language>()
+
+        // Always include English
+        availableLanguages.insert(.english)
+
+        // Add learning languages from user profile
+        if let userLanguagesData = UserDefaults.standard.data(forKey: "userLanguages"),
+           let userLanguageData = try? JSONDecoder().decode(UserLanguageData.self, from: userLanguagesData) {
+            for learning in userLanguageData.learningLanguages {
+                availableLanguages.insert(learning.language)
+            }
+        }
+
+        // Add additional Muse languages from settings/onboarding
+        if let museLanguageCodes = UserDefaults.standard.array(forKey: "museLanguages") as? [String] {
+            for code in museLanguageCodes {
+                if let language = Language(rawValue: code) {
+                    availableLanguages.insert(language)
+                }
+            }
+        }
+
+        // Get all Muses and filter to only available languages
+        let allMuses = AIBotFactory.createAIBots()
+        let filteredMuses = allMuses.filter { availableLanguages.contains($0.nativeLanguage.language) }
+
+        // If no languages selected yet (new user), show all Muses as fallback
+        if filteredMuses.isEmpty {
+            return allMuses
+        }
+
+        return filteredMuses
     }
 
     private func startChatWithBot(_ bot: User) {

@@ -37,9 +37,14 @@ class ChatViewController: UIViewController {
         // The conversation learning language is the match's native language (what user is learning)
         self.conversationLearningLanguage = user.nativeLanguage.language
 
-        // TODO: Get actual current user's native language from UserDefaults or global state
-        // For now, assume English as fallback
-        self.currentUserNativeLanguage = .english
+        // Get current user's native language from UserDefaults
+        if let data = UserDefaults.standard.data(forKey: "userLanguages"),
+           let decoded = try? JSONDecoder().decode(UserLanguageData.self, from: data) {
+            self.currentUserNativeLanguage = decoded.nativeLanguage.language
+        } else {
+            // Fallback to English if not found
+            self.currentUserNativeLanguage = .english
+        }
 
         super.init(nibName: nil, bundle: nil)
     }
@@ -1100,7 +1105,9 @@ extension ChatViewController: UITableViewDataSource {
         let message = messages[indexPath.row]
 
         // Use SwipeableMessageCell for all messages now (to enable translation/grammar on demand)
-        let cell = tableView.dequeueReusableCell(withIdentifier: "SwipeableMessageCell", for: indexPath) as! SwipeableMessageCell
+        guard let cell = tableView.dequeueReusableCell(withIdentifier: "SwipeableMessageCell", for: indexPath) as? SwipeableMessageCell else {
+            return UITableViewCell()
+        }
         let granularity = UserDefaults.standard.integer(forKey: "granularityLevel")
         cell.delegate = self
         cell.setSubscriptionTier(currentSubscriptionTier) // Set tier for TTS voice quality
@@ -1216,7 +1223,7 @@ extension ChatViewController: SwipeableMessageCellDelegate {
 // MARK: - UITextFieldDelegate
 extension ChatViewController: UITextFieldDelegate {
     func textFieldShouldReturn(_ textField: UITextField) -> Bool {
-        if !textField.text!.isEmpty {
+        if let text = textField.text, !text.isEmpty {
             sendButtonTapped()
         }
         return true

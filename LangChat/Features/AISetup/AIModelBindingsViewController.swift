@@ -309,7 +309,9 @@ extension AIModelBindingsViewController: UITableViewDelegate, UITableViewDataSou
     }
 
     func tableView(_ tableView: UITableView, cellForRowAt indexPath: IndexPath) -> UITableViewCell {
-        let cell = tableView.dequeueReusableCell(withIdentifier: "BindingCell", for: indexPath) as! BindingCell
+        guard let cell = tableView.dequeueReusableCell(withIdentifier: "BindingCell", for: indexPath) as? BindingCell else {
+            return UITableViewCell()
+        }
         cell.configure(with: bindings[indexPath.row])
         return cell
     }

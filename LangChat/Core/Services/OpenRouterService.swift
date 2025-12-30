@@ -22,12 +22,14 @@ class OpenRouterService {
             throw OpenRouterError.missingAPIKey
         }
 
-        let url = URL(string: "\(baseURL)/chat/completions")!
+        guard let url = URL(string: "\(baseURL)/chat/completions") else {
+            throw OpenRouterError.invalidResponse
+        }
         var request = URLRequest(url: url)
         request.httpMethod = "POST"
         request.setValue("Bearer \(apiKey)", forHTTPHeaderField: "Authorization")
         request.setValue("application/json", forHTTPHeaderField: "Content-Type")
-        request.setValue("https://langchat.app", forHTTPHeaderField: "HTTP-Referer")
+        request.setValue("https://ByZyB.ai", forHTTPHeaderField: "HTTP-Referer")
         request.setValue("Fluenca iOS", forHTTPHeaderField: "X-Title")
 
         let requestBody = ChatCompletionRequest(
@@ -101,7 +103,9 @@ class OpenRouterService {
 
     // MARK: - Fetch Available Models
     func fetchAvailableModels() async throws -> [OpenRouterModel] {
-        let url = URL(string: "\(baseURL)/models")!
+        guard let url = URL(string: "\(baseURL)/models") else {
+            throw OpenRouterError.invalidResponse
+        }
 
         var request = URLRequest(url: url)
         request.setValue("application/json", forHTTPHeaderField: "Content-Type")

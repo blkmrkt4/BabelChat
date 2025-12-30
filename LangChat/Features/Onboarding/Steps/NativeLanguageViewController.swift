@@ -65,7 +65,9 @@ extension NativeLanguageViewController: UITableViewDataSource {
     }
 
     func tableView(_ tableView: UITableView, cellForRowAt indexPath: IndexPath) -> UITableViewCell {
-        let cell = tableView.dequeueReusableCell(withIdentifier: "LanguageCell", for: indexPath) as! LanguageCell
+        guard let cell = tableView.dequeueReusableCell(withIdentifier: "LanguageCell", for: indexPath) as? LanguageCell else {
+            return UITableViewCell()
+        }
         let language = filteredLanguages[indexPath.row]
         cell.configure(
             with: language,

@@ -569,7 +569,9 @@ extension TravelPlansViewController: UITableViewDelegate, UITableViewDataSource 
     }
 
     func tableView(_ tableView: UITableView, cellForRowAt indexPath: IndexPath) -> UITableViewCell {
-        let cell = tableView.dequeueReusableCell(withIdentifier: "SuggestionCell", for: indexPath) as! TravelLocationSuggestionCell
+        guard let cell = tableView.dequeueReusableCell(withIdentifier: "SuggestionCell", for: indexPath) as? TravelLocationSuggestionCell else {
+            return UITableViewCell()
+        }
         let result = searchResults[indexPath.row]
         cell.configure(with: result)
         return cell

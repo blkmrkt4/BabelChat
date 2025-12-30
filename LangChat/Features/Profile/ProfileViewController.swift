@@ -558,8 +558,8 @@ class ProfileViewController: UIViewController, PhotoGridViewDelegate {
             } else {
                 // Extract country from "City, Country" format
                 let components = location.components(separatedBy: ",")
-                if components.count > 1 {
-                    locationLabel.text = "📍 \(components.last!.trimmingCharacters(in: .whitespaces))"
+                if let country = components.last, components.count > 1 {
+                    locationLabel.text = "📍 \(country.trimmingCharacters(in: .whitespaces))"
                 } else {
                     locationLabel.text = "📍 \(location)"
                 }
