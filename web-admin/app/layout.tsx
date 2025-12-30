@@ -4,6 +4,7 @@ import type { Metadata } from 'next'
 import { Inter } from 'next/font/google'
 import './globals.css'
 import Link from 'next/link'
+import Image from 'next/image'
 import { usePathname } from 'next/navigation'
 
 const inter = Inter({ subsets: ['latin'] })
@@ -30,9 +31,16 @@ export default function RootLayout({
   return (
     <html lang="en">
       <body className={inter.className}>
-        <nav className="bg-blue-600 text-white p-4">
+        <nav className="bg-black text-white p-4">
           <div className="container mx-auto flex justify-between items-center">
-            <h1 className="text-2xl font-bold">ByzyB.ai</h1>
+            <Image
+              src="/wordmark.png"
+              alt="Logo"
+              width={120}
+              height={40}
+              className="h-8 w-auto"
+              priority
+            />
             <div className="flex gap-1">
               {links.map((link) => {
                 const isActive = pathname === link.href
@@ -42,8 +50,8 @@ export default function RootLayout({
                     href={link.href}
                     className={`px-4 py-2 rounded transition-colors ${
                       isActive
-                        ? 'bg-blue-700 font-semibold'
-                        : 'hover:bg-blue-500'
+                        ? 'bg-gray-700 font-semibold'
+                        : 'hover:bg-gray-800'
                     }`}
                   >
                     {link.label}
