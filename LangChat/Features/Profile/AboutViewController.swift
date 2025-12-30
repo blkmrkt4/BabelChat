@@ -167,9 +167,16 @@ class AboutViewController: UIViewController {
     }
 
     @objc private func rateApp() {
-        // TODO: Replace with actual App Store ID
-        if let url = URL(string: "https://apps.apple.com/app/idXXXXXXXXX?action=write-review") {
+        if let url = Config.appStoreReviewURL {
             UIApplication.shared.open(url)
+        } else {
+            let alert = UIAlertController(
+                title: "Coming Soon",
+                message: "Rating will be available once the app is live on the App Store.",
+                preferredStyle: .alert
+            )
+            alert.addAction(UIAlertAction(title: "OK", style: .default))
+            present(alert, animated: true)
         }
     }
 

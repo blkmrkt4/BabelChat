@@ -4,7 +4,6 @@ import type { Metadata } from 'next'
 import { Inter } from 'next/font/google'
 import './globals.css'
 import Link from 'next/link'
-import Image from 'next/image'
 import { usePathname } from 'next/navigation'
 
 const inter = Inter({ subsets: ['latin'] })
@@ -33,13 +32,10 @@ export default function RootLayout({
       <body className={inter.className}>
         <nav className="bg-black text-white p-4">
           <div className="container mx-auto flex justify-between items-center">
-            <Image
+            <img
               src="/wordmark.png"
               alt="Logo"
-              width={120}
-              height={40}
               className="h-8 w-auto"
-              priority
             />
             <div className="flex gap-1">
               {links.map((link) => {

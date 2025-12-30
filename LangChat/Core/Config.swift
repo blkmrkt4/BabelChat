@@ -87,6 +87,24 @@ struct Config {
         return nil
     }()
 
+    // MARK: - App Store
+
+    /// App Store ID - Update this after first App Store submission
+    /// Format: Just the numeric ID, e.g., "1234567890"
+    static let appStoreID: String = "PENDING_SUBMISSION"
+
+    /// Full App Store URL for the app
+    static var appStoreURL: URL? {
+        guard appStoreID != "PENDING_SUBMISSION" else { return nil }
+        return URL(string: "https://apps.apple.com/app/id\(appStoreID)")
+    }
+
+    /// App Store review URL
+    static var appStoreReviewURL: URL? {
+        guard appStoreID != "PENDING_SUBMISSION" else { return nil }
+        return URL(string: "https://apps.apple.com/app/id\(appStoreID)?action=write-review")
+    }
+
     // MARK: - Helper to read from Info.plist
 
     private static func infoPlistValue(for key: String) -> String? {
