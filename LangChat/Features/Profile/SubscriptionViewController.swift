@@ -71,6 +71,13 @@ class SubscriptionViewController: UIViewController {
             action: #selector(dismissVC)
         )
 
+        navigationItem.leftBarButtonItem = UIBarButtonItem(
+            title: "Restore",
+            style: .plain,
+            target: self,
+            action: #selector(restorePurchases)
+        )
+
         // Setup scroll view
         view.addSubview(scrollView)
         scrollView.translatesAutoresizingMaskIntoConstraints = false
@@ -225,44 +232,149 @@ class SubscriptionViewController: UIViewController {
     }
 
     private func getCurrentTier() -> String {
-        return UserDefaults.standard.string(forKey: "subscriptionTier") ?? "Free"
+        return subscriptionService.currentStatus.tier.displayName
     }
 
     private func getCurrentTierText() -> String {
-        let tier = getCurrentTier()
-        return "Current Plan: \(tier)"
+        let status = subscriptionService.currentStatus
+        var text = "Current Plan: \(status.tier.displayName)"
+
+        if status.isTrialing, let daysLeft = status.daysRemainingInTrial {
+            text += " (Trial: \(daysLeft) days left)"
+        } else if let expiresAt = status.expiresAt {
+            let formatter = DateFormatter()
+            formatter.dateStyle = .medium
+            text += "\nRenews: \(formatter.string(from: expiresAt))"
+        }
+
+        return text
     }
 
     @objc private func selectFreeTier() {
-        showConfirmation(tier: "Free")
+        // Can't downgrade to free - show manage subscription
+        showManageSubscription()
     }
 
     @objc private func selectPremiumTier() {
-        showConfirmation(tier: "Premium")
+        purchaseTier(.premium)
     }
 
     @objc private func selectProTier() {
-        showConfirmation(tier: "Pro")
+        purchaseTier(.pro)
     }
 
-    private func showConfirmation(tier: String) {
+    private func purchaseTier(_ tier: SubscriptionTier) {
         let alert = UIAlertController(
-            title: "Confirm \(tier) Plan",
-            message: "This is a demo. In production, this would use StoreKit to process the payment.",
+            title: "Subscribe to \(tier.displayName)",
+            message: "You'll be charged \(subscriptionService.localizedPricePerPeriod(for: tier))",
             preferredStyle: .alert
         )
 
         alert.addAction(UIAlertAction(title: "Cancel", style: .cancel))
-        alert.addAction(UIAlertAction(title: "Confirm", style: .default) { [weak self] _ in
-            UserDefaults.standard.set(tier, forKey: "subscriptionTier")
-            self?.currentTierLabel.text = "Current Plan: \(tier)"
-
-            // Reload the view
-            self?.navigationController?.popViewController(animated: true)
-            self?.dismiss(animated: true)
+        alert.addAction(UIAlertAction(title: "Subscribe", style: .default) { [weak self] _ in
+            self?.performPurchase(tier: tier)
         })
 
         present(alert, animated: true)
+    }
+
+    private func performPurchase(tier: SubscriptionTier) {
+        let spinner = UIActivityIndicatorView(style: .large)
+        spinner.center = view.center
+        spinner.startAnimating()
+        view.addSubview(spinner)
+        view.isUserInteractionEnabled = false
+
+        subscriptionService.purchase(tier: tier) { [weak self] result in
+            DispatchQueue.main.async {
+                spinner.removeFromSuperview()
+                self?.view.isUserInteractionEnabled = true
+
+                switch result {
+                case .success(let status):
+                    self?.showPurchaseSuccess(tier: status.tier)
+                case .failure(let error):
+                    self?.showPurchaseError(error)
+                }
+            }
+        }
+    }
+
+    private func showPurchaseSuccess(tier: SubscriptionTier) {
+        let alert = UIAlertController(
+            title: "Welcome to \(tier.displayName)!",
+            message: "Your subscription is now active.",
+            preferredStyle: .alert
+        )
+        alert.addAction(UIAlertAction(title: "OK", style: .default) { [weak self] _ in
+            self?.dismiss(animated: true)
+        })
+        present(alert, animated: true)
+    }
+
+    private func showPurchaseError(_ error: Error) {
+        let alert = UIAlertController(
+            title: "Purchase Failed",
+            message: error.localizedDescription,
+            preferredStyle: .alert
+        )
+        alert.addAction(UIAlertAction(title: "OK", style: .default))
+        present(alert, animated: true)
+    }
+
+    private func showManageSubscription() {
+        let alert = UIAlertController(
+            title: "Manage Subscription",
+            message: "To cancel or change your subscription, go to Settings > Apple ID > Subscriptions on your device.",
+            preferredStyle: .alert
+        )
+        alert.addAction(UIAlertAction(title: "Open Settings", style: .default) { _ in
+            if let url = URL(string: "https://apps.apple.com/account/subscriptions") {
+                UIApplication.shared.open(url)
+            }
+        })
+        alert.addAction(UIAlertAction(title: "Cancel", style: .cancel))
+        present(alert, animated: true)
+    }
+
+    @objc private func restorePurchases() {
+        let spinner = UIActivityIndicatorView(style: .large)
+        spinner.center = view.center
+        spinner.startAnimating()
+        view.addSubview(spinner)
+        view.isUserInteractionEnabled = false
+
+        subscriptionService.restorePurchases { [weak self] result in
+            DispatchQueue.main.async {
+                spinner.removeFromSuperview()
+                self?.view.isUserInteractionEnabled = true
+
+                switch result {
+                case .success(let status):
+                    if status.tier != .free {
+                        let alert = UIAlertController(
+                            title: "Purchases Restored",
+                            message: "Your \(status.tier.displayName) subscription has been restored.",
+                            preferredStyle: .alert
+                        )
+                        alert.addAction(UIAlertAction(title: "OK", style: .default) { _ in
+                            self?.dismiss(animated: true)
+                        })
+                        self?.present(alert, animated: true)
+                    } else {
+                        let alert = UIAlertController(
+                            title: "No Purchases Found",
+                            message: "No previous subscriptions were found for this account.",
+                            preferredStyle: .alert
+                        )
+                        alert.addAction(UIAlertAction(title: "OK", style: .default))
+                        self?.present(alert, animated: true)
+                    }
+                case .failure(let error):
+                    self?.showPurchaseError(error)
+                }
+            }
+        }
     }
 
     @objc private func dismissVC() {
