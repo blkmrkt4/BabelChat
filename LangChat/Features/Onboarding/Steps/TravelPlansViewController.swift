@@ -45,6 +45,10 @@ class TravelPlansViewController: BaseOnboardingViewController {
         let countryCode: String   // e.g., "FR"
     }
 
+    // MARK: - Edit Mode (for use from Settings)
+    var isEditMode: Bool = false
+    var onSave: (() -> Void)?
+
     // MARK: - Lifecycle
     override func configure() {
         step = .travelPlans
