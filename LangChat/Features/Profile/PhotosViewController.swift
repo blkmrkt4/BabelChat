@@ -140,8 +140,12 @@ extension PhotosViewController: PHPickerViewControllerDelegate {
 
         guard !results.isEmpty else { return }
 
-        // Show loading indicator
+        // Show loading indicator with cancel option
         let loadingAlert = UIAlertController(title: "Uploading Photos", message: "Please wait...", preferredStyle: .alert)
+        var isCancelled = false
+        loadingAlert.addAction(UIAlertAction(title: "Cancel", style: .cancel) { _ in
+            isCancelled = true
+        })
         present(loadingAlert, animated: true)
 
         Task {
@@ -149,9 +153,14 @@ extension PhotosViewController: PHPickerViewControllerDelegate {
             var failedCount = 0
 
             for result in results {
+                // Check if user cancelled
+                if isCancelled { break }
+
                 do {
-                    // Load the image
-                    let image = try await loadImage(from: result)
+                    // Load the image with timeout
+                    let image = try await withTimeout(seconds: 30) {
+                        try await self.loadImage(from: result)
+                    }
 
                     // Compress to JPEG
                     guard let imageData = image.jpegData(compressionQuality: 0.8) else {
@@ -165,13 +174,15 @@ extension PhotosViewController: PHPickerViewControllerDelegate {
                         continue
                     }
 
-                    // Upload to Supabase
+                    // Upload to Supabase with timeout
                     let photoIndex = self.photos.count
-                    let storagePath = try await SupabaseService.shared.uploadPhoto(
-                        imageData,
-                        userId: userId,
-                        photoIndex: photoIndex
-                    )
+                    let storagePath = try await withTimeout(seconds: 60) {
+                        try await SupabaseService.shared.uploadPhoto(
+                            imageData,
+                            userId: userId,
+                            photoIndex: photoIndex
+                        )
+                    }
 
                     // Add to array
                     await MainActor.run {
@@ -189,27 +200,49 @@ extension PhotosViewController: PHPickerViewControllerDelegate {
                 }
             }
 
-            // Dismiss loading
+            // Dismiss loading - ensure this always happens
             await MainActor.run {
-                loadingAlert.dismiss(animated: true) {
-                    if failedCount > 0 {
-                        let alert = UIAlertController(
-                            title: "Upload Complete",
-                            message: "\(uploadedCount) photo(s) uploaded. \(failedCount) failed.",
-                            preferredStyle: .alert
-                        )
-                        alert.addAction(UIAlertAction(title: "OK", style: .default))
-                        self.present(alert, animated: true)
+                // Dismiss any presented alert
+                if self.presentedViewController != nil {
+                    self.dismiss(animated: true) {
+                        self.showUploadResult(uploaded: uploadedCount, failed: failedCount, cancelled: isCancelled)
                     }
+                } else {
+                    self.showUploadResult(uploaded: uploadedCount, failed: failedCount, cancelled: isCancelled)
                 }
             }
         }
     }
 
-    /// Helper to load UIImage from PHPickerResult asynchronously
+    private func showUploadResult(uploaded: Int, failed: Int, cancelled: Bool) {
+        if cancelled {
+            let alert = UIAlertController(
+                title: "Upload Cancelled",
+                message: uploaded > 0 ? "\(uploaded) photo(s) were uploaded before cancellation." : nil,
+                preferredStyle: .alert
+            )
+            alert.addAction(UIAlertAction(title: "OK", style: .default))
+            present(alert, animated: true)
+        } else if failed > 0 {
+            let alert = UIAlertController(
+                title: "Upload Complete",
+                message: "\(uploaded) photo(s) uploaded. \(failed) failed.",
+                preferredStyle: .alert
+            )
+            alert.addAction(UIAlertAction(title: "OK", style: .default))
+            present(alert, animated: true)
+        }
+    }
+
+    /// Helper to load UIImage from PHPickerResult asynchronously with proper error handling
     private func loadImage(from result: PHPickerResult) async throws -> UIImage {
         let originalImage: UIImage = try await withCheckedThrowingContinuation { continuation in
+            var hasResumed = false
+
             result.itemProvider.loadObject(ofClass: UIImage.self) { object, error in
+                guard !hasResumed else { return }
+                hasResumed = true
+
                 if let error = error {
                     continuation.resume(throwing: error)
                 } else if let image = object as? UIImage {
@@ -223,6 +256,25 @@ extension PhotosViewController: PHPickerViewControllerDelegate {
 
         // Resize image to max 1200px to reduce memory usage and prevent crashes
         return resizeImage(originalImage, maxDimension: 1200)
+    }
+
+    /// Execute an async operation with a timeout
+    private func withTimeout<T>(seconds: TimeInterval, operation: @escaping () async throws -> T) async throws -> T {
+        try await withThrowingTaskGroup(of: T.self) { group in
+            group.addTask {
+                try await operation()
+            }
+
+            group.addTask {
+                try await Task.sleep(nanoseconds: UInt64(seconds * 1_000_000_000))
+                throw NSError(domain: "Timeout", code: -1,
+                    userInfo: [NSLocalizedDescriptionKey: "Operation timed out after \(Int(seconds)) seconds"])
+            }
+
+            let result = try await group.next()!
+            group.cancelAll()
+            return result
+        }
     }
 
     /// Resize image to fit within maxDimension while maintaining aspect ratio
