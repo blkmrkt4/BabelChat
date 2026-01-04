@@ -15,6 +15,10 @@ export default function RootLayout({
 }) {
   const pathname = usePathname()
 
+  // Public pages don't show admin navigation
+  const publicPages = ['/privacy', '/terms', '/support', '/login']
+  const isPublicPage = publicPages.some(page => pathname?.startsWith(page))
+
   const links = [
     { href: '/', label: 'AI Model/Prompt Bindings' },
     { href: '/evaluation', label: 'Model/Prompt Testing' },
@@ -26,6 +30,17 @@ export default function RootLayout({
     { href: '/voices', label: 'TTS Voices' },
     { href: '/settings', label: 'Settings' },
   ]
+
+  // For public pages, render without admin nav
+  if (isPublicPage) {
+    return (
+      <html lang="en">
+        <body className={inter.className}>
+          {children}
+        </body>
+      </html>
+    )
+  }
 
   return (
     <html lang="en">
