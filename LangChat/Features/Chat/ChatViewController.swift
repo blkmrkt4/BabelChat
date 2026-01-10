@@ -703,20 +703,23 @@ class ChatViewController: UIViewController {
         ])
 
         // Handle placeholder visibility
-        NotificationCenter.default.addObserver(forName: UITextView.textDidChangeNotification, object: textView, queue: .main) { _ in
+        museDialogObserver = NotificationCenter.default.addObserver(forName: UITextView.textDidChangeNotification, object: textView, queue: .main) { _ in
             placeholderLabel.isHidden = !textView.text.isEmpty
         }
 
         // Button actions
-        cancelButton.addAction(UIAction { _ in
-            alertVC.dismiss(animated: true)
+        cancelButton.addAction(UIAction { [weak self] _ in
+            self?.dismissMuseDialog()
         }, for: .touchUpInside)
 
         askButton.addAction(UIAction { [weak self] _ in
             guard let self = self, !textView.text.isEmpty else { return }
-            alertVC.dismiss(animated: true) {
-                self.askMuse(query: textView.text)
-            }
+            // Capture text before dismissing
+            let query = textView.text ?? ""
+            self.dismissMuseDialog()
+            // Wait for dismissal to complete slightly or just fire (dismiss is animated)
+            // Ideally we'd pass a completion block to dismissMuseDialog, but for now this works as askMuse presents a new alert
+            self.askMuse(query: query)
         }, for: .touchUpInside)
 
         // Dismiss on background tap
@@ -733,8 +736,13 @@ class ChatViewController: UIViewController {
     }
 
     private var museDialogVC: UIViewController?
+    private var museDialogObserver: NSObjectProtocol?
 
     @objc private func dismissMuseDialog() {
+        if let observer = museDialogObserver {
+            NotificationCenter.default.removeObserver(observer)
+            museDialogObserver = nil
+        }
         museDialogVC?.dismiss(animated: true)
         museDialogVC = nil
     }

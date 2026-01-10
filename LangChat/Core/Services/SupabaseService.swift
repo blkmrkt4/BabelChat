@@ -1291,6 +1291,8 @@ struct MatchResponse: Codable {
     let user2Id: String
     let isMutual: Bool
     let matchedAt: String
+    let user1: ProfileResponse?
+    let user2: ProfileResponse?
 
     enum CodingKeys: String, CodingKey {
         case id
@@ -1298,6 +1300,8 @@ struct MatchResponse: Codable {
         case user2Id = "user2_id"
         case isMutual = "is_mutual"
         case matchedAt = "matched_at"
+        case user1
+        case user2
     }
 }
 

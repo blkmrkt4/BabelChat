@@ -1,6 +1,33 @@
 import UIKit
 import AVFoundation
 
+// MARK: - NSCache Subscript Extension
+extension NSCache where KeyType == NSString, ObjectType == NSString {
+    subscript(key: String) -> String? {
+        get { object(forKey: key as NSString) as String? }
+        set {
+            if let value = newValue {
+                setObject(value as NSString, forKey: key as NSString)
+            } else {
+                removeObject(forKey: key as NSString)
+            }
+        }
+    }
+}
+
+extension NSCache where KeyType == NSString, ObjectType == NSNumber {
+    subscript(key: String) -> Bool? {
+        get { object(forKey: key as NSString)?.boolValue }
+        set {
+            if let value = newValue {
+                setObject(NSNumber(value: value), forKey: key as NSString)
+            } else {
+                removeObject(forKey: key as NSString)
+            }
+        }
+    }
+}
+
 // Protocol to notify when pane changes and actions
 protocol SwipeableMessageCellDelegate: AnyObject {
     func cell(_ cell: SwipeableMessageCell, didSwipeToPaneIndex paneIndex: Int)
@@ -57,12 +84,12 @@ class SwipeableMessageCell: UITableViewCell {
     private var bubbleTrailingConstraint: NSLayoutConstraint!
 
     // Static cache for translations and grammar checks (across cell reuse)
-    private static var translationCache: [String: String] = [:] // messageId: translation
-    private static var grammarCache: [String: String] = [:] // messageId: grammarJSON (native language explanation)
-    private static var grammarCacheAlt: [String: String] = [:] // messageId: grammarJSON (learning language explanation)
+    private static let translationCache = NSCache<NSString, NSString>()
+    private static let grammarCache = NSCache<NSString, NSString>()
+    private static let grammarCacheAlt = NSCache<NSString, NSString>()
 
     // Track which explanation language is currently shown per message
-    private static var grammarExplanationInNative: [String: Bool] = [:] // messageId: true if showing native language
+    private static let grammarExplanationInNative = NSCache<NSString, NSNumber>()
 
     // Language indicator badge on grammar pane
     private let grammarLanguageBadge = UILabel()
@@ -438,7 +465,7 @@ class SwipeableMessageCell: UITableViewCell {
         // Determine current and alternate languages
         // The two options should always be: native language OR learning language
         // (not the detected message language, which could be the same as native)
-        let isShowingNative = Self.grammarExplanationInNative[message.id] ?? true
+        let isShowingNative = Self.grammarExplanationInNative.object(forKey: message.id as NSString)?.boolValue ?? true
         let currentLangName = isShowingNative ? nativeLanguage.name : learningLanguage.name
         let alternateLangName = isShowingNative ? learningLanguage.name : nativeLanguage.name
 
@@ -764,12 +791,12 @@ class SwipeableMessageCell: UITableViewCell {
         timeLabel.text = message.formattedTime
 
         // Configure translation pane (initially show loading or cached)
-        if let cached = Self.translationCache[message.id] {
-            translationLabel.text = cached
+        if let cached = Self.translationCache.object(forKey: message.id as NSString) {
+            translationLabel.text = cached as String
         } else if let translation = message.translatedText {
             // Use pre-populated translation from demo data
             translationLabel.text = translation
-            Self.translationCache[message.id] = translation
+            Self.translationCache.setObject(translation as NSString, forKey: message.id as NSString)
         } else {
             translationLabel.text = "Swipe to translate..."
         }

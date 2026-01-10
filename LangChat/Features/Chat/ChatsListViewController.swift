@@ -61,22 +61,25 @@ class ChatsListViewController: UIViewController {
                 }
                 let currentUserIdString = currentUserId.uuidString
 
-                // Get the other user's ID from each match
+                // Get the other user's ID and profile from each match
                 var matchedUsers: [(matchId: String, user: User)] = []
 
                 for matchResponse in mutualMatches {
                     // Use case-insensitive comparison for UUIDs
-                    let otherUserId = matchResponse.user1Id.lowercased() == currentUserIdString.lowercased()
-                        ? matchResponse.user2Id
-                        : matchResponse.user1Id
+                    let isUser1Current = matchResponse.user1Id.lowercased() == currentUserIdString.lowercased()
+                    let otherUserId = isUser1Current ? matchResponse.user2Id : matchResponse.user1Id
 
                     // Skip if already have a chat with this user
                     if existingChatUserIds.contains(otherUserId) {
                         continue
                     }
 
-                    // Try to fetch user profile
-                    if let userProfile = try? await SupabaseService.shared.fetchUserProfile(userId: otherUserId) {
+                    // Use embedded profile if available, otherwise fetch
+                    if let embeddedProfile = isUser1Current ? matchResponse.user2 : matchResponse.user1,
+                       let user = embeddedProfile.toUser() {
+                        matchedUsers.append((matchId: matchResponse.id, user: user))
+                    } else if let userProfile = try? await SupabaseService.shared.fetchUserProfile(userId: otherUserId) {
+                        // Fallback to fetch if embedded data is missing (shouldn't happen with correct query)
                         matchedUsers.append((matchId: matchResponse.id, user: userProfile))
                     }
                 }

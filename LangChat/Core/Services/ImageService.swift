@@ -3,8 +3,16 @@ import UIKit
 class ImageService {
     static let shared = ImageService()
     private let cache = NSCache<NSString, UIImage>()
+    
+    // Shared session for all image downloads
+    private let session: URLSession
 
-    private init() {}
+    private init() {
+        let config = URLSessionConfiguration.default
+        config.timeoutIntervalForRequest = 30
+        config.waitsForConnectivity = true
+        self.session = URLSession(configuration: config)
+    }
 
     // Generate placeholder images for testing
     // Best services for testing:
@@ -66,13 +74,7 @@ class ImageService {
             return
         }
 
-        // Configure session to reduce network errors
-        let config = URLSessionConfiguration.default
-        config.timeoutIntervalForRequest = 30
-        config.waitsForConnectivity = true
-        let session = URLSession(configuration: config)
-
-        // Download image
+        // Download image using shared session
         session.dataTask(with: url) { [weak self, weak imageView] data, response, error in
             if let error = error {
                 print("Image loading error: \(error.localizedDescription)")

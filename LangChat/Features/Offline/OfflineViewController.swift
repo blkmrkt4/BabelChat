@@ -244,9 +244,12 @@ class OfflineViewController: UIViewController {
     }
 
     // MARK: - Animations
+    private var dotsTimer: Timer?
+
     private func animateRetryingDots() {
+        dotsTimer?.invalidate()
         var dotCount = 0
-        Timer.scheduledTimer(withTimeInterval: 0.5, repeats: true) { [weak self] timer in
+        dotsTimer = Timer.scheduledTimer(withTimeInterval: 0.5, repeats: true) { [weak self] timer in
             guard let self = self else {
                 timer.invalidate()
                 return
@@ -258,6 +261,11 @@ class OfflineViewController: UIViewController {
                 self.retryingLabel.text = "Retrying\(dots)"
             }
         }
+    }
+
+    private func stopAnimatingDots() {
+        dotsTimer?.invalidate()
+        dotsTimer = nil
     }
 }
 
