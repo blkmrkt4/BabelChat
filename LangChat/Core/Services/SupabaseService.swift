@@ -1980,12 +1980,15 @@ extension SupabaseService {
         }
 
         // Call the database function to generate invite code
-        let response: PostgrestResponse<[String: String]> = try await client.rpc(
+        // The function returns a plain TEXT value
+        let response: PostgrestResponse<String> = try await client.rpc(
             "create_invite",
             params: ["p_inviter_id": userId.uuidString]
         ).single().execute()
 
-        guard let code = response.value["create_invite"] else {
+        let code = response.value
+
+        guard !code.isEmpty else {
             throw NSError(domain: "SupabaseService", code: 500, userInfo: [NSLocalizedDescriptionKey: "Failed to generate invite code"])
         }
 
