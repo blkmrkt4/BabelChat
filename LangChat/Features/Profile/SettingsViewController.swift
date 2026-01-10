@@ -368,33 +368,78 @@ class SettingsViewController: UIViewController {
     }
 
     private func showInviteFriends() {
-        // Get user's name for the share text
-        let firstName = UserDefaults.standard.string(forKey: "firstName") ?? "Someone"
+        // Show loading indicator
+        let loadingAlert = UIAlertController(title: nil, message: "Generating invite link...", preferredStyle: .alert)
+        let loadingIndicator = UIActivityIndicatorView(frame: CGRect(x: 10, y: 5, width: 50, height: 50))
+        loadingIndicator.hidesWhenStopped = true
+        loadingIndicator.style = .medium
+        loadingIndicator.startAnimating()
+        loadingAlert.view.addSubview(loadingIndicator)
+        present(loadingAlert, animated: true)
 
-        // Build simple shareable text - no database call needed
-        let shareText = """
-        \(firstName) wants to practice languages with you on Fluenca!
+        Task {
+            do {
+                // Generate a unique invite code
+                let inviteCode = try await SupabaseService.shared.generateInviteCode()
+                let firstName = UserDefaults.standard.string(forKey: "firstName") ?? "Someone"
 
-        Download Fluenca to connect and start your language learning journey together.
+                // Build the deep link URL
+                let inviteLink = "fluenca://invite/\(inviteCode)"
 
-        App Store: https://apps.apple.com/app/fluenca/id6740043019
-        """
+                // Build clear, step-by-step instructions
+                let shareText = """
+                🎉 \(firstName) invited you to practice languages together on Fluenca!
 
-        // Show share sheet directly
-        let activityVC = UIActivityViewController(
-            activityItems: [shareText],
-            applicationActivities: nil
-        )
+                📱 HOW TO CONNECT:
 
-        // Configure for iPad
-        if let popover = activityVC.popoverPresentationController {
-            popover.sourceView = self.tableView
-            if let socialSection = SettingSection.allCases.firstIndex(of: .social) {
-                popover.sourceRect = self.tableView.rectForRow(at: IndexPath(row: 0, section: socialSection))
+                1️⃣ Download Fluenca from the App Store:
+                https://apps.apple.com/app/fluenca/id6740043019
+
+                2️⃣ Create your account and choose the Premium plan ($9.99/mo) to unlock matching with real people
+
+                3️⃣ After signing up, tap this link to instantly connect with \(firstName):
+                \(inviteLink)
+
+                Your invite code: \(inviteCode)
+
+                ✨ Once connected, you can start practicing languages together right away!
+                """
+
+                await MainActor.run {
+                    loadingAlert.dismiss(animated: true) {
+                        // Show share sheet
+                        let activityVC = UIActivityViewController(
+                            activityItems: [shareText],
+                            applicationActivities: nil
+                        )
+
+                        // Configure for iPad
+                        if let popover = activityVC.popoverPresentationController {
+                            popover.sourceView = self.tableView
+                            if let socialSection = SettingSection.allCases.firstIndex(of: .social) {
+                                popover.sourceRect = self.tableView.rectForRow(at: IndexPath(row: 0, section: socialSection))
+                            }
+                        }
+
+                        self.present(activityVC, animated: true)
+                    }
+                }
+            } catch {
+                await MainActor.run {
+                    loadingAlert.dismiss(animated: true) {
+                        // Show error alert
+                        let errorAlert = UIAlertController(
+                            title: "Couldn't Generate Invite",
+                            message: "Please check your connection and try again.",
+                            preferredStyle: .alert
+                        )
+                        errorAlert.addAction(UIAlertAction(title: "OK", style: .default))
+                        self.present(errorAlert, animated: true)
+                    }
+                }
+                print("❌ Error generating invite code: \(error)")
             }
         }
-
-        present(activityVC, animated: true)
     }
 
     private func showSubscription() {
