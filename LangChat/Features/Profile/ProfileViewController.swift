@@ -40,6 +40,7 @@ class ProfileViewController: UIViewController, PhotoGridViewDelegate {
     private let bioEditHintLabel = UILabel()
     private var bioLabelBottomConstraint: NSLayoutConstraint?
     private var bioTextViewHeightConstraint: NSLayoutConstraint?
+    private var bioTextViewBottomConstraint: NSLayoutConstraint?
     private var isEditingBio = false
 
     // Location
@@ -59,6 +60,20 @@ class ProfileViewController: UIViewController, PhotoGridViewDelegate {
             name: .userProfileUpdated,
             object: nil
         )
+
+        // Listen for keyboard events
+        NotificationCenter.default.addObserver(
+            self,
+            selector: #selector(keyboardWillShow(_:)),
+            name: UIResponder.keyboardWillShowNotification,
+            object: nil
+        )
+        NotificationCenter.default.addObserver(
+            self,
+            selector: #selector(keyboardWillHide(_:)),
+            name: UIResponder.keyboardWillHideNotification,
+            object: nil
+        )
     }
 
     override func viewWillAppear(_ animated: Bool) {
@@ -76,14 +91,7 @@ class ProfileViewController: UIViewController, PhotoGridViewDelegate {
         // No title needed - it's clear from the tab bar
         navigationController?.navigationBar.prefersLargeTitles = false
 
-        // Left side: Language Lab, Welcome Screen
-        let languageLabButton = UIBarButtonItem(
-            image: UIImage(systemName: "flask"),
-            style: .plain,
-            target: self,
-            action: #selector(languageLabTapped)
-        )
-
+        // Left side: Welcome Screen
         let welcomeButton = UIBarButtonItem(
             image: UIImage(systemName: "house"),
             style: .plain,
@@ -106,7 +114,7 @@ class ProfileViewController: UIViewController, PhotoGridViewDelegate {
             action: #selector(settingsTapped)
         )
 
-        navigationItem.leftBarButtonItems = [languageLabButton, welcomeButton]
+        navigationItem.leftBarButtonItems = [welcomeButton]
         navigationItem.rightBarButtonItems = [settingsButton, tutorialButton]
     }
 
@@ -234,12 +242,19 @@ class ProfileViewController: UIViewController, PhotoGridViewDelegate {
         bioLabel.textColor = .secondaryLabel
         bioLabel.numberOfLines = 0
         bioLabel.isUserInteractionEnabled = true
+        bioLabel.backgroundColor = .secondarySystemBackground
+        bioLabel.layer.cornerRadius = 12
+        bioLabel.clipsToBounds = true
         contentView.addSubview(bioLabel)
 
         // Add long press gesture to edit bio
         let bioLongPressGesture = UILongPressGestureRecognizer(target: self, action: #selector(bioLongPressed(_:)))
         bioLongPressGesture.minimumPressDuration = 0.5
         bioLabel.addGestureRecognizer(bioLongPressGesture)
+
+        // Also add tap gesture as alternative to long press
+        let bioTapGesture = UITapGestureRecognizer(target: self, action: #selector(bioTapped))
+        bioLabel.addGestureRecognizer(bioTapGesture)
 
         // Bio text view (for inline editing)
         bioTextView.font = .systemFont(ofSize: 16, weight: .regular)
@@ -255,7 +270,7 @@ class ProfileViewController: UIViewController, PhotoGridViewDelegate {
         contentView.addSubview(bioTextView)
 
         // Edit hint label
-        bioEditHintLabel.text = "Long press to edit"
+        bioEditHintLabel.text = "Tap to edit"
         bioEditHintLabel.font = .systemFont(ofSize: 12, weight: .regular)
         bioEditHintLabel.textColor = .tertiaryLabel
         bioEditHintLabel.textAlignment = .right
@@ -371,10 +386,11 @@ class ProfileViewController: UIViewController, PhotoGridViewDelegate {
             bioEditHintLabel.centerYAnchor.constraint(equalTo: aboutLabel.centerYAnchor),
             bioEditHintLabel.trailingAnchor.constraint(equalTo: contentView.trailingAnchor, constant: -20),
 
-            // Bio label (shown when not editing)
+            // Bio label (shown when not editing) - minimum height ensures it's tappable
             bioLabel.topAnchor.constraint(equalTo: aboutLabel.bottomAnchor, constant: 6),
             bioLabel.leadingAnchor.constraint(equalTo: contentView.leadingAnchor, constant: 20),
             bioLabel.trailingAnchor.constraint(equalTo: contentView.trailingAnchor, constant: -20),
+            bioLabel.heightAnchor.constraint(greaterThanOrEqualToConstant: 60),
             bioLabelBottomConstraint!,
 
             // Bio text view (shown when editing)
@@ -415,7 +431,7 @@ class ProfileViewController: UIViewController, PhotoGridViewDelegate {
         nameLabel.text = lastName.isEmpty ? firstName : "\(firstName) \(lastName)"
 
         // Bio
-        bioLabel.text = profile.bio ?? "Long press to add your bio"
+        bioLabel.text = profile.bio ?? "Tap to add your bio"
 
         // Location
         let location = profile.location ?? "Add location"
@@ -531,9 +547,16 @@ class ProfileViewController: UIViewController, PhotoGridViewDelegate {
 
     private func loadProfileDataFromUserDefaults() {
         // Fallback: Load from UserDefaults
-        let firstName = UserDefaults.standard.string(forKey: "firstName") ?? "Your"
-        let lastName = UserDefaults.standard.string(forKey: "lastName") ?? "Name"
-        nameLabel.text = "\(firstName) \(lastName)"
+        let firstName = UserDefaults.standard.string(forKey: "firstName") ?? ""
+        let lastName = UserDefaults.standard.string(forKey: "lastName") ?? ""
+
+        if firstName.isEmpty {
+            nameLabel.text = "Complete Your Profile"
+        } else if lastName.isEmpty {
+            nameLabel.text = firstName
+        } else {
+            nameLabel.text = "\(firstName) \(lastName)"
+        }
 
         // Load profile image
         if let profileImageURL = UserDefaults.standard.string(forKey: "profileImageURL"),
@@ -546,7 +569,7 @@ class ProfileViewController: UIViewController, PhotoGridViewDelegate {
         }
 
         // Load bio
-        bioLabel.text = UserDefaults.standard.string(forKey: "bio") ?? "Long press to add your bio"
+        bioLabel.text = UserDefaults.standard.string(forKey: "bio") ?? "Tap to add your bio"
 
         // Load location and privacy setting
         let location = UserDefaults.standard.string(forKey: "location") ?? "Add location"
@@ -602,11 +625,6 @@ class ProfileViewController: UIViewController, PhotoGridViewDelegate {
     @objc private func settingsTapped() {
         let settingsVC = SettingsViewController()
         navigationController?.pushViewController(settingsVC, animated: true)
-    }
-
-    @objc private func languageLabTapped() {
-        let languageLabVC = LanguageLabViewController()
-        navigationController?.pushViewController(languageLabVC, animated: true)
     }
 
     @objc private func welcomeScreenTapped() {
@@ -732,6 +750,16 @@ class ProfileViewController: UIViewController, PhotoGridViewDelegate {
 
     // MARK: - Bio Editing
 
+    @objc private func bioTapped() {
+        guard !isEditingBio else { return }
+
+        // Haptic feedback
+        let impactFeedback = UIImpactFeedbackGenerator(style: .light)
+        impactFeedback.impactOccurred()
+
+        startEditingBio()
+    }
+
     @objc private func bioLongPressed(_ gesture: UILongPressGestureRecognizer) {
         guard gesture.state == .began else { return }
         guard !isEditingBio else { return }
@@ -747,7 +775,7 @@ class ProfileViewController: UIViewController, PhotoGridViewDelegate {
         isEditingBio = true
 
         let currentBio = currentProfile?.bio ?? ""
-        let placeholderText = "Long press to add your bio"
+        let placeholderText = "Tap to add your bio"
 
         // Set text view content (don't show placeholder as actual text)
         bioTextView.text = currentBio == placeholderText ? "" : currentBio
@@ -763,23 +791,22 @@ class ProfileViewController: UIViewController, PhotoGridViewDelegate {
             self.bioLabel.isHidden = true
         }
 
-        // Update constraints
+        // Update constraints - add extra bottom padding so user can scroll bio above keyboard
         bioLabelBottomConstraint?.isActive = false
-        let textViewBottomConstraint = bioTextView.bottomAnchor.constraint(equalTo: contentView.bottomAnchor, constant: -40)
-        textViewBottomConstraint.isActive = true
+
+        if bioTextViewBottomConstraint == nil {
+            bioTextViewBottomConstraint = bioTextView.bottomAnchor.constraint(equalTo: contentView.bottomAnchor, constant: -40)
+        }
+        // Add 350pt extra padding below so user can scroll the About section well above keyboard
+        bioTextViewBottomConstraint?.constant = -350
+        bioTextViewBottomConstraint?.isActive = true
 
         // Add Done button to navigation bar
         let doneButton = UIBarButtonItem(title: "Done", style: .done, target: self, action: #selector(doneEditingBioTapped))
         navigationItem.rightBarButtonItems?.insert(doneButton, at: 0)
 
-        // Focus text view
+        // Focus text view - keyboard handler will scroll to About section
         bioTextView.becomeFirstResponder()
-
-        // Scroll to make bio visible
-        DispatchQueue.main.asyncAfter(deadline: .now() + 0.3) {
-            let rect = self.bioTextView.convert(self.bioTextView.bounds, to: self.scrollView)
-            self.scrollView.scrollRectToVisible(rect, animated: true)
-        }
     }
 
     @objc private func doneEditingBioTapped() {
@@ -802,13 +829,14 @@ class ProfileViewController: UIViewController, PhotoGridViewDelegate {
             self.bioLabel.alpha = 1
             self.bioTextView.alpha = 0
             self.bioLabel.isHidden = false
-            self.bioEditHintLabel.text = "Long press to edit"
+            self.bioEditHintLabel.text = "Tap to edit"
             self.bioEditHintLabel.textColor = .tertiaryLabel
         } completion: { _ in
             self.bioTextView.isHidden = true
         }
 
-        // Update constraints
+        // Update constraints - reset bottom padding
+        bioTextViewBottomConstraint?.isActive = false
         bioLabelBottomConstraint?.isActive = true
 
         // Remove Done button from navigation bar
@@ -822,13 +850,52 @@ class ProfileViewController: UIViewController, PhotoGridViewDelegate {
         isEditingBio = false
     }
 
+    // MARK: - Keyboard Handling
+
+    @objc private func keyboardWillShow(_ notification: Notification) {
+        guard isEditingBio,
+              let keyboardFrame = notification.userInfo?[UIResponder.keyboardFrameEndUserInfoKey] as? CGRect,
+              let duration = notification.userInfo?[UIResponder.keyboardAnimationDurationUserInfoKey] as? TimeInterval else {
+            return
+        }
+
+        let keyboardHeight = keyboardFrame.height
+
+        // Adjust scroll view content inset to account for keyboard
+        let contentInset = UIEdgeInsets(top: 0, left: 0, bottom: keyboardHeight, right: 0)
+        scrollView.contentInset = contentInset
+        scrollView.scrollIndicatorInsets = contentInset
+
+        // Scroll to position the About section at the top of the visible area
+        UIView.animate(withDuration: duration) {
+            // Get the frame of the About label in scrollView coordinates
+            let aboutLabelFrame = self.aboutLabel.convert(self.aboutLabel.bounds, to: self.scrollView)
+
+            // Scroll so About label is at the top with some padding
+            let targetOffset = CGPoint(x: 0, y: aboutLabelFrame.origin.y - 20)
+            self.scrollView.setContentOffset(targetOffset, animated: false)
+        }
+    }
+
+    @objc private func keyboardWillHide(_ notification: Notification) {
+        guard let duration = notification.userInfo?[UIResponder.keyboardAnimationDurationUserInfoKey] as? TimeInterval else {
+            return
+        }
+
+        // Reset scroll view insets
+        UIView.animate(withDuration: duration) {
+            self.scrollView.contentInset = .zero
+            self.scrollView.scrollIndicatorInsets = .zero
+        }
+    }
+
     private func saveBio(_ bio: String) {
         Task {
             do {
                 try await SupabaseService.shared.updateUserBio(bio: bio)
                 await MainActor.run {
                     // Update local state
-                    self.bioLabel.text = bio.isEmpty ? "Long press to add your bio" : bio
+                    self.bioLabel.text = bio.isEmpty ? "Tap to add your bio" : bio
 
                     // Update UserDefaults as fallback
                     UserDefaults.standard.set(bio, forKey: "bio")

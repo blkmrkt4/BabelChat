@@ -8,6 +8,7 @@ class AuthenticationViewController: UIViewController {
     private let overlayView = UIView()
     private let logoLabel = UILabel()
     private let taglineLabel = UILabel()
+    private var separatorLine: UIView!
     private let taglineLabel2 = UILabel()
     private let buttonsStackView = UIStackView()
     private let appleSignInButton = ASAuthorizationAppleIDButton(type: .signIn, style: .white)
@@ -73,19 +74,30 @@ class AuthenticationViewController: UIViewController {
         view.addSubview(logoLabel)
 
         // Tagline
-        taglineLabel.text = "Your brain learns faster when it cares"
-        taglineLabel.font = .systemFont(ofSize: 20, weight: .medium)
+        taglineLabel.text = "Science says your brain learns faster when it cares"
+        taglineLabel.font = .systemFont(ofSize: 18, weight: .medium)
         taglineLabel.textColor = .white.withAlphaComponent(0.9)
         taglineLabel.textAlignment = .center
         taglineLabel.numberOfLines = 0
+        taglineLabel.lineBreakMode = .byWordWrapping
+        taglineLabel.adjustsFontSizeToFitWidth = false
         view.addSubview(taglineLabel)
+
+        // Thin separator line between taglines
+        let separatorLine = UIView()
+        separatorLine.backgroundColor = .white.withAlphaComponent(0.3)
+        separatorLine.translatesAutoresizingMaskIntoConstraints = false
+        view.addSubview(separatorLine)
+        self.separatorLine = separatorLine
 
         // Second tagline
         taglineLabel2.text = "Speaking like a local is the fastest path to fluency"
-        taglineLabel2.font = .systemFont(ofSize: 16, weight: .regular)
+        taglineLabel2.font = .systemFont(ofSize: 15, weight: .regular)
         taglineLabel2.textColor = .white.withAlphaComponent(0.7)
         taglineLabel2.textAlignment = .center
         taglineLabel2.numberOfLines = 0
+        taglineLabel2.lineBreakMode = .byWordWrapping
+        taglineLabel2.adjustsFontSizeToFitWidth = false
         view.addSubview(taglineLabel2)
 
         // Buttons stack
@@ -187,17 +199,23 @@ class AuthenticationViewController: UIViewController {
             overlayView.trailingAnchor.constraint(equalTo: view.trailingAnchor),
             overlayView.bottomAnchor.constraint(equalTo: view.bottomAnchor),
 
-            // Logo - centered, upper third
+            // Logo - centered, moved up (halfway between original and top)
             logoLabel.centerXAnchor.constraint(equalTo: view.centerXAnchor),
-            logoLabel.topAnchor.constraint(equalTo: view.safeAreaLayoutGuide.topAnchor, constant: 100),
+            logoLabel.topAnchor.constraint(equalTo: view.safeAreaLayoutGuide.topAnchor, constant: 50),
 
-            // Tagline
-            taglineLabel.topAnchor.constraint(equalTo: logoLabel.bottomAnchor, constant: 12),
+            // Tagline - underneath logo
+            taglineLabel.topAnchor.constraint(equalTo: logoLabel.bottomAnchor, constant: 16),
             taglineLabel.leadingAnchor.constraint(equalTo: view.leadingAnchor, constant: 40),
             taglineLabel.trailingAnchor.constraint(equalTo: view.trailingAnchor, constant: -40),
 
-            // Second tagline
-            taglineLabel2.topAnchor.constraint(equalTo: taglineLabel.bottomAnchor, constant: 8),
+            // Separator line between taglines
+            separatorLine.topAnchor.constraint(equalTo: taglineLabel.bottomAnchor, constant: 12),
+            separatorLine.leadingAnchor.constraint(equalTo: view.leadingAnchor, constant: 60),
+            separatorLine.trailingAnchor.constraint(equalTo: view.trailingAnchor, constant: -60),
+            separatorLine.heightAnchor.constraint(equalToConstant: 0.5),
+
+            // Second tagline - underneath separator
+            taglineLabel2.topAnchor.constraint(equalTo: separatorLine.bottomAnchor, constant: 12),
             taglineLabel2.leadingAnchor.constraint(equalTo: view.leadingAnchor, constant: 40),
             taglineLabel2.trailingAnchor.constraint(equalTo: view.trailingAnchor, constant: -40),
 

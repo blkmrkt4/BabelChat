@@ -313,9 +313,26 @@ class SubscriptionViewController: UIViewController {
     }
 
     private func showPurchaseError(_ error: Error) {
+        let errorMessage: String
+        let errorDescription = error.localizedDescription.lowercased()
+
+        // Provide more helpful messages for common errors
+        if errorDescription.contains("configuration") || errorDescription.contains("product") {
+            errorMessage = "Subscriptions are not yet available. Please check back later or contact support."
+        } else if errorDescription.contains("network") || errorDescription.contains("connection") {
+            errorMessage = "Please check your internet connection and try again."
+        } else if errorDescription.contains("cancel") {
+            // User cancelled - don't show an error
+            return
+        } else {
+            errorMessage = error.localizedDescription
+        }
+
+        print("❌ Purchase error: \(error)")
+
         let alert = UIAlertController(
             title: "Purchase Failed",
-            message: error.localizedDescription,
+            message: errorMessage,
             preferredStyle: .alert
         )
         alert.addAction(UIAlertAction(title: "OK", style: .default))

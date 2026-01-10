@@ -303,6 +303,7 @@ class OnboardingCoordinator {
         UserDefaults.standard.set(userData.lastName, forKey: "lastName")
         UserDefaults.standard.set(userData.email, forKey: "email")
         UserDefaults.standard.set(userData.birthYear, forKey: "birthYear")
+        UserDefaults.standard.set(userData.birthMonth, forKey: "birthMonth")
         UserDefaults.standard.set(userData.hometown, forKey: "location")
         UserDefaults.standard.set(userData.city, forKey: "city")
         UserDefaults.standard.set(userData.country, forKey: "country")
@@ -379,7 +380,11 @@ extension OnboardingCoordinator: OnboardingStepDelegate {
                 userData.lastName = name.1
             }
         case .birthYear:
-            if let year = data as? Int {
+            if let birthDate = data as? BirthDate {
+                userData.birthYear = birthDate.year
+                userData.birthMonth = birthDate.month
+            } else if let year = data as? Int {
+                // Legacy fallback for just year
                 userData.birthYear = year
             }
         case .hometown:
@@ -499,6 +504,7 @@ struct OnboardingUserData {
     var lastName: String?
     var email: String? // Populated from authentication (Apple Sign In or email login)
     var birthYear: Int?
+    var birthMonth: Int?         // 1-12, for accurate age calculation
     var hometown: String?        // Full location name (e.g., "Toronto, ON, Canada")
     var city: String?            // City name (e.g., "Toronto")
     var country: String?         // Country name (e.g., "Canada")

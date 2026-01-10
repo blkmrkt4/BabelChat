@@ -290,7 +290,7 @@ extension MatchesListViewController: UICollectionViewDelegate {
         let availableMuses = getAvailableMuses()
         for muse in availableMuses {
             let action = UIAlertAction(
-                title: "\(muse.nativeLanguage.language.flag) \(muse.firstName) - \(muse.nativeLanguage.language.name)",
+                title: "\(muse.firstName) - \(muse.nativeLanguage.language.name)",
                 style: .default
             ) { [weak self] _ in
                 self?.startChatWithBot(muse)

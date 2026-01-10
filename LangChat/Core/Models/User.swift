@@ -21,6 +21,7 @@ struct User: Codable {
     let isOnline: Bool
     let isAI: Bool // Indicates if this is an AI practice partner
     let birthYear: Int? // Birth year for age calculation
+    let birthMonth: Int? // Birth month (1-12) for accurate age calculation
     let gender: String? // Gender for TTS voice selection (male, female, or nil)
 
     // Platonic and blur preferences
@@ -95,6 +96,7 @@ struct User: Codable {
          isOnline: Bool = false,
          isAI: Bool = false,
          birthYear: Int? = nil,
+         birthMonth: Int? = nil,
          gender: String? = nil,
          strictlyPlatonic: Bool = false,
          blurPhotosUntilMatch: Bool = false,
@@ -123,6 +125,7 @@ struct User: Codable {
         self.isOnline = isOnline
         self.isAI = isAI
         self.birthYear = birthYear
+        self.birthMonth = birthMonth
         self.gender = gender
         self.strictlyPlatonic = strictlyPlatonic
         self.blurPhotosUntilMatch = blurPhotosUntilMatch
@@ -180,11 +183,23 @@ struct User: Codable {
         }
     }
 
-    // Calculate age from birth year
+    // Calculate age from birth year and month (accounts for whether birthday has passed)
     var age: Int? {
         guard let birthYear = birthYear else { return nil }
-        let currentYear = Calendar.current.component(.year, from: Date())
-        return currentYear - birthYear
+
+        let calendar = Calendar.current
+        let now = Date()
+        let currentYear = calendar.component(.year, from: now)
+        let currentMonth = calendar.component(.month, from: now)
+
+        var age = currentYear - birthYear
+
+        // If we have birth month, check if birthday has passed this year
+        if let birthMonth = birthMonth, currentMonth < birthMonth {
+            age -= 1
+        }
+
+        return age
     }
 
     // Check if any photo has blur enabled (for discovery view)

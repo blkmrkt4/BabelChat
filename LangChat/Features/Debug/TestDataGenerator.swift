@@ -1,3 +1,4 @@
+#if DEBUG
 import Foundation
 import Supabase
 
@@ -272,3 +273,4 @@ struct ProfileInsertWithoutId: Codable {
         case lastActive = "last_active"
     }
 }
+#endif

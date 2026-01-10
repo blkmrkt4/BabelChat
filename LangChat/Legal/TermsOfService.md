@@ -1,8 +1,8 @@
 # Terms of Service
 
-**Last Updated: December 15, 2024**
+**Last Updated: January 3, 2026**
 
-Welcome to LangChat! These Terms of Service ("Terms") govern your use of the LangChat mobile application and related services (collectively, the "Service") operated by PainKiller Labs ("Company," "we," "us," or "our").
+Welcome to Fluenca! These Terms of Service ("Terms") govern your use of the Fluenca mobile application and related services (collectively, the "Service") operated by PainKiller Labs ("Company," "we," "us," or "our").
 
 By accessing or using our Service, you agree to be bound by these Terms. If you disagree with any part of these Terms, you may not access the Service.
 
@@ -20,7 +20,7 @@ To use certain features of the Service, you must create an account using Sign in
 
 ## 2. Description of Service
 
-LangChat is a language exchange platform that connects users who want to practice languages with native speakers and AI-powered conversation partners. The Service includes:
+Fluenca is a language exchange platform that connects users who want to practice languages with native speakers and AI-powered conversation partners. The Service includes:
 
 - **Matching System:** Connects users based on language learning goals and native languages
 - **Messaging:** Real-time chat with matched users
@@ -137,10 +137,10 @@ AI-powered translation and grammar features are provided as learning aids. While
 ## 8. Intellectual Property
 
 ### 8.1 Our Property
-The Service, including its original content, features, and functionality, is owned by LangMatcher and is protected by international copyright, trademark, and other intellectual property laws.
+The Service, including its original content, features, and functionality, is owned by PainKiller Labs and is protected by international copyright, trademark, and other intellectual property laws.
 
 ### 8.2 Trademarks
-"LangChat," "LangMatcher," and related logos are trademarks of LangMatcher. You may not use these marks without our prior written permission.
+"Fluenca" and related logos are trademarks of PainKiller Labs. You may not use these marks without our prior written permission.
 
 ### 8.3 Feedback
 Any feedback, suggestions, or ideas you provide about the Service may be used by us without any obligation to compensate you.
@@ -250,8 +250,8 @@ PainKiller Labs
 8 Parkwood Avenue
 Toronto, Ontario, Canada M4V 2W8
 
-**Website:** https://painkillerlabs.com/langmatcher
+**Website:** https://painkillerlabs.com/fluenca
 
 ---
 
-By using LangChat, you acknowledge that you have read, understood, and agree to be bound by these Terms of Service.
+By using Fluenca, you acknowledge that you have read, understood, and agree to be bound by these Terms of Service.

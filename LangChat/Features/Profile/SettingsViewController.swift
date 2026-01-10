@@ -11,9 +11,6 @@ class SettingsViewController: UIViewController {
         case matchingSettings
         case museSettings
         case social
-        #if DEBUG
-        case aiSettings
-        #endif
         case grammarFeedback
         case privacy
         case support
@@ -25,9 +22,6 @@ class SettingsViewController: UIViewController {
             case .matchingSettings: return nil  // No header for single matching item
             case .museSettings: return "AI Muse"
             case .social: return "Share"
-            #if DEBUG
-            case .aiSettings: return "AI Settings"
-            #endif
             case .grammarFeedback: return "Grammar Feedback"
             case .privacy: return "Privacy & Safety"
             case .support: return "Support"
@@ -51,14 +45,8 @@ class SettingsViewController: UIViewController {
                 ]
             case .social:
                 return [
-                    ("Invite Friends", "person.badge.plus")
+                    ("Invite Matches", "person.badge.plus")
                 ]
-            #if DEBUG
-            case .aiSettings:
-                return [
-                    ("Model Bindings", "link.circle")
-                ]
-            #endif
             case .grammarFeedback:
                 return [
                     ("Feedback Level", "slider.horizontal.3")
@@ -261,12 +249,6 @@ class SettingsViewController: UIViewController {
         case .social:
             showInviteFriends()
 
-        #if DEBUG
-        case .aiSettings:
-            // Only one item now - Model Bindings (view-only)
-            showModelBindings()
-        #endif
-
         case .grammarFeedback:
             switch row {
             case 0: showGrammarFeedbackLevel()
@@ -386,60 +368,33 @@ class SettingsViewController: UIViewController {
     }
 
     private func showInviteFriends() {
-        // Show loading indicator
-        let loadingAlert = UIAlertController(title: nil, message: "Generating invite link...", preferredStyle: .alert)
-        let loadingIndicator = UIActivityIndicatorView(frame: CGRect(x: 10, y: 5, width: 50, height: 50))
-        loadingIndicator.hidesWhenStopped = true
-        loadingIndicator.style = .medium
-        loadingIndicator.startAnimating()
-        loadingAlert.view.addSubview(loadingIndicator)
-        present(loadingAlert, animated: true)
+        // Get user's name for the share text
+        let firstName = UserDefaults.standard.string(forKey: "firstName") ?? "Someone"
 
-        Task {
-            do {
-                // Generate invite code
-                let code = try await SupabaseService.shared.generateInviteCode()
+        // Build simple shareable text - no database call needed
+        let shareText = """
+        \(firstName) wants to practice languages with you on Fluenca!
 
-                // Get user's name for the share text
-                let firstName = UserDefaults.standard.string(forKey: "firstName") ?? "A friend"
+        Download Fluenca to connect and start your language learning journey together.
 
-                // Build shareable text
-                let shareText = SupabaseService.shared.buildShareableInviteText(code: code, inviterName: firstName)
+        App Store: https://apps.apple.com/app/fluenca/id6740043019
+        """
 
-                await MainActor.run {
-                    loadingAlert.dismiss(animated: true) {
-                        // Show share sheet
-                        let activityVC = UIActivityViewController(
-                            activityItems: [shareText],
-                            applicationActivities: nil
-                        )
+        // Show share sheet directly
+        let activityVC = UIActivityViewController(
+            activityItems: [shareText],
+            applicationActivities: nil
+        )
 
-                        // Configure for iPad
-                        if let popover = activityVC.popoverPresentationController {
-                            popover.sourceView = self.tableView
-                            if let socialSection = SettingSection.allCases.firstIndex(of: .social) {
-                                popover.sourceRect = self.tableView.rectForRow(at: IndexPath(row: 0, section: socialSection))
-                            }
-                        }
-
-                        self.present(activityVC, animated: true)
-                    }
-                }
-            } catch {
-                await MainActor.run {
-                    loadingAlert.dismiss(animated: true) {
-                        let errorAlert = UIAlertController(
-                            title: "Error",
-                            message: "Could not generate invite link. Please try again.",
-                            preferredStyle: .alert
-                        )
-                        errorAlert.addAction(UIAlertAction(title: "OK", style: .default))
-                        self.present(errorAlert, animated: true)
-                    }
-                }
-                print("❌ Error generating invite: \(error)")
+        // Configure for iPad
+        if let popover = activityVC.popoverPresentationController {
+            popover.sourceView = self.tableView
+            if let socialSection = SettingSection.allCases.firstIndex(of: .social) {
+                popover.sourceRect = self.tableView.rectForRow(at: IndexPath(row: 0, section: socialSection))
             }
         }
+
+        present(activityVC, animated: true)
     }
 
     private func showSubscription() {
@@ -484,14 +439,6 @@ class SettingsViewController: UIViewController {
 
         present(alert, animated: true)
     }
-
-    #if DEBUG
-    private func showModelBindings() {
-        let bindingsVC = AIModelBindingsViewController()
-        bindingsVC.title = "Model Bindings"
-        navigationController?.pushViewController(bindingsVC, animated: true)
-    }
-    #endif
 
     private func showNotificationSettings() {
         print("Show notification settings")
@@ -654,15 +601,34 @@ class SettingsViewController: UIViewController {
     }
 
     private func showTermsOfService() {
-        print("Show terms of service")
+        showLegalDocument(title: "Terms of Service", filename: "TermsOfService")
     }
 
     private func showPrivacyPolicy() {
-        print("Show privacy policy")
+        showLegalDocument(title: "Privacy Policy", filename: "PrivacyPolicy")
     }
 
     private func showOpenSourceLibraries() {
-        print("Show open source libraries")
+        showLegalDocument(title: "Open Source Libraries", filename: "ThirdPartyLicenses")
+    }
+
+    private func showLegalDocument(title: String, filename: String) {
+        // Try to load from bundle
+        guard let url = Bundle.main.url(forResource: filename, withExtension: "md"),
+              let content = try? String(contentsOf: url, encoding: .utf8) else {
+            // Fallback: show error
+            let alert = UIAlertController(
+                title: "Error",
+                message: "Could not load \(title)",
+                preferredStyle: .alert
+            )
+            alert.addAction(UIAlertAction(title: "OK", style: .default))
+            present(alert, animated: true)
+            return
+        }
+
+        let vc = LegalDocumentViewController(title: title, content: content)
+        navigationController?.pushViewController(vc, animated: true)
     }
 
     private func showVersion() {
@@ -676,6 +642,96 @@ class SettingsViewController: UIViewController {
         )
         alert.addAction(UIAlertAction(title: "OK", style: .default))
         present(alert, animated: true)
+    }
+}
+
+// MARK: - Legal Document Viewer
+class LegalDocumentViewController: UIViewController {
+
+    private let textView = UITextView()
+    private let documentContent: String
+
+    init(title: String, content: String) {
+        self.documentContent = content
+        super.init(nibName: nil, bundle: nil)
+        self.title = title
+    }
+
+    required init?(coder: NSCoder) {
+        fatalError("init(coder:) has not been implemented")
+    }
+
+    override func viewDidLoad() {
+        super.viewDidLoad()
+        setupViews()
+    }
+
+    private func setupViews() {
+        view.backgroundColor = .systemBackground
+        navigationItem.largeTitleDisplayMode = .never
+
+        textView.isEditable = false
+        textView.font = .systemFont(ofSize: 15)
+        textView.textColor = .label
+        textView.backgroundColor = .systemBackground
+        textView.textContainerInset = UIEdgeInsets(top: 16, left: 16, bottom: 16, right: 16)
+
+        // Convert markdown to attributed string (basic conversion)
+        textView.attributedText = parseMarkdown(documentContent)
+
+        view.addSubview(textView)
+        textView.translatesAutoresizingMaskIntoConstraints = false
+
+        NSLayoutConstraint.activate([
+            textView.topAnchor.constraint(equalTo: view.safeAreaLayoutGuide.topAnchor),
+            textView.leadingAnchor.constraint(equalTo: view.leadingAnchor),
+            textView.trailingAnchor.constraint(equalTo: view.trailingAnchor),
+            textView.bottomAnchor.constraint(equalTo: view.bottomAnchor)
+        ])
+    }
+
+    private func parseMarkdown(_ markdown: String) -> NSAttributedString {
+        let result = NSMutableAttributedString()
+
+        let paragraphStyle = NSMutableParagraphStyle()
+        paragraphStyle.lineSpacing = 4
+        paragraphStyle.paragraphSpacing = 12
+
+        let lines = markdown.components(separatedBy: "\n")
+
+        for line in lines {
+            var text = line
+            var attributes: [NSAttributedString.Key: Any] = [
+                .font: UIFont.systemFont(ofSize: 15),
+                .foregroundColor: UIColor.label,
+                .paragraphStyle: paragraphStyle
+            ]
+
+            // Headers
+            if line.hasPrefix("# ") {
+                text = String(line.dropFirst(2))
+                attributes[.font] = UIFont.systemFont(ofSize: 24, weight: .bold)
+            } else if line.hasPrefix("## ") {
+                text = String(line.dropFirst(3))
+                attributes[.font] = UIFont.systemFont(ofSize: 20, weight: .bold)
+            } else if line.hasPrefix("### ") {
+                text = String(line.dropFirst(4))
+                attributes[.font] = UIFont.systemFont(ofSize: 17, weight: .semibold)
+            }
+            // Bold
+            else if line.contains("**") {
+                text = line.replacingOccurrences(of: "**", with: "")
+                attributes[.font] = UIFont.systemFont(ofSize: 15, weight: .semibold)
+            }
+            // List items
+            else if line.hasPrefix("- ") {
+                text = "• " + String(line.dropFirst(2))
+            }
+
+            result.append(NSAttributedString(string: text + "\n", attributes: attributes))
+        }
+
+        return result
     }
 }
 

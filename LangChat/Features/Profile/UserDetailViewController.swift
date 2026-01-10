@@ -184,6 +184,18 @@ class UserDetailViewController: UIViewController, PhotoGridViewDelegate {
             navigationItem.hidesBackButton = true
         }
 
+        updateNavigationBarItems()
+    }
+
+    private func updateNavigationBarItems() {
+        guard let user = user else { return }
+
+        // Keep title as just the name
+        title = user.firstName
+
+        // Right bar button items
+        var rightItems: [UIBarButtonItem] = []
+
         if isMatched {
             // Add chat button if matched
             let chatButton = UIBarButtonItem(
@@ -192,7 +204,84 @@ class UserDetailViewController: UIViewController, PhotoGridViewDelegate {
                 target: self,
                 action: #selector(chatTapped)
             )
-            navigationItem.rightBarButtonItem = chatButton
+            rightItems.append(chatButton)
+        }
+
+        navigationItem.rightBarButtonItems = rightItems.isEmpty ? nil : rightItems
+
+        // Left side - star (if pinned) and platonic badge (if strictly platonic)
+        let pinnedProfiles = UserDefaults.standard.stringArray(forKey: "pinnedProfileIds") ?? []
+        let isPinned = pinnedProfiles.contains(user.id)
+
+        let showStar = isPinned
+        let showPlatonic = user.strictlyPlatonic
+
+        if showStar || showPlatonic {
+            let leftStack = UIStackView()
+            leftStack.axis = .horizontal
+            leftStack.alignment = .center
+            leftStack.spacing = 6
+
+            // Star indicator (same StarButton image at 50% size = ~17x17)
+            if showStar {
+                let starImageView = UIImageView()
+                if let starImage = UIImage(named: "StarButton") {
+                    starImageView.image = starImage
+                }
+                starImageView.contentMode = .scaleAspectFit
+                starImageView.translatesAutoresizingMaskIntoConstraints = false
+                NSLayoutConstraint.activate([
+                    starImageView.widthAnchor.constraint(equalToConstant: 18),
+                    starImageView.heightAnchor.constraint(equalToConstant: 18)
+                ])
+                leftStack.addArrangedSubview(starImageView)
+            }
+
+            // Platonic badge with text
+            if showPlatonic {
+                let platonicBadge = UIView()
+                platonicBadge.backgroundColor = .systemTeal
+                platonicBadge.layer.cornerRadius = 8
+
+                let badgeStack = UIStackView()
+                badgeStack.axis = .horizontal
+                badgeStack.alignment = .center
+                badgeStack.spacing = 3
+                badgeStack.translatesAutoresizingMaskIntoConstraints = false
+
+                let iconView = UIImageView(image: UIImage(systemName: "person.2.fill"))
+                iconView.tintColor = .white
+                iconView.contentMode = .scaleAspectFit
+                iconView.translatesAutoresizingMaskIntoConstraints = false
+                NSLayoutConstraint.activate([
+                    iconView.widthAnchor.constraint(equalToConstant: 10),
+                    iconView.heightAnchor.constraint(equalToConstant: 10)
+                ])
+
+                let label = UILabel()
+                label.text = "Platonic"
+                label.font = .systemFont(ofSize: 9, weight: .semibold)
+                label.textColor = .white
+
+                badgeStack.addArrangedSubview(iconView)
+                badgeStack.addArrangedSubview(label)
+
+                platonicBadge.addSubview(badgeStack)
+                NSLayoutConstraint.activate([
+                    badgeStack.leadingAnchor.constraint(equalTo: platonicBadge.leadingAnchor, constant: 5),
+                    badgeStack.trailingAnchor.constraint(equalTo: platonicBadge.trailingAnchor, constant: -5),
+                    badgeStack.topAnchor.constraint(equalTo: platonicBadge.topAnchor, constant: 3),
+                    badgeStack.bottomAnchor.constraint(equalTo: platonicBadge.bottomAnchor, constant: -3)
+                ])
+
+                leftStack.addArrangedSubview(platonicBadge)
+            }
+
+            let leftBarItem = UIBarButtonItem(customView: leftStack)
+            navigationItem.leftBarButtonItem = leftBarItem
+        } else if isFromDiscover {
+            // No left button when from discover and nothing to show
+            navigationItem.leftBarButtonItem = nil
         }
     }
 
@@ -498,44 +587,56 @@ class UserDetailViewController: UIViewController, PhotoGridViewDelegate {
             actionButtonsContainer.trailingAnchor.constraint(equalTo: contentView.trailingAnchor, constant: -20),
             actionButtonsContainer.heightAnchor.constraint(equalToConstant: 70),
 
-            // Action buttons layout depends on isMatched
-            backButton.leadingAnchor.constraint(equalTo: actionButtonsContainer.leadingAnchor, constant: 5),
+            // Navigation arrows - smaller and positioned at the edges
+            backButton.leadingAnchor.constraint(equalTo: actionButtonsContainer.leadingAnchor, constant: 0),
             backButton.centerYAnchor.constraint(equalTo: actionButtonsContainer.centerYAnchor),
-            backButton.widthAnchor.constraint(equalToConstant: 70),
-            backButton.heightAnchor.constraint(equalToConstant: 70),
+            backButton.widthAnchor.constraint(equalToConstant: 44),
+            backButton.heightAnchor.constraint(equalToConstant: 44),
 
-            forwardButton.trailingAnchor.constraint(equalTo: actionButtonsContainer.trailingAnchor, constant: -5),
+            forwardButton.trailingAnchor.constraint(equalTo: actionButtonsContainer.trailingAnchor, constant: 0),
             forwardButton.centerYAnchor.constraint(equalTo: actionButtonsContainer.centerYAnchor),
-            forwardButton.widthAnchor.constraint(equalToConstant: 70),
-            forwardButton.heightAnchor.constraint(equalToConstant: 70),
+            forwardButton.widthAnchor.constraint(equalToConstant: 44),
+            forwardButton.heightAnchor.constraint(equalToConstant: 44),
         ])
 
         // Add middle button constraints based on isMatched
         if isMatched {
-            // Single delete button in center for matched users
+            // Single delete button in center for matched users (smaller size)
             NSLayoutConstraint.activate([
                 deleteButton.centerXAnchor.constraint(equalTo: actionButtonsContainer.centerXAnchor),
                 deleteButton.centerYAnchor.constraint(equalTo: actionButtonsContainer.centerYAnchor),
-                deleteButton.widthAnchor.constraint(equalToConstant: 70),
-                deleteButton.heightAnchor.constraint(equalToConstant: 70),
+                deleteButton.widthAnchor.constraint(equalToConstant: 35),
+                deleteButton.heightAnchor.constraint(equalToConstant: 35),
             ])
+            // Adjust corner radius for smaller button
+            deleteButton.layer.cornerRadius = 17.5
+            if let blurView = deleteButton.subviews.first(where: { $0 is UIVisualEffectView }) {
+                blurView.layer.cornerRadius = 17.5
+            }
+            // Adjust border width for smaller button
+            deleteButton.layer.borderWidth = 1.5
+            // Adjust icon size for smaller button
+            let smallConfig = UIImage.SymbolConfiguration(pointSize: 14, weight: .medium, scale: .medium)
+            let smallImage = UIImage(systemName: "trash", withConfiguration: smallConfig)
+            deleteButton.setImage(smallImage, for: .normal)
         } else {
-            // Three middle buttons for non-matched users
+            // Three action buttons in the middle - reject, pin, like
+            // Space them evenly between the navigation arrows
             NSLayoutConstraint.activate([
-                rejectButton.centerXAnchor.constraint(equalTo: actionButtonsContainer.centerXAnchor, constant: -80),
+                rejectButton.centerXAnchor.constraint(equalTo: actionButtonsContainer.centerXAnchor, constant: -55),
                 rejectButton.centerYAnchor.constraint(equalTo: actionButtonsContainer.centerYAnchor),
-                rejectButton.widthAnchor.constraint(equalToConstant: 70),
-                rejectButton.heightAnchor.constraint(equalToConstant: 70),
+                rejectButton.widthAnchor.constraint(equalToConstant: 45),
+                rejectButton.heightAnchor.constraint(equalToConstant: 45),
 
                 pinButton.centerXAnchor.constraint(equalTo: actionButtonsContainer.centerXAnchor),
                 pinButton.centerYAnchor.constraint(equalTo: actionButtonsContainer.centerYAnchor),
-                pinButton.widthAnchor.constraint(equalToConstant: 45),
-                pinButton.heightAnchor.constraint(equalToConstant: 45),
+                pinButton.widthAnchor.constraint(equalToConstant: 35),
+                pinButton.heightAnchor.constraint(equalToConstant: 35),
 
-                likeButton.centerXAnchor.constraint(equalTo: actionButtonsContainer.centerXAnchor, constant: 80),
+                likeButton.centerXAnchor.constraint(equalTo: actionButtonsContainer.centerXAnchor, constant: 55),
                 likeButton.centerYAnchor.constraint(equalTo: actionButtonsContainer.centerYAnchor),
-                likeButton.widthAnchor.constraint(equalToConstant: 70),
-                likeButton.heightAnchor.constraint(equalToConstant: 70),
+                likeButton.widthAnchor.constraint(equalToConstant: 45),
+                likeButton.heightAnchor.constraint(equalToConstant: 45),
             ])
         }
 
@@ -603,11 +704,14 @@ class UserDetailViewController: UIViewController, PhotoGridViewDelegate {
         // Update navigation title
         title = user.firstName
 
-        // Name - for AI Muses, just show first name without "Muse" surname
+        // Name - show first name + first initial of last name (e.g., "Pierre D.")
         if user.isAI {
             nameLabel.text = user.firstName
+        } else if let lastName = user.lastName, !lastName.isEmpty {
+            let lastInitial = String(lastName.prefix(1)).uppercased()
+            nameLabel.text = "\(user.firstName) \(lastInitial)."
         } else {
-            nameLabel.text = "\(user.firstName) \(user.lastName ?? "")"
+            nameLabel.text = user.firstName
         }
 
         // Load profile image with signed URL if needed
@@ -670,7 +774,7 @@ class UserDetailViewController: UIViewController, PhotoGridViewDelegate {
         openToMatchLabel.text = openToMatchText
 
         // Bio
-        bioLabel.text = user.bio ?? "No bio available"
+        bioLabel.text = user.bio ?? "This person hasn't added a bio yet"
 
         // Load photos with signed URLs if needed
         Task {
@@ -755,11 +859,8 @@ class UserDetailViewController: UIViewController, PhotoGridViewDelegate {
     }
 
     private func updatePlatonicBadge() {
-        guard let user = user else {
-            platonicBadge.isHidden = true
-            return
-        }
-        platonicBadge.isHidden = !user.strictlyPlatonic
+        // Always hide the content view badge - we now show it in the navigation bar
+        platonicBadge.isHidden = true
     }
 
     private func updatePinButtonState() {
@@ -931,20 +1032,21 @@ class UserDetailViewController: UIViewController, PhotoGridViewDelegate {
         }
 
         updatePinButtonState()
+        updateNavigationBarItems() // Update star indicator in nav bar
     }
 
     @objc private func likeButtonTapped() {
         // Send match request - commit to matching
         guard let user = user else { return }
 
-        // Check if this is a sample user (ID is not a valid UUID)
+        // Validate that user ID is a proper UUID (required for database operations)
         let uuidPattern = "^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$"
         let isValidUUID = user.id.range(of: uuidPattern, options: .regularExpression) != nil
 
         if !isValidUUID {
-            // This is a sample user, can't record swipes
-            print("⚠️ Cannot match with sample user: \(user.firstName) (ID: \(user.id))")
-            showActionFeedback("Demo Profile - Can't Match", color: .systemOrange)
+            // This is an invalid profile - can't record swipes
+            print("⚠️ Cannot match with invalid profile: \(user.firstName) (ID: \(user.id))")
+            showActionFeedback("Unable to match. Try again later.", color: .systemOrange)
             return
         }
 

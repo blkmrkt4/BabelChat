@@ -240,7 +240,7 @@ class SubscriptionService: NSObject {
                 return
             }
 
-            guard let package = offerings?.current?.availablePackages.first(where: { $0.identifier == productId }) else {
+            guard let package = offerings?.current?.availablePackages.first(where: { $0.storeProduct.productIdentifier == productId }) else {
                 completion(.failure(SubscriptionError.productNotFound))
                 return
             }
@@ -305,8 +305,21 @@ class SubscriptionService: NSObject {
     private func updateStatus(from customerInfo: CustomerInfo?) {
         guard let customerInfo = customerInfo else { return }
 
-        // Check if user has active premium subscription
-        if let entitlement = customerInfo.entitlements["premium"],
+        // Check for Pro tier first (higher tier)
+        if let entitlement = customerInfo.entitlements["pro"],
+           entitlement.isActive {
+            let status = SubscriptionStatus(
+                tier: .pro,
+                isActive: true,
+                expiresAt: entitlement.expirationDate,
+                isTrialing: entitlement.periodType == .trial,
+                trialStartDate: entitlement.originalPurchaseDate,
+                trialEndDate: entitlement.periodType == .trial ? entitlement.expirationDate : nil
+            )
+            self.currentStatus = status
+        }
+        // Check for Premium tier
+        else if let entitlement = customerInfo.entitlements["premium"],
            entitlement.isActive {
             let status = SubscriptionStatus(
                 tier: .premium,

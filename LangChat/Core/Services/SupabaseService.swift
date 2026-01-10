@@ -356,6 +356,7 @@ extension SupabaseService {
             UserDefaults.standard.set(profile.bio, forKey: "bio")
             UserDefaults.standard.set(profile.location, forKey: "location")
             UserDefaults.standard.set(profile.birthYear, forKey: "birthYear")
+            UserDefaults.standard.set(profile.birthMonth, forKey: "birthMonth")
 
             // Language data
             UserDefaults.standard.set(profile.nativeLanguage, forKey: "nativeLanguage")
@@ -990,6 +991,7 @@ struct ProfileResponse: Codable {
     let lastName: String?
     let bio: String?
     let birthYear: Int?
+    let birthMonth: Int?
     let nativeLanguage: String
     let learningLanguages: [String]?
     let profilePhotos: [String]? // Storage paths, not URLs
@@ -1028,6 +1030,7 @@ struct ProfileResponse: Codable {
         case firstName = "first_name"
         case lastName = "last_name"
         case birthYear = "birth_year"
+        case birthMonth = "birth_month"
         case nativeLanguage = "native_language"
         case learningLanguages = "learning_languages"
         case profilePhotos = "profile_photos"
@@ -1197,28 +1200,49 @@ struct ProfileUpdate: Codable {
     var firstName: String?
     var lastName: String?
     var bio: String?
+    var birthYear: Int?
+    var birthMonth: Int?
     var location: String?
     var city: String?
     var country: String?
     var latitude: Double?
     var longitude: Double?
+    var showCityInProfile: Bool?
+    var nativeLanguage: String?
     var learningLanguages: [String]?
+    var proficiencyLevels: [String: String]?
+    var gender: String?
+    var genderPreference: String?
+    var minAge: Int?
+    var maxAge: Int?
     var granularityLevel: Int?
     var strictlyPlatonic: Bool?
     var blurPhotosUntilMatch: Bool?
     var minProficiencyLevel: String?
     var maxProficiencyLevel: String?
+    var openToLanguages: [String]?
+    var profilePhotos: [String]?
 
     enum CodingKeys: String, CodingKey {
-        case bio, location, city, country, latitude, longitude
+        case bio, location, city, country, latitude, longitude, gender
         case firstName = "first_name"
         case lastName = "last_name"
+        case birthYear = "birth_year"
+        case birthMonth = "birth_month"
+        case showCityInProfile = "show_city_in_profile"
+        case nativeLanguage = "native_language"
         case learningLanguages = "learning_languages"
+        case proficiencyLevels = "proficiency_levels"
+        case genderPreference = "gender_preference"
+        case minAge = "min_age"
+        case maxAge = "max_age"
         case granularityLevel = "granularity_level"
         case strictlyPlatonic = "strictly_platonic"
         case blurPhotosUntilMatch = "blur_photos_until_match"
         case minProficiencyLevel = "min_proficiency_level"
         case maxProficiencyLevel = "max_proficiency_level"
+        case openToLanguages = "open_to_languages"
+        case profilePhotos = "profile_photos"
     }
 }
 

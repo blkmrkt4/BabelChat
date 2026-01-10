@@ -754,10 +754,15 @@ private class FluencyHeatView: UIView {
 
         let changeLabel = UILabel()
         let trendText: String
-        switch trend {
-        case .rising: trendText = "↑ Trending up • Keep it going!"
-        case .falling: trendText = "↓ Cool down • Chat more!"
-        case .stable: trendText = "→ Steady • Nice consistency!"
+        // Show appropriate message based on temperature
+        if temperature == 0 {
+            trendText = "💬 Start chatting to warm up!"
+        } else {
+            switch trend {
+            case .rising: trendText = "↑ Trending up • Keep it going!"
+            case .falling: trendText = "↓ Cooling down • Chat more!"
+            case .stable: trendText = "→ Steady • Nice consistency!"
+            }
         }
         changeLabel.text = trendText
         changeLabel.font = .systemFont(ofSize: 12)

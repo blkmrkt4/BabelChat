@@ -1,8 +1,8 @@
 # Privacy Policy
 
-**Last Updated: December 15, 2024**
+**Last Updated: January 3, 2026**
 
-PainKiller Labs ("Company," "we," "us," or "our") operates the LangChat mobile application (the "App"). This Privacy Policy explains how we collect, use, disclose, and safeguard your information when you use our App.
+PainKiller Labs ("Company," "we," "us," or "our") operates the Fluenca mobile application (the "App"). This Privacy Policy explains how we collect, use, disclose, and safeguard your information when you use our App.
 
 Please read this Privacy Policy carefully. By using the App, you agree to the collection and use of information in accordance with this policy.
 
@@ -271,7 +271,7 @@ PainKiller Labs
 8 Parkwood Avenue
 Toronto, Ontario, Canada M4V 2W8
 
-**Website:** https://painkillerlabs.com/langmatcher/privacy
+**Website:** https://painkillerlabs.com/fluenca/privacy
 
 ---
 
@@ -295,4 +295,4 @@ Toronto, Ontario, Canada M4V 2W8
 
 ---
 
-By using LangChat, you acknowledge that you have read and understood this Privacy Policy.
+By using Fluenca, you acknowledge that you have read and understood this Privacy Policy.

@@ -241,20 +241,29 @@ class OnboardingCarouselViewController: UIViewController {
 
         // Tagline
         let taglineLabel = UILabel()
-        taglineLabel.text = "Your brain learns faster when it cares"
-        taglineLabel.font = .systemFont(ofSize: 22, weight: .medium)
+        taglineLabel.text = "Science says your brain learns faster when it cares"
+        taglineLabel.font = .systemFont(ofSize: 18, weight: .medium)
         taglineLabel.textColor = UIColor.white.withAlphaComponent(0.9)
         taglineLabel.textAlignment = .center
+        taglineLabel.numberOfLines = 0
+        taglineLabel.lineBreakMode = .byWordWrapping
         taglineLabel.translatesAutoresizingMaskIntoConstraints = false
         pageView.addSubview(taglineLabel)
+
+        // Thin separator line between taglines
+        let separatorLine = UIView()
+        separatorLine.backgroundColor = UIColor.white.withAlphaComponent(0.3)
+        separatorLine.translatesAutoresizingMaskIntoConstraints = false
+        pageView.addSubview(separatorLine)
 
         // Second tagline
         let taglineLabel2 = UILabel()
         taglineLabel2.text = "Speaking like a local is the fastest path to fluency"
-        taglineLabel2.font = .systemFont(ofSize: 16, weight: .regular)
+        taglineLabel2.font = .systemFont(ofSize: 15, weight: .regular)
         taglineLabel2.textColor = UIColor.white.withAlphaComponent(0.7)
         taglineLabel2.textAlignment = .center
         taglineLabel2.numberOfLines = 0
+        taglineLabel2.lineBreakMode = .byWordWrapping
         taglineLabel2.translatesAutoresizingMaskIntoConstraints = false
         pageView.addSubview(taglineLabel2)
 
@@ -279,14 +288,20 @@ class OnboardingCarouselViewController: UIViewController {
             overlayView.bottomAnchor.constraint(equalTo: pageView.bottomAnchor),
 
             logoLabel.centerXAnchor.constraint(equalTo: pageView.centerXAnchor),
-            logoLabel.centerYAnchor.constraint(equalTo: pageView.centerYAnchor, constant: -60),
+            logoLabel.topAnchor.constraint(equalTo: pageView.safeAreaLayoutGuide.topAnchor, constant: 50),
 
-            taglineLabel.topAnchor.constraint(equalTo: logoLabel.bottomAnchor, constant: 12),
+            taglineLabel.topAnchor.constraint(equalTo: logoLabel.bottomAnchor, constant: 16),
             taglineLabel.centerXAnchor.constraint(equalTo: pageView.centerXAnchor),
             taglineLabel.leadingAnchor.constraint(equalTo: pageView.leadingAnchor, constant: 40),
             taglineLabel.trailingAnchor.constraint(equalTo: pageView.trailingAnchor, constant: -40),
 
-            taglineLabel2.topAnchor.constraint(equalTo: taglineLabel.bottomAnchor, constant: 8),
+            // Separator line between taglines
+            separatorLine.topAnchor.constraint(equalTo: taglineLabel.bottomAnchor, constant: 12),
+            separatorLine.leadingAnchor.constraint(equalTo: pageView.leadingAnchor, constant: 60),
+            separatorLine.trailingAnchor.constraint(equalTo: pageView.trailingAnchor, constant: -60),
+            separatorLine.heightAnchor.constraint(equalToConstant: 0.5),
+
+            taglineLabel2.topAnchor.constraint(equalTo: separatorLine.bottomAnchor, constant: 12),
             taglineLabel2.centerXAnchor.constraint(equalTo: pageView.centerXAnchor),
             taglineLabel2.leadingAnchor.constraint(equalTo: pageView.leadingAnchor, constant: 40),
             taglineLabel2.trailingAnchor.constraint(equalTo: pageView.trailingAnchor, constant: -40),

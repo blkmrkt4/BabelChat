@@ -138,9 +138,26 @@ class ProfileSettingsViewController: UIViewController {
 
         case .birthYear:
             let birthYear = UserDefaults.standard.integer(forKey: "birthYear")
+            let birthMonth = UserDefaults.standard.integer(forKey: "birthMonth")
             if birthYear > 0 {
-                let age = Calendar.current.component(.year, from: Date()) - birthYear
-                return "\(birthYear) (\(age) years old)"
+                let calendar = Calendar.current
+                let now = Date()
+                let currentYear = calendar.component(.year, from: now)
+                let currentMonth = calendar.component(.month, from: now)
+
+                var age = currentYear - birthYear
+                // Adjust age if birthday hasn't occurred yet this year
+                if birthMonth > 0 && currentMonth < birthMonth {
+                    age -= 1
+                }
+
+                // Format display string
+                if birthMonth > 0 {
+                    let monthName = DateFormatter().monthSymbols[birthMonth - 1]
+                    return "\(monthName) \(birthYear) (\(age) years old)"
+                } else {
+                    return "\(birthYear) (\(age) years old)"
+                }
             }
             return ""
 
@@ -239,32 +256,25 @@ class ProfileSettingsViewController: UIViewController {
 
     private func showBirthYearPicker() {
         let currentBirthYear = UserDefaults.standard.integer(forKey: "birthYear")
+        let currentBirthMonth = UserDefaults.standard.integer(forKey: "birthMonth")
 
-        let alert = UIAlertController(title: "Birth Year", message: nil, preferredStyle: .alert)
-
-        alert.addTextField { textField in
-            textField.placeholder = "e.g., 1990"
-            textField.keyboardType = .numberPad
-            if currentBirthYear > 0 {
-                textField.text = "\(currentBirthYear)"
-            }
-        }
-
-        alert.addAction(UIAlertAction(title: "Cancel", style: .cancel))
-        alert.addAction(UIAlertAction(title: "Save", style: .default) { [weak self, weak alert] _ in
-            guard let yearText = alert?.textFields?.first?.text,
-                  let year = Int(yearText),
-                  year > 1920 && year <= Calendar.current.component(.year, from: Date()) - 18 else {
-                self?.showError("Please enter a valid birth year (must be 18+)")
-                return
-            }
-
+        let vc = BirthDatePickerViewController()
+        vc.currentYear = currentBirthYear > 0 ? currentBirthYear : nil
+        vc.currentMonth = currentBirthMonth > 0 ? currentBirthMonth : nil
+        vc.onSave = { [weak self] month, year in
             UserDefaults.standard.set(year, forKey: "birthYear")
+            UserDefaults.standard.set(month, forKey: "birthMonth")
             self?.saveToSupabase()
             self?.tableView.reloadData()
-        })
+        }
 
-        present(alert, animated: true)
+        let nav = UINavigationController(rootViewController: vc)
+        nav.modalPresentationStyle = .pageSheet
+        if let sheet = nav.sheetPresentationController {
+            sheet.detents = [.medium()]
+            sheet.prefersGrabberVisible = true
+        }
+        present(nav, animated: true)
     }
 
     private func showBioEditor() {
@@ -304,6 +314,10 @@ class ProfileSettingsViewController: UIViewController {
         vc.onSave = { [weak self] languages in
             if let language = languages.first {
                 UserDefaults.standard.set(language, forKey: "nativeLanguage")
+
+                // Also update the userLanguages data structure
+                self?.updateNativeLanguageInUserLanguages(languageName: language)
+
                 self?.saveToSupabase()
                 self?.tableView.reloadData()
             }
@@ -312,20 +326,104 @@ class ProfileSettingsViewController: UIViewController {
         present(nav, animated: true)
     }
 
+    private func updateNativeLanguageInUserLanguages(languageName: String) {
+        guard let language = Language.from(name: languageName) else { return }
+
+        let newNativeLanguage = UserLanguage(language: language, proficiency: .native, isNative: true)
+
+        // Load existing data or create new
+        var learningLanguages: [UserLanguage] = []
+        var openToLanguages: [Language] = []
+        var practiceLanguages: [UserLanguage]? = nil
+
+        if let data = UserDefaults.standard.data(forKey: "userLanguages"),
+           let decoded = try? JSONDecoder().decode(UserLanguageData.self, from: data) {
+            learningLanguages = decoded.learningLanguages
+            openToLanguages = decoded.openToLanguages
+            practiceLanguages = decoded.practiceLanguages
+        }
+
+        // Save with updated native language
+        let languageData = UserLanguageData(
+            nativeLanguage: newNativeLanguage,
+            learningLanguages: learningLanguages,
+            openToLanguages: openToLanguages,
+            practiceLanguages: practiceLanguages
+        )
+
+        if let encoded = try? JSONEncoder().encode(languageData) {
+            UserDefaults.standard.set(encoded, forKey: "userLanguages")
+        }
+    }
+
     private func showLearningLanguagesPicker() {
         let currentLanguages = UserDefaults.standard.array(forKey: "learningLanguages") as? [String] ?? []
+
+        // Load existing proficiency levels
+        var currentProficiencies: [String: String] = [:]
+        if let data = UserDefaults.standard.data(forKey: "userLanguages"),
+           let decoded = try? JSONDecoder().decode(UserLanguageData.self, from: data) {
+            for lang in decoded.learningLanguages {
+                currentProficiencies[lang.language.name] = lang.proficiency.rawValue
+            }
+        }
+
         let vc = LanguagePickerViewController(
             title: "Learning Languages",
             selectedLanguages: currentLanguages,
-            allowsMultipleSelection: true
+            allowsMultipleSelection: true,
+            showProficiency: true,
+            proficiencies: currentProficiencies
         )
-        vc.onSave = { [weak self] languages in
+        vc.onSaveWithProficiency = { [weak self] languages, proficiencies in
             UserDefaults.standard.set(languages, forKey: "learningLanguages")
+
+            // Update userLanguages with proficiency data
+            self?.updateUserLanguagesWithProficiency(languages: languages, proficiencies: proficiencies)
+
             self?.saveToSupabase()
             self?.tableView.reloadData()
         }
         let nav = UINavigationController(rootViewController: vc)
         present(nav, animated: true)
+    }
+
+    private func updateUserLanguagesWithProficiency(languages: [String], proficiencies: [String: String]) {
+        // Load existing userLanguages data
+        var nativeLanguage: UserLanguage
+        var openToLanguages: [Language] = []
+        var practiceLanguages: [UserLanguage]? = nil
+
+        if let data = UserDefaults.standard.data(forKey: "userLanguages"),
+           let decoded = try? JSONDecoder().decode(UserLanguageData.self, from: data) {
+            nativeLanguage = decoded.nativeLanguage
+            openToLanguages = decoded.openToLanguages
+            practiceLanguages = decoded.practiceLanguages
+        } else {
+            nativeLanguage = UserLanguage(language: .english, proficiency: .native, isNative: true)
+        }
+
+        // Build new learning languages array with proficiencies
+        var newLearningLanguages: [UserLanguage] = []
+        for langName in languages {
+            if let language = Language.from(name: langName) {
+                let proficiencyRaw = proficiencies[langName] ?? "beginner"
+                let proficiency = LanguageProficiency(rawValue: proficiencyRaw) ?? .beginner
+                newLearningLanguages.append(UserLanguage(language: language, proficiency: proficiency, isNative: false))
+            }
+        }
+
+        // Save updated data
+        let languageData = UserLanguageData(
+            nativeLanguage: nativeLanguage,
+            learningLanguages: newLearningLanguages,
+            openToLanguages: openToLanguages,
+            practiceLanguages: practiceLanguages
+        )
+
+        if let encoded = try? JSONEncoder().encode(languageData) {
+            UserDefaults.standard.set(encoded, forKey: "userLanguages")
+        }
     }
 
     private func showRelationshipIntentPicker() {
@@ -376,8 +474,60 @@ class ProfileSettingsViewController: UIViewController {
     }
 
     private func saveToSupabase() {
+        // Build profile update from current UserDefaults values
+        var update = ProfileUpdate()
+
+        // Name
+        update.firstName = UserDefaults.standard.string(forKey: "firstName")
+        update.lastName = UserDefaults.standard.string(forKey: "lastName")
+
+        // Bio
+        update.bio = UserDefaults.standard.string(forKey: "bio")
+
+        // Birth date
+        let birthYear = UserDefaults.standard.integer(forKey: "birthYear")
+        let birthMonth = UserDefaults.standard.integer(forKey: "birthMonth")
+        if birthYear > 0 {
+            update.birthYear = birthYear
+        }
+        if birthMonth > 0 {
+            update.birthMonth = birthMonth
+        }
+
+        // Location
+        update.location = UserDefaults.standard.string(forKey: "location")
+        update.city = UserDefaults.standard.string(forKey: "city")
+        update.country = UserDefaults.standard.string(forKey: "country")
+        if let lat = UserDefaults.standard.object(forKey: "latitude") as? Double {
+            update.latitude = lat
+        }
+        if let lon = UserDefaults.standard.object(forKey: "longitude") as? Double {
+            update.longitude = lon
+        }
+
+        // Languages
+        if let nativeLanguage = UserDefaults.standard.string(forKey: "nativeLanguage") {
+            update.nativeLanguage = nativeLanguage
+        }
+        if let learningLanguages = UserDefaults.standard.array(forKey: "learningLanguages") as? [String] {
+            update.learningLanguages = learningLanguages
+        }
+
+        // Preferences
+        update.strictlyPlatonic = UserDefaults.standard.bool(forKey: "strictlyPlatonic")
+
+        // Sync to Supabase
+        Task {
+            do {
+                try await SupabaseService.shared.updateProfile(update)
+                print("✅ Profile synced to Supabase")
+            } catch {
+                print("❌ Failed to sync profile to Supabase: \(error)")
+            }
+        }
+
+        // Notify observers to reload
         NotificationCenter.default.post(name: .userProfileUpdated, object: nil)
-        // The profile observer will handle the Supabase update
     }
 }
 
@@ -574,8 +724,11 @@ extension BioEditorViewController: UITextViewDelegate {
 class LanguagePickerViewController: UIViewController {
     private let tableView = UITableView(frame: .zero, style: .insetGrouped)
     private var selectedLanguages: Set<String>
+    private var languageProficiencies: [String: String] = [:] // language -> proficiency
     private let allowsMultipleSelection: Bool
+    private let showProficiency: Bool
     var onSave: (([String]) -> Void)?
+    var onSaveWithProficiency: (([String], [String: String]) -> Void)?
 
     private let languages = [
         "English", "Spanish", "French", "German", "Italian", "Portuguese",
@@ -584,9 +737,13 @@ class LanguagePickerViewController: UIViewController {
         "Finnish", "Indonesian", "Filipino", "Vietnamese", "Thai", "Turkish"
     ]
 
-    init(title: String, selectedLanguages: [String], allowsMultipleSelection: Bool) {
+    private let proficiencyLevels = ["beginner", "intermediate", "advanced"]
+
+    init(title: String, selectedLanguages: [String], allowsMultipleSelection: Bool, showProficiency: Bool = false, proficiencies: [String: String] = [:]) {
         self.selectedLanguages = Set(selectedLanguages)
         self.allowsMultipleSelection = allowsMultipleSelection
+        self.showProficiency = showProficiency
+        self.languageProficiencies = proficiencies
         super.init(nibName: nil, bundle: nil)
         self.title = title
     }
@@ -625,8 +782,67 @@ class LanguagePickerViewController: UIViewController {
     }
 
     @objc private func save() {
-        onSave?(Array(selectedLanguages))
+        if showProficiency {
+            onSaveWithProficiency?(Array(selectedLanguages), languageProficiencies)
+        } else {
+            onSave?(Array(selectedLanguages))
+        }
         dismiss(animated: true)
+    }
+
+    private func proficiencyDisplayName(_ proficiency: String) -> String {
+        switch proficiency {
+        case "beginner": return "Beginner"
+        case "intermediate": return "Intermediate"
+        case "advanced": return "Advanced"
+        default: return proficiency.capitalized
+        }
+    }
+
+    private func showProficiencyPicker(for language: String, isNewSelection: Bool) {
+        let alertController = UIAlertController(
+            title: isNewSelection ? "Select Proficiency" : "Change Proficiency",
+            message: "How well do you speak \(language)?",
+            preferredStyle: .actionSheet
+        )
+
+        let currentProficiency = languageProficiencies[language]
+
+        for proficiency in proficiencyLevels {
+            let isSelected = proficiency == currentProficiency
+            let displayName = proficiencyDisplayName(proficiency)
+            let title = isSelected ? "✓ \(displayName)" : displayName
+
+            alertController.addAction(UIAlertAction(title: title, style: .default) { [weak self] _ in
+                self?.languageProficiencies[language] = proficiency
+                if isNewSelection {
+                    self?.selectedLanguages.insert(language)
+                }
+                self?.tableView.reloadData()
+            })
+        }
+
+        if !isNewSelection {
+            alertController.addAction(UIAlertAction(title: "Remove Language", style: .destructive) { [weak self] _ in
+                self?.selectedLanguages.remove(language)
+                self?.languageProficiencies.removeValue(forKey: language)
+                self?.tableView.reloadData()
+            })
+        }
+
+        alertController.addAction(UIAlertAction(title: "Cancel", style: .cancel) { [weak self] _ in
+            // If this was a new selection and user cancelled, don't add the language
+            if isNewSelection {
+                self?.tableView.reloadData()
+            }
+        })
+
+        if let popover = alertController.popoverPresentationController {
+            popover.sourceView = view
+            popover.sourceRect = CGRect(x: view.bounds.midX, y: view.bounds.midY, width: 0, height: 0)
+        }
+
+        present(alertController, animated: true)
     }
 }
 
@@ -635,11 +851,35 @@ extension LanguagePickerViewController: UITableViewDataSource, UITableViewDelega
         return languages.count
     }
 
+    func tableView(_ tableView: UITableView, titleForFooterInSection section: Int) -> String? {
+        if showProficiency && allowsMultipleSelection {
+            return "Tap to add a language and set proficiency. Tap again to change level or remove."
+        }
+        return nil
+    }
+
     func tableView(_ tableView: UITableView, cellForRowAt indexPath: IndexPath) -> UITableViewCell {
         let cell = tableView.dequeueReusableCell(withIdentifier: "Cell", for: indexPath)
         let language = languages[indexPath.row]
-        cell.textLabel?.text = language
-        cell.accessoryType = selectedLanguages.contains(language) ? .checkmark : .none
+
+        var config = cell.defaultContentConfiguration()
+        config.text = language
+
+        let isSelected = selectedLanguages.contains(language)
+
+        if isSelected && showProficiency {
+            if let proficiency = languageProficiencies[language] {
+                config.secondaryText = proficiencyDisplayName(proficiency)
+                config.secondaryTextProperties.color = .systemBlue
+            } else {
+                config.secondaryText = "Tap to set level"
+                config.secondaryTextProperties.color = .systemOrange
+            }
+        }
+
+        cell.contentConfiguration = config
+        cell.accessoryType = isSelected ? .checkmark : .none
+
         return cell
     }
 
@@ -649,15 +889,26 @@ extension LanguagePickerViewController: UITableViewDataSource, UITableViewDelega
 
         if allowsMultipleSelection {
             if selectedLanguages.contains(language) {
-                selectedLanguages.remove(language)
+                if showProficiency {
+                    // Show proficiency picker with remove option
+                    showProficiencyPicker(for: language, isNewSelection: false)
+                } else {
+                    selectedLanguages.remove(language)
+                    tableView.reloadData()
+                }
             } else {
-                selectedLanguages.insert(language)
+                if showProficiency {
+                    // Show proficiency picker for new language
+                    showProficiencyPicker(for: language, isNewSelection: true)
+                } else {
+                    selectedLanguages.insert(language)
+                    tableView.reloadData()
+                }
             }
         } else {
             selectedLanguages = [language]
+            tableView.reloadData()
         }
-
-        tableView.reloadData()
     }
 }
 
@@ -738,6 +989,115 @@ extension MultiSelectPickerViewController: UITableViewDataSource, UITableViewDel
         }
 
         tableView.reloadData()
+    }
+}
+
+// MARK: - Birth Date Picker
+class BirthDatePickerViewController: UIViewController {
+    var currentYear: Int?
+    var currentMonth: Int?
+    var onSave: ((Int, Int) -> Void)?  // (month, year)
+
+    private let datePicker = UIDatePicker()
+    private let displayLabel = UILabel()
+
+    override func viewDidLoad() {
+        super.viewDidLoad()
+        setupViews()
+    }
+
+    private func setupViews() {
+        title = "Birth Date"
+        view.backgroundColor = .systemBackground
+
+        navigationItem.leftBarButtonItem = UIBarButtonItem(
+            barButtonSystemItem: .cancel,
+            target: self,
+            action: #selector(cancelTapped)
+        )
+        navigationItem.rightBarButtonItem = UIBarButtonItem(
+            barButtonSystemItem: .save,
+            target: self,
+            action: #selector(saveTapped)
+        )
+
+        // Display label
+        displayLabel.font = .systemFont(ofSize: 28, weight: .bold)
+        displayLabel.textColor = .label
+        displayLabel.textAlignment = .center
+        view.addSubview(displayLabel)
+
+        // Date picker
+        datePicker.datePickerMode = .date
+        datePicker.preferredDatePickerStyle = .wheels
+        datePicker.addTarget(self, action: #selector(dateChanged), for: .valueChanged)
+
+        // Set min/max dates
+        var minComponents = DateComponents()
+        minComponents.year = 1920
+        minComponents.month = 1
+        minComponents.day = 1
+        datePicker.minimumDate = Calendar.current.date(from: minComponents)
+
+        // Must be at least 13 years old
+        datePicker.maximumDate = Calendar.current.date(byAdding: .year, value: -13, to: Date())
+
+        // Set current date
+        if let year = currentYear {
+            var components = DateComponents()
+            components.year = year
+            components.month = currentMonth ?? 1
+            components.day = 1
+            if let date = Calendar.current.date(from: components) {
+                datePicker.date = date
+            }
+        } else {
+            // Default to 25 years ago
+            if let defaultDate = Calendar.current.date(byAdding: .year, value: -25, to: Date()) {
+                datePicker.date = defaultDate
+            }
+        }
+
+        view.addSubview(datePicker)
+        updateDisplayLabel()
+
+        // Layout
+        displayLabel.translatesAutoresizingMaskIntoConstraints = false
+        datePicker.translatesAutoresizingMaskIntoConstraints = false
+
+        NSLayoutConstraint.activate([
+            displayLabel.topAnchor.constraint(equalTo: view.safeAreaLayoutGuide.topAnchor, constant: 20),
+            displayLabel.leadingAnchor.constraint(equalTo: view.leadingAnchor, constant: 20),
+            displayLabel.trailingAnchor.constraint(equalTo: view.trailingAnchor, constant: -20),
+
+            datePicker.topAnchor.constraint(equalTo: displayLabel.bottomAnchor, constant: 20),
+            datePicker.leadingAnchor.constraint(equalTo: view.leadingAnchor),
+            datePicker.trailingAnchor.constraint(equalTo: view.trailingAnchor)
+        ])
+    }
+
+    private func updateDisplayLabel() {
+        let calendar = Calendar.current
+        let month = calendar.component(.month, from: datePicker.date)
+        let year = calendar.component(.year, from: datePicker.date)
+        let monthName = DateFormatter().monthSymbols[month - 1]
+        displayLabel.text = "\(monthName) \(year)"
+    }
+
+    @objc private func dateChanged() {
+        updateDisplayLabel()
+    }
+
+    @objc private func cancelTapped() {
+        dismiss(animated: true)
+    }
+
+    @objc private func saveTapped() {
+        let calendar = Calendar.current
+        let month = calendar.component(.month, from: datePicker.date)
+        let year = calendar.component(.year, from: datePicker.date)
+        onSave?(month, year)
+        dismiss(animated: true)
     }
 }
 

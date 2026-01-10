@@ -58,8 +58,42 @@ class TravelPlansViewController: BaseOnboardingViewController {
         setupScrollableContent()
 
         // Can skip this step
-        continueButton.setTitle("Skip for Now", for: .normal)
+        continueButton.setTitle(isEditMode ? "Save" : "Skip for Now", for: .normal)
         updateContinueButton(enabled: true)
+
+        // Load existing travel destination in edit mode
+        if isEditMode {
+            loadExistingTravelDestination()
+        }
+    }
+
+    private func loadExistingTravelDestination() {
+        guard let data = UserDefaults.standard.data(forKey: "travelDestination"),
+              let destination = try? JSONDecoder().decode(TravelDestination.self, from: data) else {
+            return
+        }
+
+        // Populate the UI with existing data
+        selectedLocation = TravelLocationData(
+            displayName: destination.displayName,
+            city: destination.city,
+            country: destination.countryName ?? destination.country,
+            countryCode: destination.country
+        )
+
+        selectedLocationLabel.text = destination.displayName
+        selectedLocationView.isHidden = false
+        searchTextField.isHidden = true
+        datesContainer.isHidden = false
+
+        if let startDate = destination.startDate {
+            startDatePicker.date = startDate
+        }
+        if let endDate = destination.endDate {
+            endDatePicker.date = endDate
+        }
+
+        continueButton.setTitle("Save", for: .normal)
     }
 
     // MARK: - Setup
@@ -504,9 +538,16 @@ class TravelPlansViewController: BaseOnboardingViewController {
     override func continueButtonTapped() {
         view.endEditing(true)
 
-        // If no location selected, skip
+        // If no location selected, skip/clear
         guard let location = selectedLocation else {
-            delegate?.didCompleteStep(withData: nil as TravelDestination?)
+            if isEditMode {
+                // Clear travel destination in edit mode
+                UserDefaults.standard.removeObject(forKey: "travelDestination")
+                onSave?()
+                navigationController?.popViewController(animated: true)
+            } else {
+                delegate?.didCompleteStep(withData: nil as TravelDestination?)
+            }
             return
         }
 
@@ -519,7 +560,16 @@ class TravelPlansViewController: BaseOnboardingViewController {
             endDate: endDatePicker.date
         )
 
-        delegate?.didCompleteStep(withData: travelDestination as TravelDestination?)
+        if isEditMode {
+            // Save to UserDefaults in edit mode
+            if let encoded = try? JSONEncoder().encode(travelDestination) {
+                UserDefaults.standard.set(encoded, forKey: "travelDestination")
+            }
+            onSave?()
+            navigationController?.popViewController(animated: true)
+        } else {
+            delegate?.didCompleteStep(withData: travelDestination as TravelDestination?)
+        }
     }
 }
 

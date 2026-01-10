@@ -1,8 +1,8 @@
 # End User License Agreement (EULA)
 
-**Last Updated: December 15, 2024**
+**Last Updated: January 3, 2026**
 
-This End User License Agreement ("Agreement") is a legal agreement between you ("User" or "you") and PainKiller Labs ("Company," "we," "us," or "our") for the use of the LangChat mobile application ("App").
+This End User License Agreement ("Agreement") is a legal agreement between you ("User" or "you") and PainKiller Labs ("Company," "we," "us," or "our") for the use of the Fluenca mobile application ("App").
 
 By downloading, installing, or using the App, you agree to be bound by the terms of this Agreement. If you do not agree to these terms, do not download, install, or use the App.
 
@@ -160,7 +160,7 @@ PainKiller Labs
 8 Parkwood Avenue
 Toronto, Ontario, Canada M4V 2W8
 
-**Website:** https://painkillerlabs.com/langmatcher
+**Website:** https://painkillerlabs.com/fluenca
 
 ---
 

@@ -46,6 +46,15 @@ class EditProfileViewController: UIViewController {
     private let addPracticeLanguageButton = UIButton(type: .system)
     private var practiceLanguages: [UserLanguage] = []
 
+    // Gender & Preferences Section
+    private let genderLabel = UILabel()
+    private let genderButton = UIButton(type: .system)
+    private var selectedGender: String? = nil
+
+    private let genderPreferenceLabel = UILabel()
+    private let genderPreferenceButton = UIButton(type: .system)
+    private var selectedGenderPreference: String? = nil
+
     // Photo Gallery
     private let photosLabel = UILabel()
     private let photosCollectionView: UICollectionView
@@ -256,6 +265,28 @@ class EditProfileViewController: UIViewController {
         openToMatchStack.isHidden = true
         contentView.addSubview(openToMatchStack)
 
+        // Gender Section
+        genderLabel.text = "My Gender"
+        genderLabel.font = .systemFont(ofSize: 18, weight: .semibold)
+        contentView.addSubview(genderLabel)
+
+        genderButton.setTitle("Select Gender", for: .normal)
+        genderButton.contentHorizontalAlignment = .left
+        genderButton.titleLabel?.font = .systemFont(ofSize: 16)
+        genderButton.addTarget(self, action: #selector(selectGenderTapped), for: .touchUpInside)
+        contentView.addSubview(genderButton)
+
+        // Gender Preference Section
+        genderPreferenceLabel.text = "Interested in Matching With"
+        genderPreferenceLabel.font = .systemFont(ofSize: 18, weight: .semibold)
+        contentView.addSubview(genderPreferenceLabel)
+
+        genderPreferenceButton.setTitle("Select Preference", for: .normal)
+        genderPreferenceButton.contentHorizontalAlignment = .left
+        genderPreferenceButton.titleLabel?.font = .systemFont(ofSize: 16)
+        genderPreferenceButton.addTarget(self, action: #selector(selectGenderPreferenceTapped), for: .touchUpInside)
+        contentView.addSubview(genderPreferenceButton)
+
         // Photos
         photosLabel.text = "My Photos"
         photosLabel.font = .systemFont(ofSize: 18, weight: .semibold)
@@ -411,12 +442,36 @@ class EditProfileViewController: UIViewController {
             ])
         }
 
+        // Gender constraints
+        genderLabel.translatesAutoresizingMaskIntoConstraints = false
+        genderButton.translatesAutoresizingMaskIntoConstraints = false
+        genderPreferenceLabel.translatesAutoresizingMaskIntoConstraints = false
+        genderPreferenceButton.translatesAutoresizingMaskIntoConstraints = false
+
         NSLayoutConstraint.activate([
             openToMatchStack.topAnchor.constraint(equalTo: openToMatchLabel.bottomAnchor, constant: 12),
             openToMatchStack.leadingAnchor.constraint(equalTo: contentView.leadingAnchor, constant: 20),
             openToMatchStack.trailingAnchor.constraint(equalTo: contentView.trailingAnchor, constant: -20),
 
-            photosLabel.topAnchor.constraint(equalTo: openToMatchStack.bottomAnchor, constant: 32),
+            // Gender section
+            genderLabel.topAnchor.constraint(equalTo: openToMatchStack.bottomAnchor, constant: 32),
+            genderLabel.leadingAnchor.constraint(equalTo: contentView.leadingAnchor, constant: 20),
+
+            genderButton.topAnchor.constraint(equalTo: genderLabel.bottomAnchor, constant: 12),
+            genderButton.leadingAnchor.constraint(equalTo: contentView.leadingAnchor, constant: 20),
+            genderButton.trailingAnchor.constraint(equalTo: contentView.trailingAnchor, constant: -20),
+            genderButton.heightAnchor.constraint(equalToConstant: 44),
+
+            genderPreferenceLabel.topAnchor.constraint(equalTo: genderButton.bottomAnchor, constant: 24),
+            genderPreferenceLabel.leadingAnchor.constraint(equalTo: contentView.leadingAnchor, constant: 20),
+
+            genderPreferenceButton.topAnchor.constraint(equalTo: genderPreferenceLabel.bottomAnchor, constant: 12),
+            genderPreferenceButton.leadingAnchor.constraint(equalTo: contentView.leadingAnchor, constant: 20),
+            genderPreferenceButton.trailingAnchor.constraint(equalTo: contentView.trailingAnchor, constant: -20),
+            genderPreferenceButton.heightAnchor.constraint(equalToConstant: 44),
+
+            // Photos section
+            photosLabel.topAnchor.constraint(equalTo: genderPreferenceButton.bottomAnchor, constant: 32),
             photosLabel.leadingAnchor.constraint(equalTo: contentView.leadingAnchor, constant: 20),
 
             photosCollectionView.topAnchor.constraint(equalTo: photosLabel.bottomAnchor, constant: 12),
@@ -456,6 +511,36 @@ class EditProfileViewController: UIViewController {
                 placeholder: UIImage(systemName: "person.fill")
             )
         }
+
+        // Load gender settings
+        selectedGender = user.gender
+        if let gender = user.gender {
+            genderButton.setTitle(genderDisplayName(gender), for: .normal)
+        }
+
+        selectedGenderPreference = user.matchingPreferences.genderPreference.rawValue
+        genderPreferenceButton.setTitle(genderPreferenceDisplayName(user.matchingPreferences.genderPreference.rawValue), for: .normal)
+    }
+
+    private func genderDisplayName(_ gender: String) -> String {
+        switch gender.lowercased() {
+        case "male": return "Male"
+        case "female": return "Female"
+        case "non_binary", "nonbinary": return "Non-binary"
+        case "prefer_not_to_say": return "Prefer not to say"
+        default: return gender.capitalized
+        }
+    }
+
+    private func genderPreferenceDisplayName(_ pref: String) -> String {
+        switch pref.lowercased() {
+        case "all": return "Everyone"
+        case "same_only": return "Same gender only"
+        case "different_only": return "Different gender only"
+        case "male": return "Men"
+        case "female": return "Women"
+        default: return pref.capitalized
+        }
     }
 
     private func loadMockUserData() {
@@ -463,7 +548,11 @@ class EditProfileViewController: UIViewController {
         locationTextField.text = UserDefaults.standard.string(forKey: "location") ?? ""
         showCitySwitch.isOn = UserDefaults.standard.object(forKey: "showCityInProfile") as? Bool ?? true
 
-        // Load from UserDefaults if available
+        // Load name and bio from UserDefaults
+        firstNameTextField.text = UserDefaults.standard.string(forKey: "firstName") ?? ""
+        lastNameTextField.text = UserDefaults.standard.string(forKey: "lastName") ?? ""
+        bioTextView.text = UserDefaults.standard.string(forKey: "bio") ?? ""
+
         if let data = UserDefaults.standard.data(forKey: "userLanguages"),
            let decoded = try? JSONDecoder().decode(UserLanguageData.self, from: data) {
             selectedNativeLanguage = decoded.nativeLanguage.language
@@ -472,22 +561,11 @@ class EditProfileViewController: UIViewController {
             openToLanguages = decoded.openToLanguages
             practiceLanguages = decoded.practiceLanguages ?? []
         } else {
-            // Create mock user for testing
-            firstNameTextField.text = "John"
-            lastNameTextField.text = "Doe"
-            bioTextView.text = "Language enthusiast and world traveler. Love meeting new people!"
-            locationTextField.text = "San Francisco, USA"
-            showCitySwitch.isOn = true
-
+            // No language data saved - show defaults without mock data
             selectedNativeLanguage = .english
-            nativeLanguageButton.setTitle("English", for: .normal)
-
-            learningLanguages = [
-                UserLanguage(language: .spanish, proficiency: .intermediate, isNative: false),
-                UserLanguage(language: .japanese, proficiency: .beginner, isNative: false)
-            ]
-
-            openToLanguages = [.spanish, .japanese]
+            nativeLanguageButton.setTitle("Select Native Language", for: .normal)
+            learningLanguages = []
+            openToLanguages = []
             practiceLanguages = []
         }
 
@@ -526,32 +604,83 @@ class EditProfileViewController: UIViewController {
     private func createLanguageRow(language: UserLanguage, isLearning: Bool) -> UIView {
         let row = UIView()
         row.heightAnchor.constraint(equalToConstant: 44).isActive = true
+        row.tag = learningLanguages.firstIndex(where: { $0.language.code == language.language.code }) ?? 0
 
-        let label = UILabel()
-        label.text = "\(language.language.name) - \(language.proficiency.displayName)"
-        label.font = .systemFont(ofSize: 16)
-        row.addSubview(label)
+        // Tappable area for editing proficiency
+        let editButton = UIButton(type: .system)
+        editButton.setTitle("\(language.language.name) - \(language.proficiency.displayName)", for: .normal)
+        editButton.setTitleColor(.label, for: .normal)
+        editButton.titleLabel?.font = .systemFont(ofSize: 16)
+        editButton.contentHorizontalAlignment = .left
+        editButton.tag = row.tag
+        editButton.addTarget(self, action: #selector(editLearningLanguageProficiency(_:)), for: .touchUpInside)
+        row.addSubview(editButton)
+
+        // Edit indicator
+        let editIcon = UIImageView(image: UIImage(systemName: "chevron.up.chevron.down"))
+        editIcon.tintColor = .systemGray2
+        editIcon.contentMode = .scaleAspectFit
+        row.addSubview(editIcon)
 
         let deleteButton = UIButton(type: .system)
         deleteButton.setTitle("Remove", for: .normal)
         deleteButton.titleLabel?.font = .systemFont(ofSize: 14)
         deleteButton.setTitleColor(.systemRed, for: .normal)
-        deleteButton.tag = learningLanguages.firstIndex(where: { $0.language.code == language.language.code }) ?? 0
+        deleteButton.tag = row.tag
         deleteButton.addTarget(self, action: #selector(removeLearningLanguage(_:)), for: .touchUpInside)
         row.addSubview(deleteButton)
 
-        label.translatesAutoresizingMaskIntoConstraints = false
+        editButton.translatesAutoresizingMaskIntoConstraints = false
+        editIcon.translatesAutoresizingMaskIntoConstraints = false
         deleteButton.translatesAutoresizingMaskIntoConstraints = false
 
         NSLayoutConstraint.activate([
-            label.leadingAnchor.constraint(equalTo: row.leadingAnchor),
-            label.centerYAnchor.constraint(equalTo: row.centerYAnchor),
+            editButton.leadingAnchor.constraint(equalTo: row.leadingAnchor),
+            editButton.centerYAnchor.constraint(equalTo: row.centerYAnchor),
+
+            editIcon.leadingAnchor.constraint(equalTo: editButton.trailingAnchor, constant: 4),
+            editIcon.centerYAnchor.constraint(equalTo: row.centerYAnchor),
+            editIcon.widthAnchor.constraint(equalToConstant: 14),
+            editIcon.heightAnchor.constraint(equalToConstant: 14),
 
             deleteButton.trailingAnchor.constraint(equalTo: row.trailingAnchor),
             deleteButton.centerYAnchor.constraint(equalTo: row.centerYAnchor)
         ])
 
         return row
+    }
+
+    @objc private func editLearningLanguageProficiency(_ sender: UIButton) {
+        guard sender.tag < learningLanguages.count else { return }
+        let language = learningLanguages[sender.tag]
+
+        let alertController = UIAlertController(
+            title: "Change Proficiency",
+            message: "Select your \(language.language.name) proficiency level",
+            preferredStyle: .actionSheet
+        )
+
+        for proficiency in LanguageProficiency.allCases {
+            if proficiency == .native { continue }
+
+            let isSelected = proficiency == language.proficiency
+            let title = isSelected ? "✓ \(proficiency.displayName)" : proficiency.displayName
+
+            alertController.addAction(UIAlertAction(title: title, style: .default) { _ in
+                let updated = UserLanguage(language: language.language, proficiency: proficiency, isNative: false)
+                self.learningLanguages[sender.tag] = updated
+                self.updateLearningLanguagesDisplay()
+            })
+        }
+
+        alertController.addAction(UIAlertAction(title: "Cancel", style: .cancel))
+
+        if let popover = alertController.popoverPresentationController {
+            popover.sourceView = sender
+            popover.sourceRect = sender.bounds
+        }
+
+        present(alertController, animated: true)
     }
 
     private func createOpenToMatchRow(language: UserLanguage) -> UIView {
@@ -586,32 +715,81 @@ class EditProfileViewController: UIViewController {
     private func createPracticeLanguageRow(language: UserLanguage) -> UIView {
         let row = UIView()
         row.heightAnchor.constraint(equalToConstant: 44).isActive = true
+        row.tag = practiceLanguages.firstIndex(where: { $0.language.code == language.language.code }) ?? 0
 
-        let label = UILabel()
-        label.text = "\(language.language.name) - \(language.proficiency.displayName)"
-        label.font = .systemFont(ofSize: 16)
-        row.addSubview(label)
+        // Tappable area for editing proficiency
+        let editButton = UIButton(type: .system)
+        editButton.setTitle("\(language.language.name) - \(language.proficiency.displayName)", for: .normal)
+        editButton.setTitleColor(.label, for: .normal)
+        editButton.titleLabel?.font = .systemFont(ofSize: 16)
+        editButton.contentHorizontalAlignment = .left
+        editButton.tag = row.tag
+        editButton.addTarget(self, action: #selector(editPracticeLanguageProficiency(_:)), for: .touchUpInside)
+        row.addSubview(editButton)
+
+        // Edit indicator
+        let editIcon = UIImageView(image: UIImage(systemName: "chevron.up.chevron.down"))
+        editIcon.tintColor = .systemGray2
+        editIcon.contentMode = .scaleAspectFit
+        row.addSubview(editIcon)
 
         let deleteButton = UIButton(type: .system)
         deleteButton.setTitle("Remove", for: .normal)
         deleteButton.titleLabel?.font = .systemFont(ofSize: 14)
         deleteButton.setTitleColor(.systemRed, for: .normal)
-        deleteButton.tag = practiceLanguages.firstIndex(where: { $0.language.code == language.language.code }) ?? 0
+        deleteButton.tag = row.tag
         deleteButton.addTarget(self, action: #selector(removePracticeLanguage(_:)), for: .touchUpInside)
         row.addSubview(deleteButton)
 
-        label.translatesAutoresizingMaskIntoConstraints = false
+        editButton.translatesAutoresizingMaskIntoConstraints = false
+        editIcon.translatesAutoresizingMaskIntoConstraints = false
         deleteButton.translatesAutoresizingMaskIntoConstraints = false
 
         NSLayoutConstraint.activate([
-            label.leadingAnchor.constraint(equalTo: row.leadingAnchor),
-            label.centerYAnchor.constraint(equalTo: row.centerYAnchor),
+            editButton.leadingAnchor.constraint(equalTo: row.leadingAnchor),
+            editButton.centerYAnchor.constraint(equalTo: row.centerYAnchor),
+
+            editIcon.leadingAnchor.constraint(equalTo: editButton.trailingAnchor, constant: 4),
+            editIcon.centerYAnchor.constraint(equalTo: row.centerYAnchor),
+            editIcon.widthAnchor.constraint(equalToConstant: 14),
+            editIcon.heightAnchor.constraint(equalToConstant: 14),
 
             deleteButton.trailingAnchor.constraint(equalTo: row.trailingAnchor),
             deleteButton.centerYAnchor.constraint(equalTo: row.centerYAnchor)
         ])
 
         return row
+    }
+
+    @objc private func editPracticeLanguageProficiency(_ sender: UIButton) {
+        guard sender.tag < practiceLanguages.count else { return }
+        let language = practiceLanguages[sender.tag]
+
+        let alertController = UIAlertController(
+            title: "Change Proficiency",
+            message: "Select your \(language.language.name) proficiency level",
+            preferredStyle: .actionSheet
+        )
+
+        for proficiency in LanguageProficiency.allCases {
+            let isSelected = proficiency == language.proficiency
+            let title = isSelected ? "✓ \(proficiency.displayName)" : proficiency.displayName
+
+            alertController.addAction(UIAlertAction(title: title, style: .default) { _ in
+                let updated = UserLanguage(language: language.language, proficiency: proficiency, isNative: proficiency == .native)
+                self.practiceLanguages[sender.tag] = updated
+                self.updatePracticeLanguagesDisplay()
+            })
+        }
+
+        alertController.addAction(UIAlertAction(title: "Cancel", style: .cancel))
+
+        if let popover = alertController.popoverPresentationController {
+            popover.sourceView = sender
+            popover.sourceRect = sender.bounds
+        }
+
+        present(alertController, animated: true)
     }
 
     @objc private func changePhotoTapped() {
@@ -783,6 +961,75 @@ class EditProfileViewController: UIViewController {
         present(alertController, animated: true)
     }
 
+    @objc private func selectGenderTapped() {
+        let alertController = UIAlertController(
+            title: "My Gender",
+            message: nil,
+            preferredStyle: .actionSheet
+        )
+
+        let genderOptions: [(value: String, display: String)] = [
+            ("male", "Male"),
+            ("female", "Female"),
+            ("non_binary", "Non-binary"),
+            ("prefer_not_to_say", "Prefer not to say")
+        ]
+
+        for option in genderOptions {
+            let isSelected = selectedGender == option.value
+            let title = isSelected ? "✓ \(option.display)" : option.display
+
+            alertController.addAction(UIAlertAction(title: title, style: .default) { _ in
+                self.selectedGender = option.value
+                self.genderButton.setTitle(option.display, for: .normal)
+            })
+        }
+
+        alertController.addAction(UIAlertAction(title: "Cancel", style: .cancel))
+
+        if let popover = alertController.popoverPresentationController {
+            popover.sourceView = genderButton
+            popover.sourceRect = genderButton.bounds
+        }
+
+        present(alertController, animated: true)
+    }
+
+    @objc private func selectGenderPreferenceTapped() {
+        let alertController = UIAlertController(
+            title: "Interested in Matching With",
+            message: nil,
+            preferredStyle: .actionSheet
+        )
+
+        let preferenceOptions: [(value: String, display: String)] = [
+            ("all", "Everyone"),
+            ("male", "Men"),
+            ("female", "Women"),
+            ("same_only", "Same gender only"),
+            ("different_only", "Different gender only")
+        ]
+
+        for option in preferenceOptions {
+            let isSelected = selectedGenderPreference == option.value
+            let title = isSelected ? "✓ \(option.display)" : option.display
+
+            alertController.addAction(UIAlertAction(title: title, style: .default) { _ in
+                self.selectedGenderPreference = option.value
+                self.genderPreferenceButton.setTitle(option.display, for: .normal)
+            })
+        }
+
+        alertController.addAction(UIAlertAction(title: "Cancel", style: .cancel))
+
+        if let popover = alertController.popoverPresentationController {
+            popover.sourceView = genderPreferenceButton
+            popover.sourceRect = genderPreferenceButton.bounds
+        }
+
+        present(alertController, animated: true)
+    }
+
     @objc private func cancelTapped() {
         dismiss(animated: true)
     }
@@ -830,13 +1077,48 @@ class EditProfileViewController: UIViewController {
             learningLanguages: learningLanguages,
             openToLanguages: openToLanguages,
             practiceLanguages: practiceLanguages,
-            location: currentUser?.location ?? "Unknown",
+            location: locationTextField.text ?? currentUser?.location ?? "Unknown",
             matchedDate: currentUser?.matchedDate,
             isOnline: currentUser?.isOnline ?? false
         )
 
-        // TODO: Save to backend (Supabase/CloudKit)
-        print("User saved: \(updatedUser.firstName)")
+        // Build proficiency levels dictionary
+        var proficiencyDict: [String: String] = [:]
+        for lang in learningLanguages {
+            proficiencyDict[lang.language.name] = lang.proficiency.rawValue
+        }
+
+        // Save to Supabase
+        let profileUpdate = ProfileUpdate(
+            firstName: firstName,
+            lastName: lastName,
+            bio: bioTextView.text,
+            location: locationTextField.text,
+            showCityInProfile: showCitySwitch.isOn,
+            nativeLanguage: selectedNativeLanguage.name,
+            learningLanguages: learningLanguages.map { $0.language.name },
+            proficiencyLevels: proficiencyDict,
+            gender: selectedGender,
+            genderPreference: selectedGenderPreference,
+            openToLanguages: openToLanguages.map { $0.name },
+            profilePhotos: photoURLs
+        )
+
+        Task {
+            do {
+                try await SupabaseService.shared.updateProfile(profileUpdate)
+                print("✅ Profile saved to Supabase")
+
+                // Sync to UserDefaults after successful save
+                try await SupabaseService.shared.syncProfileToUserDefaults()
+            } catch {
+                print("❌ Failed to save profile to Supabase: \(error)")
+                await MainActor.run {
+                    self.showAlert(title: "Save Failed", message: "Could not save your profile. Please try again.")
+                }
+                return
+            }
+        }
 
         // Post notification to update profile
         NotificationCenter.default.post(name: .userProfileUpdated, object: updatedUser)

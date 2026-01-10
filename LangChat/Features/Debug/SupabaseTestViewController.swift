@@ -1,3 +1,4 @@
+#if DEBUG
 import UIKit
 
 /// Debug view to test Supabase connection
@@ -257,3 +258,4 @@ class SupabaseTestViewController: UIViewController {
         stackView.addArrangedSubview(button)
     }
 }
+#endif

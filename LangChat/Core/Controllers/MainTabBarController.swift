@@ -58,13 +58,14 @@ class MainTabBarController: UITabBarController, UITabBarControllerDelegate {
 
     private func setupViewControllers() {
         let discoverVC = createDiscoverViewController()
+        let languageLabVC = createLanguageLabViewController()
         let matchesVC = createMatchesViewController()
         let chatsVC = createChatsViewController()
         let profileVC = createProfileViewController()
 
-        viewControllers = [discoverVC, matchesVC, chatsVC, profileVC]
+        viewControllers = [discoverVC, languageLabVC, matchesVC, chatsVC, profileVC]
 
-        selectedIndex = 1 // Start on Matches tab
+        selectedIndex = 2 // Start on Matches tab
     }
 
     private func setupAppearance() {
@@ -92,6 +93,16 @@ class MainTabBarController: UITabBarController, UITabBarControllerDelegate {
             selectedImage: UIImage(systemName: "rectangle.stack.fill")
         )
         return UINavigationController(rootViewController: discoverVC)
+    }
+
+    private func createLanguageLabViewController() -> UINavigationController {
+        let languageLabVC = LanguageLabViewController()
+        languageLabVC.tabBarItem = UITabBarItem(
+            title: "Language Lab",
+            image: UIImage(systemName: "brain.head.profile"),
+            selectedImage: UIImage(systemName: "brain.head.profile.fill")
+        )
+        return UINavigationController(rootViewController: languageLabVC)
     }
 
     private func createMatchesViewController() -> UINavigationController {

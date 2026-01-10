@@ -1,6 +1,6 @@
 # Third-Party Licenses
 
-LangChat uses the following open source libraries. We are grateful to the developers and contributors of these projects.
+Fluenca uses the following open source libraries. We are grateful to the developers and contributors of these projects.
 
 ---
 
@@ -230,4 +230,4 @@ SOFTWARE.
 
 ---
 
-*Last Updated: December 15, 2024*
+*Last Updated: January 3, 2026*

@@ -142,8 +142,29 @@ class MatchingService {
 
     /// Check if relationship intents match
     private func hasRelationshipIntentOverlap(_ user1: User, _ user2: User) -> Bool {
-        // Both users must have the same relationship intent
-        return user1.matchingPreferences.relationshipIntent == user2.matchingPreferences.relationshipIntent
+        // Relationship intent is now handled by strictly_platonic flag
+        // If both users passed the platonic filter, they're compatible on intent
+        // This allows flexibility - users can match if they have overlapping or default intents
+        let intent1 = user1.matchingPreferences.relationshipIntent
+        let intent2 = user2.matchingPreferences.relationshipIntent
+
+        // Always allow if either has the default "language practice only" intent
+        if intent1 == .languagePracticeOnly || intent2 == .languagePracticeOnly {
+            return true
+        }
+
+        // Allow if intents match
+        if intent1 == intent2 {
+            return true
+        }
+
+        // Allow friendship + openToDating to match (both are social)
+        let socialIntents: Set<RelationshipIntent> = [.friendship, .openToDating]
+        if socialIntents.contains(intent1) && socialIntents.contains(intent2) {
+            return true
+        }
+
+        return true // Be lenient - strictly_platonic handles the real separation
     }
 
     /// Determine if two users are compatible for matching (language-based)

@@ -2,10 +2,10 @@ import Foundation
 import NaturalLanguage
 
 enum LanguageProficiency: String, CaseIterable, Codable {
-    case beginner = "Beg"
-    case intermediate = "Int"
-    case advanced = "Adv"
-    case native = "Native"
+    case beginner = "beginner"
+    case intermediate = "intermediate"
+    case advanced = "advanced"
+    case native = "native"
 
     var displayName: String {
         switch self {
@@ -17,7 +17,42 @@ enum LanguageProficiency: String, CaseIterable, Codable {
     }
 
     var abbreviation: String {
-        return self.rawValue
+        switch self {
+        case .beginner: return "Beg"
+        case .intermediate: return "Int"
+        case .advanced: return "Adv"
+        case .native: return "Native"
+        }
+    }
+
+    /// Decode from legacy values (Beg, Int, Adv, Native) or new values
+    init(from decoder: Decoder) throws {
+        let container = try decoder.singleValueContainer()
+        let rawValue = try container.decode(String.self)
+
+        // Try new format first
+        if let value = LanguageProficiency(rawValue: rawValue) {
+            self = value
+            return
+        }
+
+        // Fall back to legacy format
+        switch rawValue {
+        case "Beg": self = .beginner
+        case "Int": self = .intermediate
+        case "Adv": self = .advanced
+        case "Native": self = .native
+        default:
+            // Try case-insensitive match
+            if let match = LanguageProficiency.allCases.first(where: {
+                $0.rawValue.lowercased() == rawValue.lowercased() ||
+                $0.displayName.lowercased() == rawValue.lowercased()
+            }) {
+                self = match
+            } else {
+                self = .beginner // Default fallback
+            }
+        }
     }
 }
 
@@ -129,7 +164,7 @@ enum Language: String, CaseIterable, Codable, Equatable {
     /// Languages available for Muse (AI language tutors)
     static var museLanguages: [Language] {
         return [
-            .spanish, .french, .german, .portuguese, .portuguesePortugal, .italian,
+            .english, .spanish, .french, .german, .portuguese, .portuguesePortugal, .italian,
             .japanese, .korean, .dutch, .chinese, .russian,
             .polish, .hindi, .indonesian, .filipino,
             .swedish, .danish, .finnish, .norwegian, .arabic
