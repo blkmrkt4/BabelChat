@@ -447,28 +447,7 @@ class LandingViewController: UIViewController {
                 await MainActor.run {
                     if let windowScene = UIApplication.shared.connectedScenes.first as? UIWindowScene,
                        let window = windowScene.windows.first {
-
-                        // Create Language Lab in navigation controller
-                        let languageLabVC = LanguageLabViewController()
-                        let navController = UINavigationController(rootViewController: languageLabVC)
-
-                        // Create tab bar with Language Lab as first tab
                         let tabBarController = MainTabBarController()
-
-                        // Insert Language Lab as first tab
-                        var viewControllers = tabBarController.viewControllers ?? []
-                        viewControllers.insert(navController, at: 0)
-                        tabBarController.viewControllers = viewControllers
-                        tabBarController.selectedIndex = 0
-
-                        // Update tab bar item for Language Lab
-                        navController.tabBarItem = UITabBarItem(
-                            title: "Lab",
-                            image: UIImage(systemName: "flask"),
-                            selectedImage: UIImage(systemName: "flask.fill")
-                        )
-
-                        // Set as root with animation
                         window.rootViewController = tabBarController
 
                         UIView.transition(with: window,
@@ -507,27 +486,7 @@ class LandingViewController: UIViewController {
                 return
             }
 
-            // Create Language Lab in navigation controller
-            let languageLabVC = LanguageLabViewController()
-            let navController = UINavigationController(rootViewController: languageLabVC)
-
-            // Create tab bar with Language Lab as first tab
             let tabBarController = MainTabBarController()
-
-            // Insert Language Lab as first tab
-            var viewControllers = tabBarController.viewControllers ?? []
-            viewControllers.insert(navController, at: 0)
-            tabBarController.viewControllers = viewControllers
-            tabBarController.selectedIndex = 0
-
-            // Update tab bar item for Language Lab
-            navController.tabBarItem = UITabBarItem(
-                title: "Lab",
-                image: UIImage(systemName: "flask"),
-                selectedImage: UIImage(systemName: "flask.fill")
-            )
-
-            // Set as root with animation
             window.rootViewController = tabBarController
 
             UIView.transition(with: window,

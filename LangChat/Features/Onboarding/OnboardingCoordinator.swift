@@ -265,28 +265,10 @@ class OnboardingCoordinator {
     }
 
     private func transitionToMainApp() {
-        // Transition to main app with Language Lab
+        // Transition to main app
         if let windowScene = UIApplication.shared.connectedScenes.first as? UIWindowScene,
            let window = windowScene.windows.first {
-            let languageLabVC = LanguageLabViewController()
-            let navController = UINavigationController(rootViewController: languageLabVC)
-
-            // Create tab bar with Language Lab as first tab
             let tabBarController = MainTabBarController()
-
-            // Insert Language Lab as first tab
-            var viewControllers = tabBarController.viewControllers ?? []
-            viewControllers.insert(navController, at: 0)
-            tabBarController.viewControllers = viewControllers
-            tabBarController.selectedIndex = 0
-
-            // Update tab bar item
-            navController.tabBarItem = UITabBarItem(
-                title: "Lab",
-                image: UIImage(systemName: "flask"),
-                selectedImage: UIImage(systemName: "flask.fill")
-            )
-
             window.rootViewController = tabBarController
 
             UIView.transition(with: window,
