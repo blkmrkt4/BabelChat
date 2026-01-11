@@ -14,6 +14,7 @@
 		8F691F6D2E9EB29C00F49850 /* PostgREST in Frameworks */ = {isa = PBXBuildFile; productRef = 8F691F6C2E9EB29C00F49850 /* PostgREST */; };
 		8F691F6F2E9EB2A700F49850 /* Auth in Frameworks */ = {isa = PBXBuildFile; productRef = 8F691F6E2E9EB2A700F49850 /* Auth */; };
 		8FBBA6A12EDB57F40019497E /* Secrets.xcconfig in Resources */ = {isa = PBXBuildFile; fileRef = 8FBBA6A02EDB57F40019497E /* Secrets.xcconfig */; };
+		8FF54CFD2F13F0D300D85922 /* Sentry in Frameworks */ = {isa = PBXBuildFile; productRef = 8FF54CFC2F13F0D300D85922 /* Sentry */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXContainerItemProxy section */
@@ -82,6 +83,7 @@
 				8F1056042EF5F51000C3580B /* RevenueCatUI in Frameworks */,
 				8F1056022EF5F51000C3580B /* RevenueCat in Frameworks */,
 				8F691F6F2E9EB2A700F49850 /* Auth in Frameworks */,
+				8FF54CFD2F13F0D300D85922 /* Sentry in Frameworks */,
 				8F691F692E9EB28600F49850 /* Realtime in Frameworks */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
@@ -158,6 +160,7 @@
 				8F691F6E2E9EB2A700F49850 /* Auth */,
 				8F1056012EF5F51000C3580B /* RevenueCat */,
 				8F1056032EF5F51000C3580B /* RevenueCatUI */,
+				8FF54CFC2F13F0D300D85922 /* Sentry */,
 			);
 			productName = LangChat;
 			productReference = 8F1BA3AE2E87209F003EDC2A /* LangChat.app */;
@@ -244,6 +247,7 @@
 			packageReferences = (
 				8F691F622E9EB0DA00F49850 /* XCRemoteSwiftPackageReference "supabase-swift" */,
 				8F1056002EF5F51000C3580B /* XCRemoteSwiftPackageReference "purchases-ios" */,
+				8FF54CFB2F13F0D300D85922 /* XCRemoteSwiftPackageReference "sentry-cocoa" */,
 			);
 			preferredProjectObjectVersion = 77;
 			productRefGroup = 8F1BA3AF2E87209F003EDC2A /* Products */;
@@ -667,6 +671,14 @@
 				minimumVersion = 2.5.1;
 			};
 		};
+		8FF54CFB2F13F0D300D85922 /* XCRemoteSwiftPackageReference "sentry-cocoa" */ = {
+			isa = XCRemoteSwiftPackageReference;
+			repositoryURL = "https://github.com/getsentry/sentry-cocoa";
+			requirement = {
+				kind = upToNextMajorVersion;
+				minimumVersion = 9.1.0;
+			};
+		};
 /* End XCRemoteSwiftPackageReference section */
 
 /* Begin XCSwiftPackageProductDependency section */
@@ -699,6 +711,11 @@
 			isa = XCSwiftPackageProductDependency;
 			package = 8F691F622E9EB0DA00F49850 /* XCRemoteSwiftPackageReference "supabase-swift" */;
 			productName = Auth;
+		};
+		8FF54CFC2F13F0D300D85922 /* Sentry */ = {
+			isa = XCSwiftPackageProductDependency;
+			package = 8FF54CFB2F13F0D300D85922 /* XCRemoteSwiftPackageReference "sentry-cocoa" */;
+			productName = Sentry;
 		};
 /* End XCSwiftPackageProductDependency section */
 	};

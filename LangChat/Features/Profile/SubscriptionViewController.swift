@@ -23,6 +23,12 @@ class SubscriptionViewController: UIViewController {
         super.viewDidLoad()
         setupViews()
         loadPrices()
+
+        // Track paywall viewed
+        AnalyticsService.shared.trackPaywallViewed(
+            source: "settings",
+            currentTier: subscriptionService.currentStatus.tier.displayName
+        )
     }
 
     private func loadPrices() {
@@ -264,13 +270,22 @@ class SubscriptionViewController: UIViewController {
     }
 
     private func purchaseTier(_ tier: SubscriptionTier) {
+        // Track upgrade button tapped
+        AnalyticsService.shared.track(.upgradeButtonTapped, properties: [
+            "tier": tier.displayName,
+            "current_tier": subscriptionService.currentStatus.tier.displayName
+        ])
+
         let alert = UIAlertController(
             title: "Subscribe to \(tier.displayName)",
             message: "You'll be charged \(subscriptionService.localizedPricePerPeriod(for: tier))",
             preferredStyle: .alert
         )
 
-        alert.addAction(UIAlertAction(title: "Cancel", style: .cancel))
+        alert.addAction(UIAlertAction(title: "Cancel", style: .cancel) { [weak self] _ in
+            // Track paywall dismissed
+            AnalyticsService.shared.track(.paywallDismissed, properties: ["tier": tier.displayName])
+        })
         alert.addAction(UIAlertAction(title: "Subscribe", style: .default) { [weak self] _ in
             self?.performPurchase(tier: tier)
         })
@@ -279,6 +294,12 @@ class SubscriptionViewController: UIViewController {
     }
 
     private func performPurchase(tier: SubscriptionTier) {
+        // Track purchase started
+        AnalyticsService.shared.track(.purchaseStarted, properties: [
+            "tier": tier.displayName,
+            "product_id": tier.productIdentifier ?? "unknown"
+        ])
+
         let spinner = UIActivityIndicatorView(style: .large)
         spinner.center = view.center
         spinner.startAnimating()
@@ -292,8 +313,25 @@ class SubscriptionViewController: UIViewController {
 
                 switch result {
                 case .success(let status):
+                    // Track purchase completed
+                    if let offering = self?.subscriptionService.cachedOfferings.first(where: { $0.tier == tier }) {
+                        AnalyticsService.shared.trackPurchaseCompleted(
+                            productId: tier.productIdentifier ?? "unknown",
+                            price: offering.priceValue,
+                            currency: offering.currencyCode
+                        )
+                    } else {
+                        AnalyticsService.shared.track(.purchaseCompleted, properties: [
+                            "tier": status.tier.displayName
+                        ])
+                    }
                     self?.showPurchaseSuccess(tier: status.tier)
                 case .failure(let error):
+                    // Track purchase failed
+                    AnalyticsService.shared.track(.purchaseFailed, properties: [
+                        "tier": tier.displayName,
+                        "error": error.localizedDescription
+                    ])
                     self?.showPurchaseError(error)
                 }
             }
@@ -369,6 +407,11 @@ class SubscriptionViewController: UIViewController {
                 switch result {
                 case .success(let status):
                     if status.tier != .free {
+                        // Track purchase restored
+                        AnalyticsService.shared.track(.purchaseRestored, properties: [
+                            "tier": status.tier.displayName
+                        ])
+
                         let alert = UIAlertController(
                             title: "Purchases Restored",
                             message: "Your \(status.tier.displayName) subscription has been restored.",

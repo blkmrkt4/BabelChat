@@ -83,6 +83,14 @@ class SwipeableMessageCell: UITableViewCell {
     private var bubbleLeadingConstraint: NSLayoutConstraint!
     private var bubbleTrailingConstraint: NSLayoutConstraint!
 
+    // OPTIMIZATION: Cache pane width to avoid repeated screen width calculations
+    // Using contentView width is better for iPad split view and multi-window support
+    private var paneWidth: CGFloat = 375
+    private var leftPaneWidthConstraint: NSLayoutConstraint?
+    private var centerPaneWidthConstraint: NSLayoutConstraint?
+    private var rightPaneWidthConstraint: NSLayoutConstraint?
+    private var lastLayoutWidth: CGFloat = 0
+
     // Static cache for translations and grammar checks (across cell reuse)
     private static let translationCache = NSCache<NSString, NSString>()
     private static let grammarCache = NSCache<NSString, NSString>()
@@ -112,11 +120,8 @@ class SwipeableMessageCell: UITableViewCell {
 
     override func prepareForReuse() {
         super.prepareForReuse()
-        // Reset to center pane when cell is reused
-        let screenWidth = UIApplication.shared.connectedScenes
-            .compactMap { $0 as? UIWindowScene }
-            .first?.screen.bounds.width ?? 375
-        scrollView.setContentOffset(CGPoint(x: screenWidth, y: 0), animated: false)
+        // Reset to center pane when cell is reused (use cached paneWidth)
+        scrollView.setContentOffset(CGPoint(x: paneWidth, y: 0), animated: false)
 
         // Reset pane visibility - show only center pane
         leftPane.isHidden = true
@@ -129,6 +134,26 @@ class SwipeableMessageCell: UITableViewCell {
         grammarLanguageBadge.isHidden = true
         currentMessage = nil
         currentMessageLanguage = nil
+    }
+
+    override func layoutSubviews() {
+        super.layoutSubviews()
+
+        // Update pane widths when cell bounds change (rotation, iPad split view, etc.)
+        let newWidth = contentView.bounds.width
+        guard newWidth > 0, newWidth != lastLayoutWidth else { return }
+
+        lastLayoutWidth = newWidth
+        paneWidth = newWidth
+
+        // Update width constraints
+        leftPaneWidthConstraint?.constant = newWidth
+        centerPaneWidthConstraint?.constant = newWidth
+        rightPaneWidthConstraint?.constant = newWidth
+
+        // Maintain current pane position after width change
+        let currentPaneIndex = round(scrollView.contentOffset.x / max(1, scrollView.bounds.width))
+        scrollView.contentOffset.x = currentPaneIndex * newWidth
     }
 
     // MARK: - Setup
@@ -269,9 +294,14 @@ class SwipeableMessageCell: UITableViewCell {
             containerView.heightAnchor.constraint(equalTo: scrollView.heightAnchor)
         ])
 
-        let screenWidth = UIApplication.shared.connectedScenes
-            .compactMap { $0 as? UIWindowScene }
-            .first?.screen.bounds.width ?? 375
+        // Initial pane width (will be updated in layoutSubviews for proper iPad/rotation support)
+        let initialWidth = contentView.bounds.width > 0 ? contentView.bounds.width : 375
+        paneWidth = initialWidth
+
+        // Create width constraints that can be updated later
+        leftPaneWidthConstraint = leftPane.widthAnchor.constraint(equalToConstant: initialWidth)
+        centerPaneWidthConstraint = centerPane.widthAnchor.constraint(equalToConstant: initialWidth)
+        rightPaneWidthConstraint = rightPane.widthAnchor.constraint(equalToConstant: initialWidth)
 
         // Three panes side by side
         NSLayoutConstraint.activate([
@@ -279,19 +309,19 @@ class SwipeableMessageCell: UITableViewCell {
             leftPane.leadingAnchor.constraint(equalTo: containerView.leadingAnchor),
             leftPane.topAnchor.constraint(equalTo: containerView.topAnchor),
             leftPane.bottomAnchor.constraint(equalTo: containerView.bottomAnchor),
-            leftPane.widthAnchor.constraint(equalToConstant: screenWidth),
+            leftPaneWidthConstraint!,
 
             // Center pane (original message)
             centerPane.leadingAnchor.constraint(equalTo: leftPane.trailingAnchor),
             centerPane.topAnchor.constraint(equalTo: containerView.topAnchor),
             centerPane.bottomAnchor.constraint(equalTo: containerView.bottomAnchor),
-            centerPane.widthAnchor.constraint(equalToConstant: screenWidth),
+            centerPaneWidthConstraint!,
 
             // Right pane (translation)
             rightPane.leadingAnchor.constraint(equalTo: centerPane.trailingAnchor),
             rightPane.topAnchor.constraint(equalTo: containerView.topAnchor),
             rightPane.bottomAnchor.constraint(equalTo: containerView.bottomAnchor),
-            rightPane.widthAnchor.constraint(equalToConstant: screenWidth),
+            rightPaneWidthConstraint!,
             rightPane.trailingAnchor.constraint(equalTo: containerView.trailingAnchor)
         ])
 
@@ -771,10 +801,8 @@ class SwipeableMessageCell: UITableViewCell {
     }
 
     private func scrollToPane(_ paneIndex: Int) {
-        let screenWidth = UIApplication.shared.connectedScenes
-            .compactMap { $0 as? UIWindowScene }
-            .first?.screen.bounds.width ?? 375
-        let xOffset = CGFloat(paneIndex) * screenWidth
+        // Use cached paneWidth instead of recalculating screen width each time
+        let xOffset = CGFloat(paneIndex) * paneWidth
         scrollView.setContentOffset(CGPoint(x: xOffset, y: 0), animated: true)
     }
 
@@ -834,13 +862,12 @@ class SwipeableMessageCell: UITableViewCell {
         // ALWAYS start with center pane visible (original message)
         // This ensures users see the actual message first
         DispatchQueue.main.async { [weak self] in
-            let screenWidth = UIApplication.shared.connectedScenes
-            .compactMap { $0 as? UIWindowScene }
-            .first?.screen.bounds.width ?? 375
-            self?.scrollView.setContentOffset(CGPoint(x: screenWidth, y: 0), animated: false)
+            guard let self = self else { return }
+            // Use cached paneWidth instead of recalculating screen width
+            self.scrollView.setContentOffset(CGPoint(x: self.paneWidth, y: 0), animated: false)
 
             // Show only center pane initially
-            self?.updatePaneVisibility(for: 1)
+            self.updatePaneVisibility(for: 1)
         }
     }
 

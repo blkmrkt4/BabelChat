@@ -132,6 +132,45 @@ extension SupabaseService {
         try await client.auth.verifyOTP(email: email, token: token, type: .email)
         print("✅ OTP verified for: \(email)")
     }
+
+    /// Check if current user is banned
+    /// Returns ban info if banned, nil if not banned
+    func checkBanStatus() async throws -> BanInfo? {
+        guard let userId = currentUserId else {
+            return nil
+        }
+
+        struct ProfileBanStatus: Decodable {
+            let is_banned: Bool?
+            let ban_reason: String?
+            let banned_at: String?
+        }
+
+        let response: ProfileBanStatus = try await client
+            .from("profiles")
+            .select("is_banned, ban_reason, banned_at")
+            .eq("id", value: userId.uuidString)
+            .single()
+            .execute()
+            .value
+
+        if response.is_banned == true {
+            return BanInfo(
+                isBanned: true,
+                reason: response.ban_reason,
+                bannedAt: response.banned_at
+            )
+        }
+
+        return nil
+    }
+}
+
+/// Information about a user ban
+struct BanInfo {
+    let isBanned: Bool
+    let reason: String?
+    let bannedAt: String?
 }
 
 // MARK: - Storage Methods

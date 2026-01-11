@@ -7,8 +7,67 @@ class OpenRouterService {
     private let apiKey: String
     private let baseURL = "https://openrouter.ai/api/v1"
 
+    /// Custom URLSession with appropriate timeouts for LLM API calls
+    private let urlSession: URLSession
+
+    /// Timeout for API requests (30 seconds is reasonable for LLM completions)
+    private static let requestTimeout: TimeInterval = 30
+
+    /// Timeout for the entire resource transfer (60 seconds max)
+    private static let resourceTimeout: TimeInterval = 60
+
+    /// Track active tasks for cancellation support
+    private var activeTasks: [UUID: Task<Any, Error>] = [:]
+    private let tasksLock = NSLock()
+
     private init() {
         self.apiKey = Config.openRouterAPIKey
+
+        // Configure URLSession with appropriate timeouts
+        let configuration = URLSessionConfiguration.default
+        configuration.timeoutIntervalForRequest = Self.requestTimeout
+        configuration.timeoutIntervalForResource = Self.resourceTimeout
+        configuration.waitsForConnectivity = false // Fail fast if no connection
+        self.urlSession = URLSession(configuration: configuration)
+    }
+
+    // MARK: - Task Management
+
+    /// Cancel all pending API requests (call when user dismisses view)
+    func cancelAllRequests() {
+        tasksLock.lock()
+        defer { tasksLock.unlock() }
+
+        for (_, task) in activeTasks {
+            task.cancel()
+        }
+        activeTasks.removeAll()
+        print("🛑 Cancelled all pending OpenRouter requests")
+    }
+
+    /// Cancel a specific request by ID
+    func cancelRequest(id: UUID) {
+        tasksLock.lock()
+        defer { tasksLock.unlock() }
+
+        if let task = activeTasks.removeValue(forKey: id) {
+            task.cancel()
+            print("🛑 Cancelled OpenRouter request: \(id)")
+        }
+    }
+
+    private func trackTask(_ task: Task<Any, Error>) -> UUID {
+        let id = UUID()
+        tasksLock.lock()
+        activeTasks[id] = task
+        tasksLock.unlock()
+        return id
+    }
+
+    private func untrackTask(id: UUID) {
+        tasksLock.lock()
+        activeTasks.removeValue(forKey: id)
+        tasksLock.unlock()
     }
 
     // MARK: - Chat Completion
@@ -32,6 +91,9 @@ class OpenRouterService {
         request.setValue("https://ByZyB.ai", forHTTPHeaderField: "HTTP-Referer")
         request.setValue("Fluenca iOS", forHTTPHeaderField: "X-Title")
 
+        // Explicit request-level timeout as safety net
+        request.timeoutInterval = Self.requestTimeout
+
         let requestBody = ChatCompletionRequest(
             model: model,
             messages: messages,
@@ -41,7 +103,16 @@ class OpenRouterService {
 
         request.httpBody = try JSONEncoder().encode(requestBody)
 
-        let (data, response) = try await URLSession.shared.data(for: request)
+        let (data, response): (Data, URLResponse)
+        do {
+            (data, response) = try await urlSession.data(for: request)
+        } catch let error as URLError where error.code == .timedOut {
+            throw OpenRouterError.timeout
+        } catch let error as URLError where error.code == .cancelled {
+            throw OpenRouterError.cancelled
+        } catch let error as URLError where error.code == .notConnectedToInternet {
+            throw OpenRouterError.noConnection
+        }
 
         guard let httpResponse = response as? HTTPURLResponse else {
             throw OpenRouterError.invalidResponse
@@ -109,8 +180,18 @@ class OpenRouterService {
 
         var request = URLRequest(url: url)
         request.setValue("application/json", forHTTPHeaderField: "Content-Type")
+        request.timeoutInterval = Self.requestTimeout
 
-        let (data, response) = try await URLSession.shared.data(for: request)
+        let (data, response): (Data, URLResponse)
+        do {
+            (data, response) = try await urlSession.data(for: request)
+        } catch let error as URLError where error.code == .timedOut {
+            throw OpenRouterError.timeout
+        } catch let error as URLError where error.code == .cancelled {
+            throw OpenRouterError.cancelled
+        } catch let error as URLError where error.code == .notConnectedToInternet {
+            throw OpenRouterError.noConnection
+        }
 
         guard let httpResponse = response as? HTTPURLResponse else {
             throw OpenRouterError.invalidResponse
@@ -325,6 +406,9 @@ enum OpenRouterError: LocalizedError {
     case invalidResponse
     case httpError(statusCode: Int, message: String)
     case emptyResponse
+    case timeout
+    case cancelled
+    case noConnection
 
     var errorDescription: String? {
         switch self {
@@ -336,6 +420,25 @@ enum OpenRouterError: LocalizedError {
             return "HTTP Error \(statusCode): \(message)"
         case .emptyResponse:
             return "OpenRouter returned an empty response"
+        case .timeout:
+            return "Request timed out. Please check your connection and try again."
+        case .cancelled:
+            return "Request was cancelled"
+        case .noConnection:
+            return "No internet connection. Please check your network and try again."
+        }
+    }
+
+    /// Whether this error is recoverable (user can retry)
+    var isRetryable: Bool {
+        switch self {
+        case .timeout, .noConnection:
+            return true
+        case .httpError(let statusCode, _):
+            // 5xx errors and rate limiting (429) are retryable
+            return statusCode >= 500 || statusCode == 429
+        default:
+            return false
         }
     }
 }

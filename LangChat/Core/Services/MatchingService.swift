@@ -105,17 +105,17 @@ class MatchingService {
         }
 
         // Check specific country preferences
+        // OPTIMIZATION: Pre-compute lowercased strings to avoid repeated work in loops
         if prefs1.locationPreference == .specificCountries,
            let preferredCountries1 = prefs1.preferredCountries,
            let user2Location = user2.location {
-            var matchesCountry = false
-            for countryCode in preferredCountries1 {
-                if let countryName = Locale.current.localizedString(forRegionCode: countryCode),
-                   user2Location.lowercased().contains(countryName.lowercased()) {
-                    matchesCountry = true
-                    break
-                }
+            // Pre-compute lowercased location and country names once
+            let locationLower = user2Location.lowercased()
+            let countryNames = preferredCountries1.compactMap { code -> String? in
+                Locale.current.localizedString(forRegionCode: code)?.lowercased()
             }
+            // Check if location contains any preferred country name
+            let matchesCountry = countryNames.contains { locationLower.contains($0) }
             if !matchesCountry {
                 return false
             }
@@ -124,14 +124,13 @@ class MatchingService {
         if prefs2.locationPreference == .specificCountries,
            let preferredCountries2 = prefs2.preferredCountries,
            let user1Location = user1.location {
-            var matchesCountry = false
-            for countryCode in preferredCountries2 {
-                if let countryName = Locale.current.localizedString(forRegionCode: countryCode),
-                   user1Location.lowercased().contains(countryName.lowercased()) {
-                    matchesCountry = true
-                    break
-                }
+            // Pre-compute lowercased location and country names once
+            let locationLower = user1Location.lowercased()
+            let countryNames = preferredCountries2.compactMap { code -> String? in
+                Locale.current.localizedString(forRegionCode: code)?.lowercased()
             }
+            // Check if location contains any preferred country name
+            let matchesCountry = countryNames.contains { locationLower.contains($0) }
             if !matchesCountry {
                 return false
             }
@@ -224,27 +223,31 @@ class MatchingService {
             return false
         }
 
+        // OPTIMIZATION: Pre-compute Dictionary lookups to avoid O(L²) nested searches
+        // This reduces complexity from O(L²) to O(L) for each user pair comparison
+        let user1LangDict = Dictionary(uniqueKeysWithValues: user1.learningLanguages.map { ($0.language, $0) })
+        let user2LangDict = Dictionary(uniqueKeysWithValues: user2.learningLanguages.map { ($0.language, $0) })
+
         // Check if proficiency levels are compatible for at least one common language
         for language in commonLanguages {
-            if let user1Lang = user1.learningLanguages.first(where: { $0.language == language }),
-               let user2Lang = user2.learningLanguages.first(where: { $0.language == language }) {
+            guard let user1Lang = user1LangDict[language],
+                  let user2Lang = user2LangDict[language] else { continue }
 
-                // If user1 allows non-native matches, check if user2's proficiency is acceptable
-                if user1.allowNonNativeMatches {
-                    if isProficiencyAcceptable(user2Lang.proficiency,
-                                              min: user1.minProficiencyLevel,
-                                              max: user1.maxProficiencyLevel) {
-                        return true
-                    }
+            // If user1 allows non-native matches, check if user2's proficiency is acceptable
+            if user1.allowNonNativeMatches {
+                if isProficiencyAcceptable(user2Lang.proficiency,
+                                          min: user1.minProficiencyLevel,
+                                          max: user1.maxProficiencyLevel) {
+                    return true
                 }
+            }
 
-                // If user2 allows non-native matches, check if user1's proficiency is acceptable
-                if user2.allowNonNativeMatches {
-                    if isProficiencyAcceptable(user1Lang.proficiency,
-                                              min: user2.minProficiencyLevel,
-                                              max: user2.maxProficiencyLevel) {
-                        return true
-                    }
+            // If user2 allows non-native matches, check if user1's proficiency is acceptable
+            if user2.allowNonNativeMatches {
+                if isProficiencyAcceptable(user1Lang.proficiency,
+                                          min: user2.minProficiencyLevel,
+                                          max: user2.maxProficiencyLevel) {
+                    return true
                 }
             }
         }
@@ -376,17 +379,22 @@ class MatchingService {
 
         guard !commonLanguages.isEmpty else { return 0 }
 
+        // OPTIMIZATION: Pre-compute Dictionary lookups to avoid O(L²) nested searches
+        // This reduces complexity from O(L²) to O(L) for each user pair comparison
+        let user1LangDict = Dictionary(uniqueKeysWithValues: user1.learningLanguages.map { ($0.language, $0) })
+        let user2LangDict = Dictionary(uniqueKeysWithValues: user2.learningLanguages.map { ($0.language, $0) })
+
         var maxScore = 0
         for language in commonLanguages {
-            if let user1Lang = user1.learningLanguages.first(where: { $0.language == language }),
-               let user2Lang = user2.learningLanguages.first(where: { $0.language == language }) {
-                let proficiencyDiff = abs(user1Lang.proficiency.ordinalValue - user2Lang.proficiency.ordinalValue)
-                let score = max(0, 15 - (proficiencyDiff * 5))
-                if score > maxScore {
-                    maxScore = score
-                    if proficiencyDiff <= 1 {
-                        reasons.append("Similar proficiency level")
-                    }
+            guard let user1Lang = user1LangDict[language],
+                  let user2Lang = user2LangDict[language] else { continue }
+
+            let proficiencyDiff = abs(user1Lang.proficiency.ordinalValue - user2Lang.proficiency.ordinalValue)
+            let score = max(0, 15 - (proficiencyDiff * 5))
+            if score > maxScore {
+                maxScore = score
+                if proficiencyDiff <= 1 {
+                    reasons.append("Similar proficiency level")
                 }
             }
         }

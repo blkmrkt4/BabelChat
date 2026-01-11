@@ -27,6 +27,10 @@ export interface UserDetail {
   // Calculated
   isActiveToday: boolean
   isActiveWeek: boolean
+  // Ban status
+  isBanned: boolean
+  bannedAt: string | null
+  banReason: string | null
 }
 
 export async function GET(request: Request) {
@@ -53,7 +57,10 @@ export async function GET(request: Request) {
         location,
         native_language,
         learning_languages,
-        tts_plays_used_this_month
+        tts_plays_used_this_month,
+        is_banned,
+        banned_at,
+        ban_reason
       `)
 
     // Apply search filter
@@ -198,6 +205,9 @@ export async function GET(request: Request) {
         ttsPlaysUsed: user.tts_plays_used_this_month || 0,
         isActiveToday: lastActiveDate ? lastActiveDate >= yesterday : false,
         isActiveWeek: lastActiveDate ? lastActiveDate >= lastWeek : false,
+        isBanned: user.is_banned || false,
+        bannedAt: user.banned_at || null,
+        banReason: user.ban_reason || null,
       }
     })
 

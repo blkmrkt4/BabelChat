@@ -7,6 +7,7 @@
 
 import Foundation
 import AVFoundation
+import UIKit
 
 // MARK: - TTS Error Types
 enum TTSError: Error, LocalizedError {
@@ -80,13 +81,49 @@ class TTSService: NSObject {
     // Voice config cache
     private var voiceConfigCache: [String: SupabaseService.TTSVoiceConfig] = [:]
     private var voiceConfigLastFetch: Date?
-    private let voiceConfigCacheValidity: TimeInterval = 60 // 1 minute
+    /// Cache validity: 30 minutes (voice configs rarely change - they're admin-configured)
+    private let voiceConfigCacheValidity: TimeInterval = 1800 // 30 minutes
 
     private override init() {
         super.init()
         speechSynthesizer.delegate = self
         loadConfiguration()
         loadVoiceConfigs()
+        setupAppLifecycleObservers()
+    }
+
+    deinit {
+        NotificationCenter.default.removeObserver(self)
+    }
+
+    // MARK: - App Lifecycle
+
+    private func setupAppLifecycleObservers() {
+        // Optionally refresh voice configs when app returns to foreground
+        // This handles edge case where admin updated configs while app was backgrounded
+        NotificationCenter.default.addObserver(
+            self,
+            selector: #selector(appDidBecomeActive),
+            name: UIApplication.didBecomeActiveNotification,
+            object: nil
+        )
+    }
+
+    @objc private func appDidBecomeActive() {
+        // Only refresh if cache is more than 30 minutes old (stale)
+        // This prevents unnecessary fetches on every foreground event
+        guard let lastFetch = voiceConfigLastFetch else {
+            // No cache yet, will be populated on first TTS call
+            return
+        }
+
+        let timeSinceLastFetch = Date().timeIntervalSince(lastFetch)
+        if timeSinceLastFetch > voiceConfigCacheValidity {
+            print("🔊 TTSService: Cache stale (\(Int(timeSinceLastFetch))s old), refreshing on foreground")
+            Task {
+                await refreshVoiceConfigs()
+            }
+        }
     }
 
     private func loadConfiguration() {

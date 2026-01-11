@@ -18,6 +18,9 @@ class DiscoverViewController: UIViewController {
         setupNavigationBar()
         setupViews()
         loadCards()
+
+        // Track screen view
+        AnalyticsService.shared.track(.discoverViewed)
     }
 
     override func viewWillAppear(_ animated: Bool) {
@@ -673,6 +676,15 @@ extension DiscoverViewController: SwipeCardDelegate {
     func didSwipe(_ card: SwipeCardView, direction: SwipeDirection) {
         guard let user = card.user else { return }
 
+        // Track swipe event
+        let swipeDirection: String
+        switch direction {
+        case .left: swipeDirection = "left"
+        case .right: swipeDirection = "right"
+        case .up: swipeDirection = "super"
+        }
+        AnalyticsService.shared.trackSwipe(direction: swipeDirection, profileId: user.id)
+
         // Save swipe to Supabase
         Task {
             do {
@@ -690,12 +702,15 @@ extension DiscoverViewController: SwipeCardDelegate {
 
                 if didMatch {
                     print("🎉 IT'S A MATCH with \(user.firstName)!")
+                    // Track match created
+                    AnalyticsService.shared.track(.matchCreated, properties: ["matched_user_id": user.id])
                     // TODO: Show match animation
                 } else {
                     print("✅ Swipe recorded: \(directionString) on \(user.firstName)")
                 }
             } catch {
                 print("❌ Error recording swipe: \(error)")
+                AnalyticsService.shared.trackError(error, context: "record_swipe")
             }
         }
 

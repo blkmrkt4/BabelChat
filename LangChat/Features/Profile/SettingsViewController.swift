@@ -6,6 +6,10 @@ class SettingsViewController: UIViewController {
 
     private let tableView = UITableView(frame: .zero, style: .insetGrouped)
 
+    // Secret dev menu - tap version 5 times to reveal
+    private var devMenuTapCount = 0
+    private var devMenuTapResetTimer: Timer?
+
     private enum SettingSection: Int, CaseIterable {
         case profileSettings
         case matchingSettings
@@ -677,16 +681,157 @@ class SettingsViewController: UIViewController {
     }
 
     private func showVersion() {
+        // Track taps for secret dev menu
+        devMenuTapCount += 1
+
+        // Reset timer on each tap
+        devMenuTapResetTimer?.invalidate()
+        devMenuTapResetTimer = Timer.scheduledTimer(withTimeInterval: 2.0, repeats: false) { [weak self] _ in
+            self?.devMenuTapCount = 0
+        }
+
+        // Check if dev menu should be revealed (5 taps)
+        if devMenuTapCount >= 5 {
+            devMenuTapCount = 0
+            devMenuTapResetTimer?.invalidate()
+            showDevMenu()
+            return
+        }
+
+        // Show version info normally
         let version = Bundle.main.infoDictionary?["CFBundleShortVersionString"] as? String ?? "1.0"
         let build = Bundle.main.infoDictionary?["CFBundleVersion"] as? String ?? "1"
 
+        // Show remaining taps hint after 3 taps
+        let message: String
+        if devMenuTapCount >= 3 {
+            let remaining = 5 - devMenuTapCount
+            message = "Version \(version) (\(build))\n\n\(remaining) more tap\(remaining == 1 ? "" : "s") for dev menu..."
+        } else {
+            message = "Version \(version) (\(build))"
+        }
+
         let alert = UIAlertController(
             title: "Fluenca",
-            message: "Version \(version) (\(build))",
+            message: message,
             preferredStyle: .alert
         )
         alert.addAction(UIAlertAction(title: "OK", style: .default))
         present(alert, animated: true)
+    }
+
+    // MARK: - Secret Developer Menu
+
+    private func showDevMenu() {
+        let alert = UIAlertController(
+            title: "Developer Menu",
+            message: "These options are for development and testing purposes.",
+            preferredStyle: .actionSheet
+        )
+
+        alert.addAction(UIAlertAction(title: "Reset All Data", style: .destructive) { [weak self] _ in
+            self?.devMenuResetAllData()
+        })
+
+        alert.addAction(UIAlertAction(title: "Reset to Landing Page", style: .destructive) { [weak self] _ in
+            self?.devMenuResetToLandingPage()
+        })
+
+        alert.addAction(UIAlertAction(title: "Cancel", style: .cancel))
+
+        // For iPad
+        if let popover = alert.popoverPresentationController {
+            popover.sourceView = view
+            popover.sourceRect = CGRect(x: view.bounds.midX, y: view.bounds.midY, width: 0, height: 0)
+            popover.permittedArrowDirections = []
+        }
+
+        present(alert, animated: true)
+    }
+
+    private func devMenuResetAllData() {
+        let confirm = UIAlertController(
+            title: "Reset All Data",
+            message: "This will clear all local user data, preferences, and cached information. You will remain signed in but all local settings will be reset.\n\nThis cannot be undone.",
+            preferredStyle: .alert
+        )
+
+        confirm.addAction(UIAlertAction(title: "Cancel", style: .cancel))
+        confirm.addAction(UIAlertAction(title: "Reset", style: .destructive) { [weak self] _ in
+            // Clear UserDefaults (except auth tokens)
+            let keysToPreserve = ["supabase_access_token", "supabase_refresh_token"]
+            let domain = Bundle.main.bundleIdentifier!
+            let defaults = UserDefaults.standard
+            let dict = defaults.dictionaryRepresentation()
+
+            for key in dict.keys {
+                if !keysToPreserve.contains(key) {
+                    defaults.removeObject(forKey: key)
+                }
+            }
+            defaults.synchronize()
+
+            // Show confirmation
+            let success = UIAlertController(
+                title: "Data Reset",
+                message: "All local data has been cleared. Restart the app to see changes.",
+                preferredStyle: .alert
+            )
+            success.addAction(UIAlertAction(title: "OK", style: .default))
+            self?.present(success, animated: true)
+
+            print("🔧 Dev Menu: Reset all local data")
+        })
+
+        present(confirm, animated: true)
+    }
+
+    private func devMenuResetToLandingPage() {
+        let confirm = UIAlertController(
+            title: "Reset to Landing Page",
+            message: "This will sign you out and show the welcome screen as if it's your first time using the app.\n\nThis cannot be undone.",
+            preferredStyle: .alert
+        )
+
+        confirm.addAction(UIAlertAction(title: "Cancel", style: .cancel))
+        confirm.addAction(UIAlertAction(title: "Reset", style: .destructive) { _ in
+            Task {
+                do {
+                    // Sign out from Supabase
+                    try await SupabaseService.shared.signOut()
+                    print("🔧 Dev Menu: Signed out from Supabase")
+                } catch {
+                    print("⚠️ Sign out error: \(error)")
+                }
+
+                await MainActor.run {
+                    // Clear all UserDefaults
+                    if let domain = Bundle.main.bundleIdentifier {
+                        UserDefaults.standard.removePersistentDomain(forName: domain)
+                        UserDefaults.standard.synchronize()
+                    }
+
+                    // Navigate to welcome screen
+                    if let windowScene = UIApplication.shared.connectedScenes.first as? UIWindowScene,
+                       let window = windowScene.windows.first {
+                        let welcomeVC = WelcomeViewController()
+                        let navController = UINavigationController(rootViewController: welcomeVC)
+                        navController.setNavigationBarHidden(true, animated: false)
+                        window.rootViewController = navController
+
+                        UIView.transition(with: window,
+                                        duration: 0.5,
+                                        options: .transitionCrossDissolve,
+                                        animations: nil,
+                                        completion: nil)
+
+                        print("🔧 Dev Menu: Reset complete - showing welcome screen")
+                    }
+                }
+            }
+        })
+
+        present(confirm, animated: true)
     }
 }
 

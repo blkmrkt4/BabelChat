@@ -13,6 +13,10 @@ class FeatureRequestViewController: UIViewController {
     private let maxCharacters = 1000
     private let minCharacters = 10
 
+    deinit {
+        NotificationCenter.default.removeObserver(self)
+    }
+
     override func viewDidLoad() {
         super.viewDidLoad()
         setupViews()

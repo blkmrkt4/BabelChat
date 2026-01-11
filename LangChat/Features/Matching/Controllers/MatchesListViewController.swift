@@ -22,6 +22,9 @@ class MatchesListViewController: UIViewController {
         setupNavigationBar()
         setupViews()
         loadMatches()
+
+        // Track screen view
+        AnalyticsService.shared.track(.matchesListViewed)
     }
 
     private func setupNavigationBar() {

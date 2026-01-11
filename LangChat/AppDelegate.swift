@@ -16,6 +16,12 @@ class AppDelegate: UIResponder, UIApplicationDelegate {
 
 
     func application(_ application: UIApplication, didFinishLaunchingWithOptions launchOptions: [UIApplication.LaunchOptionsKey: Any]?) -> Bool {
+        // Configure crash reporting FIRST (to catch any startup crashes)
+        CrashReportingService.shared.configure()
+
+        // Track app launch
+        AnalyticsService.shared.track(.appLaunched)
+
         // Configure audio session for text-to-speech pronunciation
         // This ensures AVSpeechSynthesizer works on physical devices
         do {
@@ -28,6 +34,7 @@ class AppDelegate: UIResponder, UIApplicationDelegate {
             print("✅ Audio session configured for text-to-speech")
         } catch {
             print("❌ Failed to configure audio session: \(error.localizedDescription)")
+            CrashReportingService.shared.captureError(error, context: ["stage": "audio_session_setup"])
         }
 
         // Configure RevenueCat for subscriptions

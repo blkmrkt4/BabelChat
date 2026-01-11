@@ -18,6 +18,16 @@ class ChatViewController: UIViewController {
     private var conversationId: String?
     private var isConversationReady = false
 
+    // Task tracking for cancellation on dismiss
+    private var activeTasks: [Task<Void, Never>] = []
+
+    deinit {
+        NotificationCenter.default.removeObserver(self)
+        // Cancel all pending async tasks to prevent updates after deallocation
+        activeTasks.forEach { $0.cancel() }
+        activeTasks.removeAll()
+    }
+
     // Language context for translations and grammar checks
     private var conversationLearningLanguage: Language // The language being practiced
     private var currentUserNativeLanguage: Language // Current user's native language
@@ -62,22 +72,34 @@ class ChatViewController: UIViewController {
         saveUserData() // Save user data for chat list
         setupConversation() // Get or create Supabase conversation
         fetchSubscriptionTier() // Get user's subscription tier for TTS
+
+        // Track chat opened
+        AnalyticsService.shared.track(.chatOpened, properties: [
+            "chat_partner_id": user.id,
+            "is_ai_chat": user.isAI,
+            "language": conversationLearningLanguage.name
+        ])
     }
 
     private func fetchSubscriptionTier() {
-        Task {
+        let task = Task { [weak self] in
             do {
                 let tier = try await SupabaseService.shared.getCurrentSubscriptionTier()
+                // Check for cancellation before UI update
+                try Task.checkCancellation()
                 await MainActor.run {
-                    self.currentSubscriptionTier = tier
+                    self?.currentSubscriptionTier = tier
                     // Reload visible cells to update their tier
-                    self.tableView.reloadData()
+                    self?.tableView.reloadData()
                 }
+            } catch is CancellationError {
+                // Task was cancelled, silently ignore
             } catch {
                 print("Failed to fetch subscription tier: \(error)")
                 // Default to free tier on error
             }
         }
+        activeTasks.append(task)
     }
 
     private func saveUserData() {
@@ -262,33 +284,75 @@ class ChatViewController: UIViewController {
 
     // MARK: - Message Persistence
 
+    /// Maximum messages to persist per conversation (prevents storage bloat)
+    private static let maxPersistedMessages = 200
+
     private func conversationKey() -> String {
         return "conversation_\(user.id)"
     }
 
+    /// Returns the file URL for storing messages (Documents directory for persistence)
+    private func messagesFileURL() -> URL {
+        let documentsDirectory = FileManager.default.urls(for: .documentDirectory, in: .userDomainMask).first!
+        let messagesDirectory = documentsDirectory.appendingPathComponent("Messages", isDirectory: true)
+
+        // Ensure directory exists
+        try? FileManager.default.createDirectory(at: messagesDirectory, withIntermediateDirectories: true)
+
+        return messagesDirectory.appendingPathComponent("\(user.id).json")
+    }
+
     private func saveMessages() {
+        // Cap messages to prevent unbounded growth
+        let messagesToSave = Array(messages.suffix(Self.maxPersistedMessages))
+
         do {
-            let data = try JSONEncoder().encode(messages)
-            UserDefaults.standard.set(data, forKey: conversationKey())
-            print("💾 Saved \(messages.count) messages for \(user.firstName)")
+            let data = try JSONEncoder().encode(messagesToSave)
+            try data.write(to: messagesFileURL(), options: [.atomic])
+            print("💾 Saved \(messagesToSave.count) messages for \(user.firstName) (capped at \(Self.maxPersistedMessages))")
         } catch {
             print("❌ Failed to save messages: \(error)")
         }
     }
 
     private func loadSavedMessages() -> [Message]? {
-        guard let data = UserDefaults.standard.data(forKey: conversationKey()) else {
-            return nil
+        let fileURL = messagesFileURL()
+
+        // Try file-based storage first (new format)
+        if FileManager.default.fileExists(atPath: fileURL.path) {
+            do {
+                let data = try Data(contentsOf: fileURL)
+                let loadedMessages = try JSONDecoder().decode([Message].self, from: data)
+                print("📬 Loaded \(loadedMessages.count) messages for \(user.firstName) from file")
+                return loadedMessages
+            } catch {
+                print("❌ Failed to load messages from file: \(error)")
+            }
         }
 
-        do {
-            let loadedMessages = try JSONDecoder().decode([Message].self, from: data)
-            print("📬 Loaded \(loadedMessages.count) messages for \(user.firstName)")
-            return loadedMessages
-        } catch {
-            print("❌ Failed to load messages: \(error)")
-            return nil
+        // Fallback: Check UserDefaults for legacy data and migrate
+        let legacyKey = conversationKey()
+        if let legacyData = UserDefaults.standard.data(forKey: legacyKey) {
+            do {
+                let loadedMessages = try JSONDecoder().decode([Message].self, from: legacyData)
+                print("📬 Migrating \(loadedMessages.count) messages from UserDefaults to file storage")
+
+                // Migrate to file storage (capped)
+                let messagesToMigrate = Array(loadedMessages.suffix(Self.maxPersistedMessages))
+                let data = try JSONEncoder().encode(messagesToMigrate)
+                try data.write(to: fileURL, options: [.atomic])
+
+                // Remove from UserDefaults after successful migration
+                UserDefaults.standard.removeObject(forKey: legacyKey)
+                print("✅ Migration complete, removed legacy UserDefaults key")
+
+                return messagesToMigrate
+            } catch {
+                print("❌ Failed to migrate messages from UserDefaults: \(error)")
+            }
         }
+
+        return nil
     }
 
     private func loadMessages() {
@@ -538,20 +602,25 @@ class ChatViewController: UIViewController {
         }
 
         // For real users with matches, set up Supabase conversation
-        Task {
+        let task = Task { [weak self] in
+            guard let self = self else { return }
+
             do {
                 // Disable send button while setting up
                 await MainActor.run {
-                    sendButton.isEnabled = false
-                    inputTextField.placeholder = "Setting up conversation..."
+                    self.sendButton.isEnabled = false
+                    self.inputTextField.placeholder = "Setting up conversation..."
                 }
 
-                print("🔍 Setting up conversation for match: \(match.id)")
-                print("🔍 User: \(user.firstName) (\(user.id))")
+                print("🔍 Setting up conversation for match: \(self.match.id)")
+                print("🔍 User: \(self.user.firstName) (\(self.user.id))")
                 print("🔍 Current user ID: \(SupabaseService.shared.currentUserId?.uuidString ?? "nil")")
                 print("🔍 Is authenticated: \(SupabaseService.shared.isAuthenticated)")
 
-                let conversation = try await SupabaseService.shared.getOrCreateConversation(forMatchId: match.id)
+                let conversation = try await SupabaseService.shared.getOrCreateConversation(forMatchId: self.match.id)
+
+                // Check for cancellation before UI update
+                try Task.checkCancellation()
 
                 await MainActor.run {
                     self.conversationId = conversation.id
@@ -561,8 +630,11 @@ class ChatViewController: UIViewController {
                     self.sendButton.isEnabled = !(self.inputTextField.text?.isEmpty ?? true)
                     print("✅ Conversation ready: \(conversation.id)")
                 }
+            } catch is CancellationError {
+                // Task was cancelled (view dismissed), silently ignore
             } catch {
-                await MainActor.run {
+                await MainActor.run { [weak self] in
+                    guard let self = self else { return }
                     self.inputTextField.placeholder = "Failed to connect"
                     print("❌ Failed to setup conversation: \(error)")
                     print("❌ Error details: \(error.localizedDescription)")
@@ -584,6 +656,7 @@ class ChatViewController: UIViewController {
                 }
             }
         }
+        activeTasks.append(task)
     }
 
     @objc private func museButtonTapped() {
@@ -756,15 +829,20 @@ class ChatViewController: UIViewController {
         )
         present(loadingAlert, animated: true)
 
-        Task {
+        let task = Task { [weak self] in
+            guard let self = self else { return }
+
             do {
                 // Get chatting configuration
                 let config = try await AIConfigurationManager.shared.getConfiguration(for: .chatting)
 
-                let systemPrompt = """
-                You are a helpful language assistant called Muse. The user is practicing \(conversationLearningLanguage.name) and needs help composing a message.
+                // Check for cancellation
+                try Task.checkCancellation()
 
-                Respond ONLY with the phrase they need in \(conversationLearningLanguage.name). Do not add explanations, translations, or extra text unless specifically asked.
+                let systemPrompt = """
+                You are a helpful language assistant called Muse. The user is practicing \(self.conversationLearningLanguage.name) and needs help composing a message.
+
+                Respond ONLY with the phrase they need in \(self.conversationLearningLanguage.name). Do not add explanations, translations, or extra text unless specifically asked.
                 Keep it natural and conversational.
                 """
 
@@ -780,6 +858,9 @@ class ChatViewController: UIViewController {
                     maxTokens: config.maxTokens
                 )
 
+                // Check for cancellation before UI update
+                try Task.checkCancellation()
+
                 guard let content = response.choices?.first?.content else {
                     throw NSError(domain: "MuseError", code: -1,
                                 userInfo: [NSLocalizedDescriptionKey: "Empty response from Muse"])
@@ -792,6 +873,11 @@ class ChatViewController: UIViewController {
                         self.showMuseResponse(cleanedResponse)
                     }
                 }
+            } catch is CancellationError {
+                // Task was cancelled, dismiss loading alert
+                await MainActor.run {
+                    loadingAlert.dismiss(animated: true)
+                }
             } catch {
                 await MainActor.run {
                     loadingAlert.dismiss(animated: true) {
@@ -800,6 +886,7 @@ class ChatViewController: UIViewController {
                 }
             }
         }
+        activeTasks.append(task)
     }
 
     private func showMuseResponse(_ response: String) {
@@ -876,50 +963,119 @@ class ChatViewController: UIViewController {
         inputTextField.text = ""
         sendButton.isEnabled = false
 
+        // Track message sent
+        AnalyticsService.shared.trackMessageSent(
+            conversationId: conversationId,
+            isAI: user.isAI,
+            characterCount: text.count
+        )
+
         let indexPath = IndexPath(row: messages.count - 1, section: 0)
         tableView.insertRows(at: [indexPath], with: .bottom)
         scrollToBottom(animated: true)
 
         // Send to Supabase and generate AI response (only for AI bots)
-        Task {
+        let task = Task { [weak self] in
+            guard let self = self else { return }
+
             // Update user's last_active timestamp
             await SupabaseService.shared.updateLastActive()
 
             do {
+                // Check for cancellation
+                try Task.checkCancellation()
+
                 // Check if this is a local-only conversation
-                let isLocalConversation = user.isAI || match.id.hasPrefix("local_match_")
+                let isLocalConversation = self.user.isAI || self.match.id.hasPrefix("local_match_")
 
                 // 1. Send user message to Supabase (skip for local conversations)
                 if !isLocalConversation {
                     try await SupabaseService.shared.sendMessage(
                         conversationId: conversationId,
-                        receiverId: user.id,
+                        receiverId: self.user.id,
                         text: text,
-                        language: conversationLearningLanguage.name
+                        language: self.conversationLearningLanguage.name
                     )
                     print("✅ User message sent to Supabase")
                 } else {
                     print("✅ Local conversation (no Supabase sync)")
                 }
 
+                // Check for cancellation before AI response
+                try Task.checkCancellation()
+
                 // 2. Generate AI response ONLY for AI bots (Muses)
                 // Real users will respond on their own - no auto-response
-                if user.isAI {
-                    // Track Muse interaction for analytics
+                if self.user.isAI {
+                    // Track Muse session for analytics
+                    AnalyticsService.shared.track(.museMessageSent, properties: [
+                        "muse_id": self.user.id,
+                        "muse_name": self.user.firstName,
+                        "language": self.user.nativeLanguage.language.name
+                    ])
+
+                    // Track Muse interaction in Supabase
                     await SupabaseService.shared.trackMuseInteraction(
-                        museId: user.id,
-                        museName: user.firstName,
-                        language: user.nativeLanguage.language.name
+                        museId: self.user.id,
+                        museName: self.user.firstName,
+                        language: self.user.nativeLanguage.language.name
                     )
 
-                    await generateAIResponse(to: text, conversationId: conversationId)
+                    await self.generateAIResponse(to: text, conversationId: conversationId)
                 } else {
                     print("📤 Message sent to real user - waiting for their response")
                 }
+            } catch is CancellationError {
+                // Task was cancelled (view dismissed), silently ignore
             } catch {
                 print("❌ Failed to send message: \(error)")
+
+                // Show error to user and offer retry
+                await MainActor.run { [weak self] in
+                    guard let self = self else { return }
+                    self.showMessageSendError(failedMessage: newMessage, originalText: text)
+                }
             }
         }
+        activeTasks.append(task)
+    }
+
+    /// Show error alert when message fails to send
+    private func showMessageSendError(failedMessage: Message, originalText: String) {
+        let alert = UIAlertController(
+            title: "Message Not Sent",
+            message: "Your message couldn't be delivered. Please check your connection and try again.",
+            preferredStyle: .alert
+        )
+
+        alert.addAction(UIAlertAction(title: "Retry", style: .default) { [weak self] _ in
+            guard let self = self else { return }
+
+            // Remove the failed message from UI
+            if let index = self.messages.firstIndex(where: { $0.id == failedMessage.id }) {
+                self.messages.remove(at: index)
+                self.tableView.deleteRows(at: [IndexPath(row: index, section: 0)], with: .fade)
+            }
+
+            // Retry sending by setting text and triggering send
+            self.inputTextField.text = originalText
+            self.sendButtonTapped()
+        })
+
+        alert.addAction(UIAlertAction(title: "Delete Message", style: .destructive) { [weak self] _ in
+            guard let self = self else { return }
+
+            // Remove the failed message from UI and saved messages
+            if let index = self.messages.firstIndex(where: { $0.id == failedMessage.id }) {
+                self.messages.remove(at: index)
+                self.saveMessages()
+                self.tableView.deleteRows(at: [IndexPath(row: index, section: 0)], with: .fade)
+            }
+        })
+
+        alert.addAction(UIAlertAction(title: "Dismiss", style: .cancel))
+
+        present(alert, animated: true)
     }
 
     /// Generate AI response for Muse bots only

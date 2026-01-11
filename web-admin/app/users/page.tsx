@@ -21,6 +21,9 @@ interface UserDetail {
   ttsPlaysUsed: number
   isActiveToday: boolean
   isActiveWeek: boolean
+  isBanned: boolean
+  bannedAt: string | null
+  banReason: string | null
 }
 
 interface Summary {
@@ -45,6 +48,9 @@ export default function UsersPage() {
   const [sortBy, setSortBy] = useState<SortField>('lastActive')
   const [sortOrder, setSortOrder] = useState<'asc' | 'desc'>('desc')
   const [selectedUser, setSelectedUser] = useState<UserDetail | null>(null)
+  const [banLoading, setBanLoading] = useState(false)
+  const [showBanModal, setShowBanModal] = useState(false)
+  const [banReason, setBanReason] = useState('')
 
   const fetchUsers = async () => {
     try {
@@ -112,6 +118,62 @@ export default function UsersPage() {
   const SortIcon = ({ field }: { field: SortField }) => {
     if (sortBy !== field) return <span className="text-gray-400 ml-1">↕</span>
     return <span className="text-blue-500 ml-1">{sortOrder === 'asc' ? '↑' : '↓'}</span>
+  }
+
+  const handleBanUser = async () => {
+    if (!selectedUser) return
+    setBanLoading(true)
+    try {
+      const response = await fetch(`/api/users/${selectedUser.id}/ban`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ reason: banReason })
+      })
+      const data = await response.json()
+      if (data.success) {
+        // Update local state
+        setUsers(users.map(u =>
+          u.id === selectedUser.id
+            ? { ...u, isBanned: true, bannedAt: new Date().toISOString(), banReason }
+            : u
+        ))
+        setSelectedUser({ ...selectedUser, isBanned: true, bannedAt: new Date().toISOString(), banReason })
+        setShowBanModal(false)
+        setBanReason('')
+      } else {
+        setError(data.error || 'Failed to ban user')
+      }
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Failed to ban user')
+    } finally {
+      setBanLoading(false)
+    }
+  }
+
+  const handleUnbanUser = async () => {
+    if (!selectedUser) return
+    setBanLoading(true)
+    try {
+      const response = await fetch(`/api/users/${selectedUser.id}/ban`, {
+        method: 'DELETE'
+      })
+      const data = await response.json()
+      if (data.success) {
+        // Update local state
+        setUsers(users.map(u =>
+          u.id === selectedUser.id
+            ? { ...u, isBanned: false, bannedAt: null, banReason: null }
+            : u
+        ))
+        setSelectedUser({ ...selectedUser, isBanned: false, bannedAt: null, banReason: null })
+      } else {
+        setError(data.error || 'Failed to unban user')
+      }
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Failed to unban user')
+    } finally {
+      setBanLoading(false)
+    }
   }
 
   // Sort users client-side for fields not in API
@@ -326,7 +388,11 @@ export default function UsersPage() {
                       </td>
                       <td className="px-4 py-4">
                         <div className="flex flex-col gap-1">
-                          {user.isActiveToday ? (
+                          {user.isBanned ? (
+                            <span className="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-red-100 text-red-800">
+                              Banned
+                            </span>
+                          ) : user.isActiveToday ? (
                             <span className="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-green-100 text-green-800">
                               Online
                             </span>
@@ -462,11 +528,122 @@ export default function UsersPage() {
                   </div>
                 </div>
 
-                <div className="mt-6 pt-4 border-t border-gray-200">
-                  <div className="flex justify-between text-sm text-gray-500">
-                    <span>Last Active: {formatDate(selectedUser.lastActive)}</span>
-                    <span>ID: {selectedUser.id.slice(0, 8)}...</span>
+                {/* Ban Status Section */}
+                {selectedUser.isBanned && (
+                  <div className="mt-6 bg-red-50 border border-red-200 rounded-lg p-4">
+                    <div className="flex items-center gap-2 text-red-800 font-semibold mb-2">
+                      <svg className="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M18.364 18.364A9 9 0 005.636 5.636m12.728 12.728A9 9 0 015.636 5.636m12.728 12.728L5.636 5.636" />
+                      </svg>
+                      User is Banned
+                    </div>
+                    <div className="text-sm text-red-700">
+                      <p><strong>Reason:</strong> {selectedUser.banReason || 'No reason provided'}</p>
+                      <p><strong>Banned:</strong> {selectedUser.bannedAt ? new Date(selectedUser.bannedAt).toLocaleString() : 'Unknown'}</p>
+                    </div>
                   </div>
+                )}
+
+                {/* Admin Actions */}
+                <div className="mt-6 pt-4 border-t border-gray-200">
+                  <div className="flex justify-between items-center">
+                    <div className="text-sm text-gray-500">
+                      <div>Last Active: {formatDate(selectedUser.lastActive)}</div>
+                      <div>ID: {selectedUser.id.slice(0, 8)}...</div>
+                    </div>
+                    <div>
+                      {selectedUser.isBanned ? (
+                        <button
+                          onClick={handleUnbanUser}
+                          disabled={banLoading}
+                          className="px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 disabled:opacity-50 flex items-center gap-2"
+                        >
+                          {banLoading ? (
+                            <svg className="animate-spin h-4 w-4" fill="none" viewBox="0 0 24 24">
+                              <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
+                              <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z" />
+                            </svg>
+                          ) : (
+                            <svg className="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
+                            </svg>
+                          )}
+                          Unban User
+                        </button>
+                      ) : (
+                        <button
+                          onClick={() => setShowBanModal(true)}
+                          className="px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 flex items-center gap-2"
+                        >
+                          <svg className="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M18.364 18.364A9 9 0 005.636 5.636m12.728 12.728A9 9 0 015.636 5.636m12.728 12.728L5.636 5.636" />
+                          </svg>
+                          Ban User
+                        </button>
+                      )}
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+        )}
+
+        {/* Ban Confirmation Modal */}
+        {showBanModal && selectedUser && (
+          <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-[60]" onClick={() => setShowBanModal(false)}>
+            <div className="bg-white rounded-lg shadow-xl max-w-md w-full mx-4" onClick={e => e.stopPropagation()}>
+              <div className="p-6">
+                <div className="flex items-center gap-3 mb-4">
+                  <div className="h-10 w-10 bg-red-100 rounded-full flex items-center justify-center">
+                    <svg className="h-6 w-6 text-red-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
+                    </svg>
+                  </div>
+                  <div>
+                    <h3 className="text-lg font-semibold text-gray-900">Ban User</h3>
+                    <p className="text-sm text-gray-500">
+                      Ban {selectedUser.firstName} {selectedUser.lastName}?
+                    </p>
+                  </div>
+                </div>
+
+                <div className="mb-4">
+                  <label className="block text-sm font-medium text-gray-700 mb-1">
+                    Reason for ban (optional)
+                  </label>
+                  <textarea
+                    value={banReason}
+                    onChange={(e) => setBanReason(e.target.value)}
+                    placeholder="Enter reason for banning this user..."
+                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-red-500 focus:border-transparent"
+                    rows={3}
+                  />
+                </div>
+
+                <div className="flex gap-3 justify-end">
+                  <button
+                    onClick={() => {
+                      setShowBanModal(false)
+                      setBanReason('')
+                    }}
+                    className="px-4 py-2 border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50"
+                  >
+                    Cancel
+                  </button>
+                  <button
+                    onClick={handleBanUser}
+                    disabled={banLoading}
+                    className="px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 disabled:opacity-50 flex items-center gap-2"
+                  >
+                    {banLoading ? (
+                      <svg className="animate-spin h-4 w-4" fill="none" viewBox="0 0 24 24">
+                        <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
+                        <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z" />
+                      </svg>
+                    ) : null}
+                    Confirm Ban
+                  </button>
                 </div>
               </div>
             </div>

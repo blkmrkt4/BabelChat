@@ -329,6 +329,9 @@ class AuthenticationViewController: UIViewController {
     @objc private func appleSignInTapped() {
         print("🍎 Apple Sign In tapped")
 
+        // Track Apple Sign In started
+        AnalyticsService.shared.track(.loginStarted, properties: ["method": "apple"])
+
         let appleIDProvider = ASAuthorizationAppleIDProvider()
         let request = appleIDProvider.createRequest()
         request.requestedScopes = [.fullName, .email]
@@ -392,10 +395,16 @@ class AuthenticationViewController: UIViewController {
     }
 
     private func signInWithEmail(email: String, password: String) {
+        // Track login attempt
+        AnalyticsService.shared.track(.loginStarted, properties: ["method": "email"])
+
         Task {
             do {
                 try await SupabaseService.shared.signIn(email: email, password: password)
                 print("✅ Email sign in successful!")
+
+                // Track successful login
+                AnalyticsService.shared.track(.loginCompleted, properties: ["method": "email"])
 
                 // Check if user has completed profile in Supabase
                 let hasCompletedProfile = try await SupabaseService.shared.hasCompletedProfile()
@@ -413,6 +422,13 @@ class AuthenticationViewController: UIViewController {
                 }
             } catch {
                 print("❌ Email sign in failed: \(error)")
+
+                // Track login failure
+                AnalyticsService.shared.track(.loginFailed, properties: [
+                    "method": "email",
+                    "error": error.localizedDescription
+                ])
+
                 await MainActor.run {
                     let alert = UIAlertController(
                         title: "Sign In Failed",
@@ -427,10 +443,15 @@ class AuthenticationViewController: UIViewController {
     }
 
     private func signUpWithEmail(email: String, password: String) {
+        // Track signup attempt
+        AnalyticsService.shared.track(.signUpStarted, properties: ["method": "email"])
         Task {
             do {
                 try await SupabaseService.shared.signUp(email: email, password: password)
                 print("✅ Email sign up successful!")
+
+                // Track successful signup
+                AnalyticsService.shared.track(.signUpCompleted, properties: ["method": "email"])
 
                 await MainActor.run {
                     // Always start onboarding for new users
@@ -438,6 +459,13 @@ class AuthenticationViewController: UIViewController {
                 }
             } catch {
                 print("❌ Email sign up failed: \(error)")
+
+                // Track signup failure
+                AnalyticsService.shared.track(.signUpFailed, properties: [
+                    "method": "email",
+                    "error": error.localizedDescription
+                ])
+
                 await MainActor.run {
                     let alert = UIAlertController(
                         title: "Sign Up Failed",
@@ -568,6 +596,9 @@ extension AuthenticationViewController: ASAuthorizationControllerDelegate {
             print("Email: \(email ?? "not provided")")
             print("Name: \(fullName?.givenName ?? "") \(fullName?.familyName ?? "")")
 
+            // Track successful Apple Sign In (new user = signup, returning = login)
+            AnalyticsService.shared.track(.signUpCompleted, properties: ["method": "apple"])
+
             // Save Apple user credentials
             UserDefaults.standard.set(userIdentifier, forKey: "userId")
             if let email = email {
@@ -583,6 +614,12 @@ extension AuthenticationViewController: ASAuthorizationControllerDelegate {
 
     func authorizationController(controller: ASAuthorizationController, didCompleteWithError error: Error) {
         print("❌ Apple Sign In failed: \(error.localizedDescription)")
+
+        // Track Apple Sign In failure
+        AnalyticsService.shared.track(.loginFailed, properties: [
+            "method": "apple",
+            "error": error.localizedDescription
+        ])
 
         let alert = UIAlertController(
             title: "Sign In Failed",

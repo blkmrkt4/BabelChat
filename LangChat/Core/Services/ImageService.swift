@@ -1,9 +1,14 @@
 import UIKit
+import ObjectiveC
+
+// MARK: - Associated Object Keys for Task Cancellation
+private var currentURLKey: UInt8 = 0
+private var currentTaskKey: UInt8 = 1
 
 class ImageService {
     static let shared = ImageService()
     private let cache = NSCache<NSString, UIImage>()
-    
+
     // Shared session for all image downloads
     private let session: URLSession
 
@@ -12,6 +17,35 @@ class ImageService {
         config.timeoutIntervalForRequest = 30
         config.waitsForConnectivity = true
         self.session = URLSession(configuration: config)
+    }
+
+    // MARK: - Task Association Helpers
+
+    /// Get the URL currently being loaded for an image view
+    private func getCurrentURL(for imageView: UIImageView) -> String? {
+        return objc_getAssociatedObject(imageView, &currentURLKey) as? String
+    }
+
+    /// Set the URL currently being loaded for an image view
+    private func setCurrentURL(_ url: String?, for imageView: UIImageView) {
+        objc_setAssociatedObject(imageView, &currentURLKey, url, .OBJC_ASSOCIATION_RETAIN_NONATOMIC)
+    }
+
+    /// Get the current download task for an image view
+    private func getCurrentTask(for imageView: UIImageView) -> URLSessionDataTask? {
+        return objc_getAssociatedObject(imageView, &currentTaskKey) as? URLSessionDataTask
+    }
+
+    /// Set the current download task for an image view
+    private func setCurrentTask(_ task: URLSessionDataTask?, for imageView: UIImageView) {
+        objc_setAssociatedObject(imageView, &currentTaskKey, task, .OBJC_ASSOCIATION_RETAIN_NONATOMIC)
+    }
+
+    /// Cancel any pending image load for an image view (call from prepareForReuse)
+    func cancelLoad(for imageView: UIImageView) {
+        getCurrentTask(for: imageView)?.cancel()
+        setCurrentTask(nil, for: imageView)
+        setCurrentURL(nil, for: imageView)
     }
 
     // Generate placeholder images for testing
@@ -56,6 +90,9 @@ class ImageService {
     }
 
     func loadImage(from urlString: String, into imageView: UIImageView, placeholder: UIImage? = nil) {
+        // Cancel any existing load for this image view
+        cancelLoad(for: imageView)
+
         // Set placeholder immediately
         let placeholderImage = placeholder ?? generateLocalPlaceholder(for: urlString)
         imageView.image = placeholderImage
@@ -74,8 +111,24 @@ class ImageService {
             return
         }
 
+        // Track this URL as the current one for this image view
+        setCurrentURL(urlString, for: imageView)
+
         // Download image using shared session
-        session.dataTask(with: url) { [weak self, weak imageView] data, response, error in
+        let task = session.dataTask(with: url) { [weak self, weak imageView] data, response, error in
+            guard let self = self, let imageView = imageView else { return }
+
+            // Clear task reference on completion
+            DispatchQueue.main.async {
+                self.setCurrentTask(nil, for: imageView)
+            }
+
+            // Check for cancellation
+            if let urlError = error as? URLError, urlError.code == .cancelled {
+                // Task was cancelled (cell reused), silently ignore
+                return
+            }
+
             if let error = error {
                 print("Image loading error: \(error.localizedDescription)")
                 // Keep placeholder on error
@@ -88,16 +141,27 @@ class ImageService {
             }
 
             // Cache the image
-            self?.cache.setObject(image, forKey: urlString as NSString)
+            self.cache.setObject(image, forKey: urlString as NSString)
 
-            // Update UI on main thread
+            // Update UI on main thread, but only if this is still the URL we're waiting for
             DispatchQueue.main.async {
-                UIView.transition(with: imageView ?? UIImageView(), duration: 0.3, options: .transitionCrossDissolve) {
-                    imageView?.image = image
-                    imageView?.contentMode = .scaleAspectFill
+                // CRITICAL: Verify this image view still wants this URL
+                // This prevents showing wrong images in reused cells
+                guard self.getCurrentURL(for: imageView) == urlString else {
+                    // URL changed (cell was reused), don't update
+                    return
+                }
+
+                UIView.transition(with: imageView, duration: 0.3, options: .transitionCrossDissolve) {
+                    imageView.image = image
+                    imageView.contentMode = .scaleAspectFill
                 }
             }
-        }.resume()
+        }
+
+        // Store task reference for potential cancellation
+        setCurrentTask(task, for: imageView)
+        task.resume()
     }
 
     // Generate colored placeholder based on string hash
@@ -167,5 +231,21 @@ class ImageService {
         default:
             return generatePhotoURLs(for: userType)
         }
+    }
+}
+
+// MARK: - UIImageView Extension for Convenient Image Loading
+
+extension UIImageView {
+    /// Load an image from URL with automatic task cancellation on reuse
+    /// Call this from your cell's configure method
+    func loadImage(from urlString: String, placeholder: UIImage? = nil) {
+        ImageService.shared.loadImage(from: urlString, into: self, placeholder: placeholder)
+    }
+
+    /// Cancel any pending image load for this image view
+    /// Call this from your cell's prepareForReuse() method
+    func cancelImageLoad() {
+        ImageService.shared.cancelLoad(for: self)
     }
 }
