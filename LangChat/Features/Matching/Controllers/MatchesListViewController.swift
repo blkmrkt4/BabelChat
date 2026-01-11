@@ -290,6 +290,12 @@ extension MatchesListViewController: UICollectionViewDelegate {
             preferredStyle: .actionSheet
         )
 
+        // Add "Edit Languages" option at the top
+        let editAction = UIAlertAction(title: "Edit Languages...", style: .default) { [weak self] _ in
+            self?.openMuseLanguagesSettings()
+        }
+        alert.addAction(editAction)
+
         let availableMuses = getAvailableMuses()
         for muse in availableMuses {
             let action = UIAlertAction(
@@ -309,6 +315,12 @@ extension MatchesListViewController: UICollectionViewDelegate {
         }
 
         present(alert, animated: true)
+    }
+
+    private func openMuseLanguagesSettings() {
+        let museLanguagesVC = MuseLanguagesSettingsViewController()
+        let navController = UINavigationController(rootViewController: museLanguagesVC)
+        present(navController, animated: true)
     }
 
     /// Get the Muses available to the user based on their language preferences
