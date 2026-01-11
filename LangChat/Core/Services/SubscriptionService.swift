@@ -319,7 +319,7 @@ class SubscriptionService: NSObject {
             self.currentStatus = status
         }
         // Check for Premium tier
-        else if let entitlement = customerInfo.entitlements["premium"],
+        else if let entitlement = customerInfo.entitlements["Premium"],
            entitlement.isActive {
             let status = SubscriptionStatus(
                 tier: .premium,
