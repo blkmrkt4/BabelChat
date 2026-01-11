@@ -59,18 +59,33 @@ class MuseLanguagesSettingsViewController: UIViewController {
 
     private func loadLanguages() {
         // Get user's native and learning languages (always included, can't be removed)
-        if let nativeCode = UserDefaults.standard.string(forKey: "nativeLanguage"),
-           let native = Language(rawValue: nativeCode) {
-            alwaysIncludedLanguages.insert(native)
-        }
+        // Read from userLanguages JSON (same source as ChatsListViewController)
+        if let userLanguagesData = UserDefaults.standard.data(forKey: "userLanguages"),
+           let userLanguageData = try? JSONDecoder().decode(UserLanguageData.self, from: userLanguagesData) {
+            // Add native language
+            alwaysIncludedLanguages.insert(userLanguageData.nativeLanguage.language)
+            // Add learning languages
+            for learning in userLanguageData.learningLanguages {
+                alwaysIncludedLanguages.insert(learning.language)
+            }
+        } else {
+            // Fallback to direct keys if userLanguages not available
+            if let nativeCode = UserDefaults.standard.string(forKey: "nativeLanguage"),
+               let native = Language(rawValue: nativeCode) {
+                alwaysIncludedLanguages.insert(native)
+            }
 
-        if let learningCodes = UserDefaults.standard.array(forKey: "learningLanguages") as? [String] {
-            for code in learningCodes {
-                if let lang = Language(rawValue: code) {
-                    alwaysIncludedLanguages.insert(lang)
+            if let learningCodes = UserDefaults.standard.array(forKey: "learningLanguages") as? [String] {
+                for code in learningCodes {
+                    if let lang = Language(rawValue: code) {
+                        alwaysIncludedLanguages.insert(lang)
+                    }
                 }
             }
         }
+
+        // Always include English
+        alwaysIncludedLanguages.insert(.english)
 
         // Get currently selected muse languages
         if let museCodes = UserDefaults.standard.array(forKey: "museLanguages") as? [String] {
