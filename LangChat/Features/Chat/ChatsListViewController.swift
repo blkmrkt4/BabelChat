@@ -139,6 +139,12 @@ class ChatsListViewController: UIViewController {
             preferredStyle: .actionSheet
         )
 
+        // Add "Edit Languages" option at the top
+        let editAction = UIAlertAction(title: "Edit Languages...", style: .default) { [weak self] _ in
+            self?.openMuseLanguagesSettings()
+        }
+        alert.addAction(editAction)
+
         let availableMuses = getAvailableMuses()
         for muse in availableMuses {
             let action = UIAlertAction(
@@ -166,6 +172,12 @@ class ChatsListViewController: UIViewController {
             preferredStyle: .actionSheet
         )
 
+        // Add "Edit Languages" option at the top
+        let editAction = UIAlertAction(title: "Edit Languages...", style: .default) { [weak self] _ in
+            self?.openMuseLanguagesSettings()
+        }
+        alert.addAction(editAction)
+
         let availableMuses = getAvailableMuses()
         for muse in availableMuses {
             let action = UIAlertAction(
@@ -184,6 +196,12 @@ class ChatsListViewController: UIViewController {
         }
 
         present(alert, animated: true)
+    }
+
+    private func openMuseLanguagesSettings() {
+        let museLanguagesVC = MuseLanguagesSettingsViewController()
+        let navController = UINavigationController(rootViewController: museLanguagesVC)
+        present(navController, animated: true)
     }
 
     /// Get the Muses available to the user based on their language preferences
