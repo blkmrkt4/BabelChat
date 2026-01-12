@@ -262,9 +262,6 @@ extension MatchesListViewController: UICollectionViewDataSource {
             header.onMuseTapped = { [weak self] in
                 self?.showBotSelection()
             }
-            header.onEditLanguagesTapped = { [weak self] in
-                self?.openMuseLanguagesSettings()
-            }
             return header
         }
         return UICollectionReusableView()
@@ -287,31 +284,21 @@ extension MatchesListViewController: UICollectionViewDelegate {
     }
 
     private func showBotSelection() {
-        let alert = UIAlertController(
-            title: "Meet your Muse",
-            message: "Choose a language to practice",
-            preferredStyle: .actionSheet
-        )
-
         let availableMuses = getAvailableMuses()
-        for muse in availableMuses {
-            let action = UIAlertAction(
-                title: "\(muse.firstName) - \(muse.nativeLanguage.language.name)",
-                style: .default
-            ) { [weak self] _ in
-                self?.startChatWithBot(muse)
-            }
-            alert.addAction(action)
+        let sheet = MuseSelectionSheetViewController(muses: availableMuses)
+        sheet.onMuseSelected = { [weak self] muse in
+            self?.startChatWithBot(muse)
+        }
+        sheet.onEditLanguages = { [weak self] in
+            self?.openMuseLanguagesSettings()
         }
 
-        alert.addAction(UIAlertAction(title: "Cancel", style: .cancel))
-
-        if let popover = alert.popoverPresentationController {
-            popover.sourceView = collectionView
-            popover.sourceRect = CGRect(x: view.bounds.midX, y: view.bounds.midY, width: 0, height: 0)
+        if let presentationController = sheet.presentationController as? UISheetPresentationController {
+            presentationController.detents = [.medium(), .large()]
+            presentationController.prefersGrabberVisible = true
         }
 
-        present(alert, animated: true)
+        present(sheet, animated: true)
     }
 
     private func openMuseLanguagesSettings() {
@@ -541,11 +528,9 @@ class MatchCollectionViewCell: UICollectionViewCell {
 class MuseHeaderView: UICollectionReusableView {
 
     var onMuseTapped: (() -> Void)?
-    var onEditLanguagesTapped: (() -> Void)?
 
     private let titleLabel = UILabel()
     private let videoContainerView = UIView()
-    private let editLanguagesPill = UIButton(type: .system)
     private var player: AVPlayer?
     private var playerLayer: AVPlayerLayer?
     private var playerLooper: AVPlayerLooper?
@@ -587,20 +572,6 @@ class MuseHeaderView: UICollectionReusableView {
         videoContainerView.addGestureRecognizer(tapGesture)
         videoContainerView.isUserInteractionEnabled = true
 
-        // Edit Languages pill button
-        editLanguagesPill.setTitle("Edit", for: .normal)
-        editLanguagesPill.setImage(UIImage(systemName: "pencil"), for: .normal)
-        editLanguagesPill.tintColor = .white
-        editLanguagesPill.setTitleColor(.white, for: .normal)
-        editLanguagesPill.titleLabel?.font = .systemFont(ofSize: 12, weight: .medium)
-        editLanguagesPill.backgroundColor = .systemBlue
-        editLanguagesPill.layer.cornerRadius = 12
-        editLanguagesPill.contentEdgeInsets = UIEdgeInsets(top: 4, left: 10, bottom: 4, right: 10)
-        editLanguagesPill.imageEdgeInsets = UIEdgeInsets(top: 0, left: -4, bottom: 0, right: 4)
-        editLanguagesPill.addTarget(self, action: #selector(editLanguagesTapped), for: .touchUpInside)
-        addSubview(editLanguagesPill)
-        editLanguagesPill.translatesAutoresizingMaskIntoConstraints = false
-
         NSLayoutConstraint.activate([
             titleLabel.topAnchor.constraint(equalTo: topAnchor, constant: 16),
             titleLabel.leadingAnchor.constraint(equalTo: leadingAnchor, constant: 16),
@@ -610,16 +581,8 @@ class MuseHeaderView: UICollectionReusableView {
             videoContainerView.topAnchor.constraint(equalTo: titleLabel.bottomAnchor, constant: 16),
             videoContainerView.centerXAnchor.constraint(equalTo: centerXAnchor),
             videoContainerView.widthAnchor.constraint(equalToConstant: 120),
-            videoContainerView.heightAnchor.constraint(equalToConstant: 120),
-
-            editLanguagesPill.topAnchor.constraint(equalTo: videoContainerView.bottomAnchor, constant: 8),
-            editLanguagesPill.centerXAnchor.constraint(equalTo: centerXAnchor),
-            editLanguagesPill.heightAnchor.constraint(equalToConstant: 24)
+            videoContainerView.heightAnchor.constraint(equalToConstant: 120)
         ])
-    }
-
-    @objc private func editLanguagesTapped() {
-        onEditLanguagesTapped?()
     }
 
     private func setupVideo() {
@@ -678,5 +641,170 @@ class MuseHeaderView: UICollectionReusableView {
     override func prepareForReuse() {
         super.prepareForReuse()
         queuePlayer?.play()
+    }
+}
+
+// MARK: - Muse Selection Sheet
+
+class MuseSelectionSheetViewController: UIViewController {
+
+    var onMuseSelected: ((User) -> Void)?
+    var onEditLanguages: (() -> Void)?
+
+    private let muses: [User]
+    private let tableView = UITableView(frame: .zero, style: .plain)
+
+    init(muses: [User]) {
+        self.muses = muses
+        super.init(nibName: nil, bundle: nil)
+    }
+
+    required init?(coder: NSCoder) {
+        fatalError("init(coder:) has not been implemented")
+    }
+
+    override func viewDidLoad() {
+        super.viewDidLoad()
+        setupViews()
+    }
+
+    private func setupViews() {
+        view.backgroundColor = .systemBackground
+
+        // Header with title and edit pill
+        let headerView = UIView()
+        headerView.backgroundColor = .systemBackground
+
+        let titleLabel = UILabel()
+        titleLabel.text = "Meet your Muse"
+        titleLabel.font = .systemFont(ofSize: 20, weight: .semibold)
+        titleLabel.textAlignment = .center
+        headerView.addSubview(titleLabel)
+        titleLabel.translatesAutoresizingMaskIntoConstraints = false
+
+        // Edit pill button
+        let editPill = UIButton(type: .system)
+        editPill.setTitle(" Edit", for: .normal)
+        editPill.setImage(UIImage(systemName: "pencil"), for: .normal)
+        editPill.tintColor = .white
+        editPill.setTitleColor(.white, for: .normal)
+        editPill.titleLabel?.font = .systemFont(ofSize: 13, weight: .medium)
+        editPill.backgroundColor = .systemBlue
+        editPill.layer.cornerRadius = 14
+        editPill.contentEdgeInsets = UIEdgeInsets(top: 6, left: 12, bottom: 6, right: 14)
+        editPill.addTarget(self, action: #selector(editTapped), for: .touchUpInside)
+        headerView.addSubview(editPill)
+        editPill.translatesAutoresizingMaskIntoConstraints = false
+
+        view.addSubview(headerView)
+        headerView.translatesAutoresizingMaskIntoConstraints = false
+
+        // Table view for muses
+        tableView.delegate = self
+        tableView.dataSource = self
+        tableView.register(MuseOptionCell.self, forCellReuseIdentifier: "MuseCell")
+        tableView.separatorInset = UIEdgeInsets(top: 0, left: 60, bottom: 0, right: 0)
+        tableView.rowHeight = 56
+        view.addSubview(tableView)
+        tableView.translatesAutoresizingMaskIntoConstraints = false
+
+        NSLayoutConstraint.activate([
+            headerView.topAnchor.constraint(equalTo: view.safeAreaLayoutGuide.topAnchor),
+            headerView.leadingAnchor.constraint(equalTo: view.leadingAnchor),
+            headerView.trailingAnchor.constraint(equalTo: view.trailingAnchor),
+            headerView.heightAnchor.constraint(equalToConstant: 80),
+
+            titleLabel.topAnchor.constraint(equalTo: headerView.topAnchor, constant: 16),
+            titleLabel.centerXAnchor.constraint(equalTo: headerView.centerXAnchor),
+
+            editPill.topAnchor.constraint(equalTo: titleLabel.bottomAnchor, constant: 10),
+            editPill.centerXAnchor.constraint(equalTo: headerView.centerXAnchor),
+            editPill.heightAnchor.constraint(equalToConstant: 28),
+
+            tableView.topAnchor.constraint(equalTo: headerView.bottomAnchor),
+            tableView.leadingAnchor.constraint(equalTo: view.leadingAnchor),
+            tableView.trailingAnchor.constraint(equalTo: view.trailingAnchor),
+            tableView.bottomAnchor.constraint(equalTo: view.bottomAnchor)
+        ])
+    }
+
+    @objc private func editTapped() {
+        dismiss(animated: true) { [weak self] in
+            self?.onEditLanguages?()
+        }
+    }
+}
+
+extension MuseSelectionSheetViewController: UITableViewDataSource, UITableViewDelegate {
+    func tableView(_ tableView: UITableView, numberOfRowsInSection section: Int) -> Int {
+        return muses.count
+    }
+
+    func tableView(_ tableView: UITableView, cellForRowAt indexPath: IndexPath) -> UITableViewCell {
+        guard let cell = tableView.dequeueReusableCell(withIdentifier: "MuseCell", for: indexPath) as? MuseOptionCell else {
+            return UITableViewCell()
+        }
+        let muse = muses[indexPath.row]
+        cell.configure(with: muse)
+        return cell
+    }
+
+    func tableView(_ tableView: UITableView, didSelectRowAt indexPath: IndexPath) {
+        tableView.deselectRow(at: indexPath, animated: true)
+        let muse = muses[indexPath.row]
+        dismiss(animated: true) { [weak self] in
+            self?.onMuseSelected?(muse)
+        }
+    }
+}
+
+// MARK: - Muse Option Cell
+
+private class MuseOptionCell: UITableViewCell {
+    private let flagLabel = UILabel()
+    private let nameLabel = UILabel()
+    private let languageLabel = UILabel()
+
+    override init(style: UITableViewCell.CellStyle, reuseIdentifier: String?) {
+        super.init(style: style, reuseIdentifier: reuseIdentifier)
+        setupViews()
+    }
+
+    required init?(coder: NSCoder) {
+        fatalError("init(coder:) has not been implemented")
+    }
+
+    private func setupViews() {
+        flagLabel.font = .systemFont(ofSize: 28)
+        contentView.addSubview(flagLabel)
+        flagLabel.translatesAutoresizingMaskIntoConstraints = false
+
+        nameLabel.font = .systemFont(ofSize: 17, weight: .medium)
+        nameLabel.textColor = .label
+        contentView.addSubview(nameLabel)
+        nameLabel.translatesAutoresizingMaskIntoConstraints = false
+
+        languageLabel.font = .systemFont(ofSize: 14)
+        languageLabel.textColor = .secondaryLabel
+        contentView.addSubview(languageLabel)
+        languageLabel.translatesAutoresizingMaskIntoConstraints = false
+
+        NSLayoutConstraint.activate([
+            flagLabel.leadingAnchor.constraint(equalTo: contentView.leadingAnchor, constant: 16),
+            flagLabel.centerYAnchor.constraint(equalTo: contentView.centerYAnchor),
+            flagLabel.widthAnchor.constraint(equalToConstant: 36),
+
+            nameLabel.leadingAnchor.constraint(equalTo: flagLabel.trailingAnchor, constant: 12),
+            nameLabel.topAnchor.constraint(equalTo: contentView.topAnchor, constant: 10),
+
+            languageLabel.leadingAnchor.constraint(equalTo: flagLabel.trailingAnchor, constant: 12),
+            languageLabel.topAnchor.constraint(equalTo: nameLabel.bottomAnchor, constant: 2)
+        ])
+    }
+
+    func configure(with muse: User) {
+        flagLabel.text = muse.nativeLanguage.language.flag
+        nameLabel.text = muse.firstName
+        languageLabel.text = muse.nativeLanguage.language.name
     }
 }
