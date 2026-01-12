@@ -262,6 +262,9 @@ extension MatchesListViewController: UICollectionViewDataSource {
             header.onMuseTapped = { [weak self] in
                 self?.showBotSelection()
             }
+            header.onEditLanguagesTapped = { [weak self] in
+                self?.openMuseLanguagesSettings()
+            }
             return header
         }
         return UICollectionReusableView()
@@ -289,12 +292,6 @@ extension MatchesListViewController: UICollectionViewDelegate {
             message: "Choose a language to practice",
             preferredStyle: .actionSheet
         )
-
-        // Add "Edit Languages" option at the top
-        let editAction = UIAlertAction(title: "Edit Languages...", style: .default) { [weak self] _ in
-            self?.openMuseLanguagesSettings()
-        }
-        alert.addAction(editAction)
 
         let availableMuses = getAvailableMuses()
         for muse in availableMuses {
@@ -544,9 +541,11 @@ class MatchCollectionViewCell: UICollectionViewCell {
 class MuseHeaderView: UICollectionReusableView {
 
     var onMuseTapped: (() -> Void)?
+    var onEditLanguagesTapped: (() -> Void)?
 
     private let titleLabel = UILabel()
     private let videoContainerView = UIView()
+    private let editLanguagesPill = UIButton(type: .system)
     private var player: AVPlayer?
     private var playerLayer: AVPlayerLayer?
     private var playerLooper: AVPlayerLooper?
@@ -588,6 +587,20 @@ class MuseHeaderView: UICollectionReusableView {
         videoContainerView.addGestureRecognizer(tapGesture)
         videoContainerView.isUserInteractionEnabled = true
 
+        // Edit Languages pill button
+        editLanguagesPill.setTitle("Edit", for: .normal)
+        editLanguagesPill.setImage(UIImage(systemName: "pencil"), for: .normal)
+        editLanguagesPill.tintColor = .white
+        editLanguagesPill.setTitleColor(.white, for: .normal)
+        editLanguagesPill.titleLabel?.font = .systemFont(ofSize: 12, weight: .medium)
+        editLanguagesPill.backgroundColor = .systemBlue
+        editLanguagesPill.layer.cornerRadius = 12
+        editLanguagesPill.contentEdgeInsets = UIEdgeInsets(top: 4, left: 10, bottom: 4, right: 10)
+        editLanguagesPill.imageEdgeInsets = UIEdgeInsets(top: 0, left: -4, bottom: 0, right: 4)
+        editLanguagesPill.addTarget(self, action: #selector(editLanguagesTapped), for: .touchUpInside)
+        addSubview(editLanguagesPill)
+        editLanguagesPill.translatesAutoresizingMaskIntoConstraints = false
+
         NSLayoutConstraint.activate([
             titleLabel.topAnchor.constraint(equalTo: topAnchor, constant: 16),
             titleLabel.leadingAnchor.constraint(equalTo: leadingAnchor, constant: 16),
@@ -597,8 +610,16 @@ class MuseHeaderView: UICollectionReusableView {
             videoContainerView.topAnchor.constraint(equalTo: titleLabel.bottomAnchor, constant: 16),
             videoContainerView.centerXAnchor.constraint(equalTo: centerXAnchor),
             videoContainerView.widthAnchor.constraint(equalToConstant: 120),
-            videoContainerView.heightAnchor.constraint(equalToConstant: 120)
+            videoContainerView.heightAnchor.constraint(equalToConstant: 120),
+
+            editLanguagesPill.topAnchor.constraint(equalTo: videoContainerView.bottomAnchor, constant: 8),
+            editLanguagesPill.centerXAnchor.constraint(equalTo: centerXAnchor),
+            editLanguagesPill.heightAnchor.constraint(equalToConstant: 24)
         ])
+    }
+
+    @objc private func editLanguagesTapped() {
+        onEditLanguagesTapped?()
     }
 
     private func setupVideo() {
