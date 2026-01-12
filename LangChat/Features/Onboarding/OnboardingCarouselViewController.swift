@@ -7,6 +7,7 @@ class OnboardingCarouselViewController: UIViewController {
     // MARK: - Properties
     var isViewingFromProfile = false
     private var pricingConfig: PricingConfig = PricingConfig.defaultConfig
+    private let subscriptionService = SubscriptionService.shared
 
     // MARK: - UI Components
     private let scrollView = UIScrollView()
@@ -20,6 +21,7 @@ class OnboardingCarouselViewController: UIViewController {
     private var proFeatureStack: UIStackView?
     private var premiumPriceLabel: UILabel?
     private var proPriceLabel: UILabel?
+    private var freePriceLabel: UILabel?
 
     private let numberOfPages = 4
 
@@ -37,13 +39,48 @@ class OnboardingCarouselViewController: UIViewController {
             let config = await PricingConfigManager.shared.getConfig()
             await MainActor.run {
                 self.pricingConfig = config
+                self.subscriptionService.updatePricingConfig(config)
                 self.updatePricingCards(with: config)
+            }
+        }
+
+        // Fetch real App Store prices from RevenueCat
+        subscriptionService.fetchOfferings { [weak self] result in
+            DispatchQueue.main.async {
+                switch result {
+                case .success(let offerings):
+                    self?.updatePricesFromOfferings(offerings)
+                case .failure:
+                    // Keep using config prices as fallback
+                    break
+                }
             }
         }
     }
 
+    private func updatePricesFromOfferings(_ offerings: [SubscriptionOffering]) {
+        // Update Premium price with localized App Store price
+        if let premiumOffering = offerings.first(where: { $0.tier == .premium }) {
+            let priceText = subscriptionService.shouldShowWeeklyPricing
+                ? premiumOffering.weeklyPriceString
+                : premiumOffering.localizedPricePerPeriod
+            premiumPriceLabel?.text = priceText
+        }
+
+        // Update Pro price with localized App Store price
+        if let proOffering = offerings.first(where: { $0.tier == .pro }) {
+            let priceText = subscriptionService.shouldShowWeeklyPricing
+                ? proOffering.weeklyPriceString
+                : proOffering.localizedPricePerPeriod
+            proPriceLabel?.text = priceText
+        }
+
+        // Free tier shows "7-Day Trial" (no price change needed)
+        freePriceLabel?.text = "Free"
+    }
+
     private func updatePricingCards(with config: PricingConfig) {
-        // Update price labels
+        // Use config prices as initial values (RevenueCat will update with real prices)
         premiumPriceLabel?.text = config.premiumPriceFormatted
         proPriceLabel?.text = config.proPriceFormatted
 
@@ -726,13 +763,24 @@ class OnboardingCarouselViewController: UIViewController {
         headerStack.addArrangedSubview(titleLabel)
 
         let priceLabel = UILabel()
-        priceLabel.text = tier.price
+        // Use localized price from RevenueCat if available, fallback to tier.price
+        if isFree {
+            priceLabel.text = "Free"
+        } else if isPremium {
+            priceLabel.text = subscriptionService.localizedPricePerPeriod(for: .premium)
+        } else if isPro {
+            priceLabel.text = subscriptionService.localizedPricePerPeriod(for: .pro)
+        } else {
+            priceLabel.text = tier.price
+        }
         priceLabel.font = .systemFont(ofSize: 16, weight: .bold)
         priceLabel.textColor = .white
         headerStack.addArrangedSubview(priceLabel)
 
         // Store price label reference for updating
-        if isPremium {
+        if isFree {
+            self.freePriceLabel = priceLabel
+        } else if isPremium {
             self.premiumPriceLabel = priceLabel
         } else if isPro {
             self.proPriceLabel = priceLabel

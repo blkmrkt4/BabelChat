@@ -10,6 +10,37 @@ class MainTabBarController: UITabBarController, UITabBarControllerDelegate {
         setupConnectivityBanner()
     }
 
+    override func viewDidAppear(_ animated: Bool) {
+        super.viewDidAppear(animated)
+        checkSubscriptionAccess()
+    }
+
+    // MARK: - Subscription Access Check
+
+    private func checkSubscriptionAccess() {
+        let subscriptionService = SubscriptionService.shared
+
+        // Initialize free trial for new users
+        subscriptionService.initializeFreeTrialIfNeeded()
+
+        // Check if paywall should be shown (free trial expired)
+        if subscriptionService.shouldShowPaywall {
+            presentPaywall()
+        }
+    }
+
+    private func presentPaywall() {
+        // Create pricing view controller as a forced paywall
+        let pricingVC = PricingViewController()
+        pricingVC.isModalPaywall = true  // Flag to prevent dismissal and show different messaging
+
+        let navController = UINavigationController(rootViewController: pricingVC)
+        navController.modalPresentationStyle = .fullScreen
+        navController.isModalInPresentation = true  // Prevent swipe to dismiss
+
+        present(navController, animated: true)
+    }
+
     deinit {
         NotificationCenter.default.removeObserver(self)
     }

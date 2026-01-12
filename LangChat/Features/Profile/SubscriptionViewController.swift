@@ -180,7 +180,12 @@ class SubscriptionViewController: UIViewController {
         titleLabel.translatesAutoresizingMaskIntoConstraints = false
 
         let priceLabel = UILabel()
-        priceLabel.text = tier.price
+        // Use localized price from RevenueCat if available, fallback to tier.price
+        if tier == .free {
+            priceLabel.text = "Free"
+        } else {
+            priceLabel.text = subscriptionService.localizedPricePerPeriod(for: tier)
+        }
         priceLabel.font = .systemFont(ofSize: 18, weight: .semibold)
         priceLabel.textColor = .systemBlue
         priceLabel.textAlignment = .center

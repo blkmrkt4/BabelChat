@@ -34,7 +34,7 @@ enum SubscriptionTier: String, Codable {
     var displayName: String {
         switch self {
         case .free:
-            return "Free"
+            return "Trial"
         case .premium:
             return "Premium"
         case .pro:
@@ -45,7 +45,7 @@ enum SubscriptionTier: String, Codable {
     var price: String {
         switch self {
         case .free:
-            return "Free"
+            return "7-Day Trial"
         case .premium:
             return "$9.99/month"
         case .pro:
@@ -57,10 +57,10 @@ enum SubscriptionTier: String, Codable {
         switch self {
         case .free:
             return [
-                "No matching with real people - AI Muse chats only",
-                "50 messages per month",
+                "7 days to explore all features",
+                "AI Muse conversations",
                 "Full translation & grammar insights",
-                "Basic text to speech"
+                "Basic text-to-speech"
             ]
         case .premium:
             return [
@@ -82,7 +82,7 @@ enum SubscriptionTier: String, Codable {
     var shortDescription: String {
         switch self {
         case .free:
-            return "Practice with AI Muse"
+            return "7-day trial to explore Fluenca"
         case .premium:
             return "Match with real people + natural voices"
         case .pro:
@@ -207,20 +207,45 @@ struct SubscriptionStatus: Codable {
     let tier: SubscriptionTier
     let isActive: Bool
     let expiresAt: Date?
-    let isTrialing: Bool
-    let trialStartDate: Date?
-    let trialEndDate: Date?
+    let isTrialing: Bool  // For Premium subscription trial
+    let trialStartDate: Date?  // For Premium subscription trial
+    let trialEndDate: Date?  // For Premium subscription trial
+
+    // Free tier app trial (7 days to try the app before requiring subscription)
+    var freeTrialStartDate: Date?
 
     var isExpired: Bool {
         guard let expiresAt = expiresAt else { return false }
         return Date() > expiresAt
     }
 
+    /// Days remaining in Premium subscription trial
     var daysRemainingInTrial: Int? {
         guard isTrialing, let trialEndDate = trialEndDate else { return nil }
         let calendar = Calendar.current
         let days = calendar.dateComponents([.day], from: Date(), to: trialEndDate).day
         return max(0, days ?? 0)
+    }
+
+    // MARK: - Free Tier App Trial (7-day limited access)
+
+    /// End date for free tier app trial (7 days after start)
+    var freeTrialEndDate: Date? {
+        guard let start = freeTrialStartDate else { return nil }
+        return Calendar.current.date(byAdding: .day, value: 7, to: start)
+    }
+
+    /// Whether the free tier app trial has expired
+    var isFreeTrialExpired: Bool {
+        guard tier == .free, let endDate = freeTrialEndDate else { return false }
+        return Date() > endDate
+    }
+
+    /// Days remaining in free tier app trial
+    var daysRemainingInFreeTrial: Int {
+        guard let endDate = freeTrialEndDate else { return 7 }  // Default to 7 if not started
+        let days = Calendar.current.dateComponents([.day], from: Date(), to: endDate).day ?? 0
+        return max(0, days)
     }
 
     static var free: SubscriptionStatus {
@@ -230,7 +255,21 @@ struct SubscriptionStatus: Codable {
             expiresAt: nil,
             isTrialing: false,
             trialStartDate: nil,
-            trialEndDate: nil
+            trialEndDate: nil,
+            freeTrialStartDate: nil
+        )
+    }
+
+    /// Create a free status with trial started
+    static func freeWithTrial(startDate: Date) -> SubscriptionStatus {
+        return SubscriptionStatus(
+            tier: .free,
+            isActive: true,
+            expiresAt: nil,
+            isTrialing: false,
+            trialStartDate: nil,
+            trialEndDate: nil,
+            freeTrialStartDate: startDate
         )
     }
 }

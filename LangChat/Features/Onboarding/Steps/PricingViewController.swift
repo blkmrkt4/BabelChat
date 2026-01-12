@@ -52,12 +52,46 @@ class PricingViewController: UIViewController {
     private let subscriptionService = SubscriptionService.shared
     private var pricingConfig: PricingConfig = PricingConfig.defaultConfig
 
+    /// When true, this is shown as a forced paywall after trial expiry (cannot dismiss, free option hidden)
+    var isModalPaywall: Bool = false
+
     // MARK: - Lifecycle
     override func viewDidLoad() {
         super.viewDidLoad()
         setupViews()
         setupConstraints()
         loadPricingConfig()
+        configureForPaywallMode()
+
+        // Debug logging for currency detection
+        #if DEBUG
+        print("📍 Device Region: \(Locale.current.region?.identifier ?? "unknown")")
+        print("💰 Device Currency: \(Locale.current.currency?.identifier ?? "unknown")")
+        print("🏪 RevenueCat Currency: \(subscriptionService.currentCurrencyCode)")
+        #endif
+    }
+
+    private func configureForPaywallMode() {
+        if isModalPaywall {
+            // Hide free option - trial expired, must subscribe
+            freeCard.isHidden = true
+
+            // Update title for expired trial
+            titleLabel.text = "Your Trial Has Ended"
+            subtitleLabel.text = "Subscribe to continue learning with Fluenca"
+
+            // Hide navigation items (no way to dismiss)
+            navigationItem.hidesBackButton = true
+            navigationItem.leftBarButtonItem = nil
+        } else {
+            // Normal onboarding - show free trial info
+            let daysRemaining = subscriptionService.daysRemainingInFreeTrial
+            if daysRemaining < 7 && daysRemaining > 0 {
+                freeTierLabel.text = "Trial (\(daysRemaining) days left)"
+            } else {
+                freeTierLabel.text = "7-Day Trial"
+            }
+        }
     }
 
     // MARK: - Setup
@@ -139,12 +173,12 @@ class PricingViewController: UIViewController {
         headerStack.alignment = .firstBaseline
         cardStack.addArrangedSubview(headerStack)
 
-        freeTierLabel.text = "Free"
+        freeTierLabel.text = "7-Day Trial"
         freeTierLabel.font = .systemFont(ofSize: 20, weight: .bold)
         freeTierLabel.textColor = .white
         headerStack.addArrangedSubview(freeTierLabel)
 
-        freePriceLabel.text = "$0"
+        freePriceLabel.text = "Free"
         freePriceLabel.font = .systemFont(ofSize: 20, weight: .heavy)
         freePriceLabel.textColor = .systemGreen
         headerStack.addArrangedSubview(freePriceLabel)
@@ -155,8 +189,8 @@ class PricingViewController: UIViewController {
         freeFeatureStack.alignment = .leading
         cardStack.addArrangedSubview(freeFeatureStack)
 
-        // Continue with Free button
-        freeButton.setTitle("Continue with Free", for: .normal)
+        // Start Trial button
+        freeButton.setTitle("Start 7-Day Trial", for: .normal)
         freeButton.titleLabel?.font = .systemFont(ofSize: 16, weight: .bold)
         freeButton.setTitleColor(.white, for: .normal)
         freeButton.backgroundColor = .white.withAlphaComponent(0.2)
@@ -490,7 +524,7 @@ class PricingViewController: UIViewController {
                 switch result {
                 case .success(let status):
                     print("✅ Purchase successful: \(status.tier.displayName)")
-                    self?.delegate?.didSelectPremiumTier()
+                    self?.handlePurchaseSuccess()
                 case .failure(let error):
                     print("❌ Purchase failed: \(error.localizedDescription)")
                     self?.showError(error)
@@ -498,7 +532,7 @@ class PricingViewController: UIViewController {
             }
         }
     }
-    
+
     @objc private func proTapped() {
         // Show loading state
         proButton.setTitle("Loading...", for: .normal)
@@ -513,7 +547,7 @@ class PricingViewController: UIViewController {
                 switch result {
                 case .success(let status):
                     print("✅ Purchase successful: \(status.tier.displayName)")
-                    self?.delegate?.didSelectProTier()
+                    self?.handlePurchaseSuccess()
                 case .failure(let error):
                     print("❌ Purchase failed: \(error.localizedDescription)")
                     self?.showError(error)
@@ -524,6 +558,16 @@ class PricingViewController: UIViewController {
 
     @objc private func freeTapped() {
         delegate?.didSelectFreeTier()
+    }
+
+    private func handlePurchaseSuccess() {
+        if isModalPaywall {
+            // Dismiss the paywall and return to the app
+            dismiss(animated: true)
+        } else {
+            // Normal onboarding flow - notify delegate
+            delegate?.didSelectPremiumTier()
+        }
     }
 
     private func showError(_ error: Error) {

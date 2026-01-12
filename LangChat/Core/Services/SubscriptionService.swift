@@ -42,14 +42,56 @@ class SubscriptionService: NSObject {
         cachedOfferings.first?.currencyCode ?? Locale.current.currency?.identifier ?? "USD"
     }
 
+    /// Maps currency codes to their primary country names
+    /// Used to show accurate country based on App Store pricing region
+    private func countryName(forCurrencyCode currencyCode: String) -> String? {
+        let currencyToCountry: [String: String] = [
+            "GBP": "United Kingdom",
+            "USD": "United States",
+            "EUR": "Eurozone",
+            "CAD": "Canada",
+            "AUD": "Australia",
+            "INR": "India",
+            "JPY": "Japan",
+            "CNY": "China",
+            "KRW": "South Korea",
+            "BRL": "Brazil",
+            "MXN": "Mexico",
+            "SGD": "Singapore",
+            "HKD": "Hong Kong",
+            "NZD": "New Zealand",
+            "CHF": "Switzerland",
+            "SEK": "Sweden",
+            "NOK": "Norway",
+            "DKK": "Denmark",
+            "PLN": "Poland",
+            "THB": "Thailand",
+            "MYR": "Malaysia",
+            "PHP": "Philippines",
+            "IDR": "Indonesia",
+            "VND": "Vietnam",
+            "ZAR": "South Africa",
+            "AED": "United Arab Emirates",
+            "SAR": "Saudi Arabia",
+            "ILS": "Israel",
+            "TRY": "Turkey",
+            "RUB": "Russia",
+            "TWD": "Taiwan",
+            "CLP": "Chile",
+            "COP": "Colombia",
+            "PEN": "Peru",
+            "ARS": "Argentina"
+        ]
+        return currencyToCountry[currencyCode.uppercased()]
+    }
+
     /// Returns a user-friendly string describing the pricing region
-    /// e.g., "Prices in USD" or "Prices for United States (USD)"
+    /// e.g., "Prices in USD" or "Prices for United Kingdom (GBP)"
     var pricingRegionDescription: String {
         let currencyCode = currentCurrencyCode
 
-        // Get country name from region code
-        if let regionCode = Locale.current.region?.identifier,
-           let countryName = Locale.current.localizedString(forRegionCode: regionCode) {
+        // Derive country name from currency code (from App Store/RevenueCat)
+        if let countryName = countryName(forCurrencyCode: currencyCode) {
             return "Prices for \(countryName) (\(currencyCode))"
         }
 
@@ -58,11 +100,8 @@ class SubscriptionService: NSObject {
 
     /// Returns just the country name for shorter displays
     var currentCountryName: String {
-        if let regionCode = Locale.current.region?.identifier,
-           let countryName = Locale.current.localizedString(forRegionCode: regionCode) {
-            return countryName
-        }
-        return currentCurrencyCode
+        let currencyCode = currentCurrencyCode
+        return countryName(forCurrencyCode: currencyCode) ?? currencyCode
     }
 
     /// Update the cached pricing config (called when config is fetched)
@@ -352,6 +391,87 @@ class SubscriptionService: NSObject {
 
     var isTrialing: Bool {
         return currentStatus.isTrialing
+    }
+
+    // MARK: - Free Tier App Trial (7-day limited access)
+
+    private let freeTrialStartKey = "free_trial_start_date"
+
+    /// Initialize the free trial if user is on free tier and hasn't started yet
+    func initializeFreeTrialIfNeeded() {
+        // Only for free tier users who haven't started trial
+        guard currentStatus.tier == .free else { return }
+
+        // Check if trial already started
+        if let existingStartDate = UserDefaults.standard.object(forKey: freeTrialStartKey) as? Date {
+            // Trial already exists, make sure status reflects it
+            if currentStatus.freeTrialStartDate == nil {
+                var updatedStatus = SubscriptionStatus.freeWithTrial(startDate: existingStartDate)
+                currentStatus = updatedStatus
+            }
+            return
+        }
+
+        // Start the 7-day free trial
+        let startDate = Date()
+        UserDefaults.standard.set(startDate, forKey: freeTrialStartKey)
+
+        // Update status with trial info
+        let updatedStatus = SubscriptionStatus.freeWithTrial(startDate: startDate)
+        currentStatus = updatedStatus
+
+        print("🎉 Free trial started: \(startDate)")
+    }
+
+    /// Load free trial start date from UserDefaults
+    func loadFreeTrialStartDate() -> Date? {
+        return UserDefaults.standard.object(forKey: freeTrialStartKey) as? Date
+    }
+
+    /// Whether the paywall should be shown (free trial expired and not subscribed)
+    var shouldShowPaywall: Bool {
+        // If user has an active paid subscription, no paywall needed
+        if currentStatus.tier != .free && currentStatus.isActive {
+            return false
+        }
+
+        // If user is on free tier, check if trial expired
+        if currentStatus.tier == .free {
+            // Load trial start from UserDefaults if not in status
+            if let startDate = loadFreeTrialStartDate() {
+                let endDate = Calendar.current.date(byAdding: .day, value: 7, to: startDate) ?? startDate
+                return Date() > endDate
+            }
+            // No trial started yet - don't show paywall (will start trial)
+            return false
+        }
+
+        return false
+    }
+
+    /// Days remaining in free trial (0 if expired or not on free tier)
+    var daysRemainingInFreeTrial: Int {
+        guard currentStatus.tier == .free else { return 0 }
+
+        if let startDate = loadFreeTrialStartDate() {
+            let endDate = Calendar.current.date(byAdding: .day, value: 7, to: startDate) ?? startDate
+            let days = Calendar.current.dateComponents([.day], from: Date(), to: endDate).day ?? 0
+            return max(0, days)
+        }
+
+        return 7 // Trial not started yet, full 7 days available
+    }
+
+    /// Whether user is currently in free trial period (not expired)
+    var isInFreeTrial: Bool {
+        guard currentStatus.tier == .free else { return false }
+
+        if let startDate = loadFreeTrialStartDate() {
+            let endDate = Calendar.current.date(byAdding: .day, value: 7, to: startDate) ?? startDate
+            return Date() <= endDate
+        }
+
+        return true // Trial not started = will have full trial available
     }
 }
 

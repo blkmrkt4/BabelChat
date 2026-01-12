@@ -58,10 +58,10 @@ struct PricingConfig: Codable {
                 PricingFeature(title: "Higher word limit per play - 150 vs 100 for Premium", subtitle: "", included: true)
             ],
             freeFeatures: [
-                PricingFeature(title: "No matching with real people - AI Muse chats only", subtitle: "", included: true),
-                PricingFeature(title: "50 messages per month", subtitle: "", included: true),
+                PricingFeature(title: "7 days to explore all features", subtitle: "", included: true),
+                PricingFeature(title: "AI Muse conversations", subtitle: "", included: true),
                 PricingFeature(title: "Full translation & grammar insights", subtitle: "", included: true),
-                PricingFeature(title: "Basic text to speech", subtitle: "", included: true)
+                PricingFeature(title: "Basic text-to-speech", subtitle: "", included: true)
             ],
             weeklyPricingCountries: ["IN", "BR", "MX", "ID", "PH", "VN", "TH", "MY"],  // Default emerging markets
             updatedAt: nil

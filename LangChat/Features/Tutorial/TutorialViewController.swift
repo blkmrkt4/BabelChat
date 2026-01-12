@@ -238,9 +238,9 @@ class TutorialViewController: UIViewController {
     }
 
     private func updatePricingCards(with config: PricingConfig) {
-        // Update price labels
-        premiumPriceLabel?.text = config.premiumPriceFormatted
-        proPriceLabel?.text = config.proPriceFormatted
+        // Update price labels with localized prices (RevenueCat if available, config as fallback)
+        premiumPriceLabel?.text = subscriptionService.localizedPricePerPeriod(for: .premium)
+        proPriceLabel?.text = subscriptionService.localizedPricePerPeriod(for: .pro)
 
         // Update feature labels
         if let label = freeFeaturesLabel {
@@ -670,15 +670,15 @@ class TutorialViewController: UIViewController {
         headerStack.addArrangedSubview(tierLabel)
 
         let priceLabel = UILabel()
-        // Use config for pricing
+        // Use localized prices from RevenueCat if available, fallback to config
         if isPremium {
-            priceLabel.text = pricingConfig.premiumPriceFormatted
+            priceLabel.text = subscriptionService.localizedPricePerPeriod(for: .premium)
             self.premiumPriceLabel = priceLabel
         } else if isPro {
-            priceLabel.text = pricingConfig.proPriceFormatted
+            priceLabel.text = subscriptionService.localizedPricePerPeriod(for: .pro)
             self.proPriceLabel = priceLabel
         } else {
-            priceLabel.text = tier.price  // Free is always "Free"
+            priceLabel.text = "Free"  // Free tier is always "Free"
             self.freePriceLabel = priceLabel
         }
         priceLabel.font = .systemFont(ofSize: 14, weight: .semibold)
