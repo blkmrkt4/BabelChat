@@ -177,12 +177,13 @@ class BaseOnboardingViewController: UIViewController {
             scrollView.trailingAnchor.constraint(equalTo: view.trailingAnchor),
             scrollViewBottomConstraint!,
 
-            // Scroll content view (fills scroll view width)
+            // Scroll content view (fills scroll view width, minimum height = scroll view height)
             scrollContentView.topAnchor.constraint(equalTo: scrollView.topAnchor),
             scrollContentView.leadingAnchor.constraint(equalTo: scrollView.leadingAnchor),
             scrollContentView.trailingAnchor.constraint(equalTo: scrollView.trailingAnchor),
             scrollContentView.bottomAnchor.constraint(equalTo: scrollView.bottomAnchor),
             scrollContentView.widthAnchor.constraint(equalTo: scrollView.widthAnchor),
+            scrollContentView.heightAnchor.constraint(greaterThanOrEqualTo: scrollView.heightAnchor),
 
             // Content view (inside scroll content with padding)
             contentView.topAnchor.constraint(equalTo: scrollContentView.topAnchor),
