@@ -314,11 +314,6 @@ class BaseOnboardingViewController: UIViewController {
         keyboardHeight = keyboardFrame.height
         let safeAreaBottom = view.safeAreaInsets.bottom
 
-        // Adjust scroll view content inset to account for keyboard
-        let bottomInset = keyboardHeight - safeAreaBottom + 60  // Extra space for continue button
-        scrollView.contentInset.bottom = bottomInset
-        scrollView.verticalScrollIndicatorInsets.bottom = bottomInset
-
         // Move continue button above keyboard
         UIView.animate(withDuration: duration) {
             self.continueButtonBottomConstraint?.constant = -self.keyboardHeight + safeAreaBottom - 8
@@ -330,10 +325,6 @@ class BaseOnboardingViewController: UIViewController {
         guard let duration = notification.userInfo?[UIResponder.keyboardAnimationDurationUserInfoKey] as? Double else {
             return
         }
-
-        // Reset scroll view insets
-        scrollView.contentInset.bottom = 0
-        scrollView.verticalScrollIndicatorInsets.bottom = 0
 
         // Reset continue button position
         UIView.animate(withDuration: duration) {
