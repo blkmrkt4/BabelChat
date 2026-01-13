@@ -332,14 +332,52 @@ class AuthenticationViewController: UIViewController {
         // Track Apple Sign In started
         AnalyticsService.shared.track(.loginStarted, properties: ["method": "apple"])
 
-        let appleIDProvider = ASAuthorizationAppleIDProvider()
-        let request = appleIDProvider.createRequest()
-        request.requestedScopes = [.fullName, .email]
+        Task {
+            do {
+                // Use SupabaseService to handle Apple Sign In with proper Supabase Auth integration
+                try await SupabaseService.shared.signInWithApple(from: self)
+                print("✅ Apple Sign In with Supabase successful!")
 
-        let authorizationController = ASAuthorizationController(authorizationRequests: [request])
-        authorizationController.delegate = self
-        authorizationController.presentationContextProvider = self
-        authorizationController.performRequests()
+                // Track successful login
+                AnalyticsService.shared.track(.loginCompleted, properties: ["method": "apple"])
+
+                // Check if user has completed profile in Supabase
+                let hasCompletedProfile = try await SupabaseService.shared.hasCompletedProfile()
+
+                await MainActor.run {
+                    if hasCompletedProfile {
+                        // User already has profile, go to main app
+                        print("✅ Profile found - going to main app")
+                        transitionToMainApp()
+                    } else {
+                        // Start onboarding
+                        print("⚠️ No profile found - starting onboarding")
+                        startOnboarding()
+                    }
+                }
+            } catch SignInWithAppleError.userCancelled {
+                // User cancelled - don't show error
+                print("ℹ️ Apple Sign In cancelled by user")
+            } catch {
+                print("❌ Apple Sign In failed: \(error)")
+
+                // Track login failure
+                AnalyticsService.shared.track(.loginFailed, properties: [
+                    "method": "apple",
+                    "error": error.localizedDescription
+                ])
+
+                await MainActor.run {
+                    let alert = UIAlertController(
+                        title: "Sign In Failed",
+                        message: "Could not sign in with Apple: \(error.localizedDescription)",
+                        preferredStyle: .alert
+                    )
+                    alert.addAction(UIAlertAction(title: "OK", style: .default))
+                    present(alert, animated: true)
+                }
+            }
+        }
     }
 
     @objc private func emailSignInTapped() {
@@ -583,57 +621,6 @@ class AuthenticationViewController: UIViewController {
     }
 }
 
-// MARK: - ASAuthorizationControllerDelegate
-extension AuthenticationViewController: ASAuthorizationControllerDelegate {
-    func authorizationController(controller: ASAuthorizationController, didCompleteWithAuthorization authorization: ASAuthorization) {
-        if let appleIDCredential = authorization.credential as? ASAuthorizationAppleIDCredential {
-            let userIdentifier = appleIDCredential.user
-            let email = appleIDCredential.email
-            let fullName = appleIDCredential.fullName
-
-            print("✅ Apple Sign In successful!")
-            print("User ID: \(userIdentifier)")
-            print("Email: \(email ?? "not provided")")
-            print("Name: \(fullName?.givenName ?? "") \(fullName?.familyName ?? "")")
-
-            // Track successful Apple Sign In (new user = signup, returning = login)
-            AnalyticsService.shared.track(.signUpCompleted, properties: ["method": "apple"])
-
-            // Save Apple user credentials
-            UserDefaults.standard.set(userIdentifier, forKey: "userId")
-            if let email = email {
-                UserDefaults.standard.set(email, forKey: "email")
-            }
-
-            // TODO: Create Supabase user with Apple credentials
-            // For now, just start onboarding
-            UserDefaults.standard.set(true, forKey: "isUserSignedIn")
-            startOnboarding()
-        }
-    }
-
-    func authorizationController(controller: ASAuthorizationController, didCompleteWithError error: Error) {
-        print("❌ Apple Sign In failed: \(error.localizedDescription)")
-
-        // Track Apple Sign In failure
-        AnalyticsService.shared.track(.loginFailed, properties: [
-            "method": "apple",
-            "error": error.localizedDescription
-        ])
-
-        let alert = UIAlertController(
-            title: "Sign In Failed",
-            message: "Could not sign in with Apple. Please try again or use email sign in.",
-            preferredStyle: .alert
-        )
-        alert.addAction(UIAlertAction(title: "OK", style: .default))
-        present(alert, animated: true)
-    }
-}
-
-// MARK: - ASAuthorizationControllerPresentationContextProviding
-extension AuthenticationViewController: ASAuthorizationControllerPresentationContextProviding {
-    func presentationAnchor(for controller: ASAuthorizationController) -> ASPresentationAnchor {
-        return view.window!
-    }
-}
+// Note: ASAuthorizationControllerDelegate is now handled by SignInWithAppleService
+// which is called via SupabaseService.shared.signInWithApple(from:)
+// This ensures proper Supabase Auth integration with Apple Sign In
