@@ -21,8 +21,7 @@ class RelationshipIntentViewController: BaseOnboardingViewController {
     // MARK: - Lifecycle
     override func configure() {
         step = .relationshipIntent
-        setTitle("What are you looking for?",
-                subtitle: "Choose one")
+        setTitle("Looking for?")
         setupIntentButtons()
         setupPrivacyOptions()
         updateContinueButton(enabled: true)
@@ -43,7 +42,8 @@ class RelationshipIntentViewController: BaseOnboardingViewController {
         NSLayoutConstraint.activate([
             stackView.topAnchor.constraint(equalTo: contentView.topAnchor, constant: 20),
             stackView.leadingAnchor.constraint(equalTo: contentView.leadingAnchor),
-            stackView.trailingAnchor.constraint(equalTo: contentView.trailingAnchor)
+            stackView.trailingAnchor.constraint(equalTo: contentView.trailingAnchor),
+            stackView.bottomAnchor.constraint(lessThanOrEqualTo: contentView.bottomAnchor, constant: -20)
         ])
 
         // Create buttons for each relationship intent

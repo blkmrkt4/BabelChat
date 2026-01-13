@@ -5,7 +5,7 @@ import UIKit
 class DatingPreferencesViewController: BaseOnboardingViewController {
 
     // MARK: - UI Components
-    private let scrollView = UIScrollView()
+    private let datingScrollView = UIScrollView()
     private let contentStack = UIStackView()
 
     // Gender section
@@ -27,8 +27,7 @@ class DatingPreferencesViewController: BaseOnboardingViewController {
     // MARK: - Lifecycle
     override func configure() {
         step = .datingPreferences
-        setTitle("Dating Preferences",
-                subtitle: "Help us find compatible matches for you")
+        setTitle("Dating?")
         setupViews()
 
         // Default to "Everyone" for preference
@@ -38,29 +37,29 @@ class DatingPreferencesViewController: BaseOnboardingViewController {
 
     // MARK: - Setup
     private func setupViews() {
-        scrollView.showsVerticalScrollIndicator = false
-        contentView.addSubview(scrollView)
+        datingScrollView.showsVerticalScrollIndicator = false
+        contentView.addSubview(datingScrollView)
 
         contentStack.axis = .vertical
         contentStack.spacing = 24
         contentStack.alignment = .fill
-        scrollView.addSubview(contentStack)
+        datingScrollView.addSubview(contentStack)
 
         // Layout scroll view
-        scrollView.translatesAutoresizingMaskIntoConstraints = false
+        datingScrollView.translatesAutoresizingMaskIntoConstraints = false
         contentStack.translatesAutoresizingMaskIntoConstraints = false
 
         NSLayoutConstraint.activate([
-            scrollView.topAnchor.constraint(equalTo: contentView.topAnchor),
-            scrollView.leadingAnchor.constraint(equalTo: contentView.leadingAnchor),
-            scrollView.trailingAnchor.constraint(equalTo: contentView.trailingAnchor),
-            scrollView.bottomAnchor.constraint(equalTo: contentView.bottomAnchor),
+            datingScrollView.topAnchor.constraint(equalTo: contentView.topAnchor),
+            datingScrollView.leadingAnchor.constraint(equalTo: contentView.leadingAnchor),
+            datingScrollView.trailingAnchor.constraint(equalTo: contentView.trailingAnchor),
+            datingScrollView.bottomAnchor.constraint(equalTo: contentView.bottomAnchor),
 
-            contentStack.topAnchor.constraint(equalTo: scrollView.topAnchor, constant: 16),
-            contentStack.leadingAnchor.constraint(equalTo: scrollView.leadingAnchor),
-            contentStack.trailingAnchor.constraint(equalTo: scrollView.trailingAnchor),
-            contentStack.bottomAnchor.constraint(equalTo: scrollView.bottomAnchor, constant: -16),
-            contentStack.widthAnchor.constraint(equalTo: scrollView.widthAnchor)
+            contentStack.topAnchor.constraint(equalTo: datingScrollView.topAnchor, constant: 16),
+            contentStack.leadingAnchor.constraint(equalTo: datingScrollView.leadingAnchor),
+            contentStack.trailingAnchor.constraint(equalTo: datingScrollView.trailingAnchor),
+            contentStack.bottomAnchor.constraint(equalTo: datingScrollView.bottomAnchor, constant: -16),
+            contentStack.widthAnchor.constraint(equalTo: datingScrollView.widthAnchor)
         ])
 
         setupGenderSection()

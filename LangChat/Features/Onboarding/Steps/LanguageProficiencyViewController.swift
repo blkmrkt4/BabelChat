@@ -3,7 +3,7 @@ import UIKit
 class LanguageProficiencyViewController: BaseOnboardingViewController {
 
     // MARK: - UI Components
-    private let scrollView = UIScrollView()
+    private let proficiencyScrollView = UIScrollView()
     private let stackView = UIStackView()
     private let headerLabel = UILabel()
 
@@ -14,8 +14,7 @@ class LanguageProficiencyViewController: BaseOnboardingViewController {
     // MARK: - Lifecycle
     override func configure() {
         step = .languageProficiency
-        setTitle("How well do you speak these languages?",
-                subtitle: "This helps us match you with appropriate partners")
+        setTitle("Proficiency?")
         setupViews()
         createProficiencyCards()
     }
@@ -23,29 +22,29 @@ class LanguageProficiencyViewController: BaseOnboardingViewController {
     // MARK: - Setup
     private func setupViews() {
         // Scroll view
-        contentView.addSubview(scrollView)
+        contentView.addSubview(proficiencyScrollView)
 
         // Stack view
         stackView.axis = .vertical
         stackView.spacing = 16
         stackView.distribution = .equalSpacing
-        scrollView.addSubview(stackView)
+        proficiencyScrollView.addSubview(stackView)
 
         // Layout
-        scrollView.translatesAutoresizingMaskIntoConstraints = false
+        proficiencyScrollView.translatesAutoresizingMaskIntoConstraints = false
         stackView.translatesAutoresizingMaskIntoConstraints = false
 
         NSLayoutConstraint.activate([
-            scrollView.topAnchor.constraint(equalTo: contentView.topAnchor),
-            scrollView.leadingAnchor.constraint(equalTo: contentView.leadingAnchor),
-            scrollView.trailingAnchor.constraint(equalTo: contentView.trailingAnchor),
-            scrollView.bottomAnchor.constraint(equalTo: contentView.bottomAnchor),
+            proficiencyScrollView.topAnchor.constraint(equalTo: contentView.topAnchor),
+            proficiencyScrollView.leadingAnchor.constraint(equalTo: contentView.leadingAnchor),
+            proficiencyScrollView.trailingAnchor.constraint(equalTo: contentView.trailingAnchor),
+            proficiencyScrollView.bottomAnchor.constraint(equalTo: contentView.bottomAnchor),
 
-            stackView.topAnchor.constraint(equalTo: scrollView.topAnchor, constant: 16),
-            stackView.leadingAnchor.constraint(equalTo: scrollView.leadingAnchor),
-            stackView.trailingAnchor.constraint(equalTo: scrollView.trailingAnchor),
-            stackView.bottomAnchor.constraint(equalTo: scrollView.bottomAnchor, constant: -16),
-            stackView.widthAnchor.constraint(equalTo: scrollView.widthAnchor)
+            stackView.topAnchor.constraint(equalTo: proficiencyScrollView.topAnchor, constant: 16),
+            stackView.leadingAnchor.constraint(equalTo: proficiencyScrollView.leadingAnchor),
+            stackView.trailingAnchor.constraint(equalTo: proficiencyScrollView.trailingAnchor),
+            stackView.bottomAnchor.constraint(equalTo: proficiencyScrollView.bottomAnchor, constant: -16),
+            stackView.widthAnchor.constraint(equalTo: proficiencyScrollView.widthAnchor)
         ])
     }
 

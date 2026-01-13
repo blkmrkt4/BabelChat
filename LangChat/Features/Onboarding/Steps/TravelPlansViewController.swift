@@ -5,7 +5,7 @@ import SwiftUI
 class TravelPlansViewController: BaseOnboardingViewController {
 
     // MARK: - UI Components
-    private let scrollView = UIScrollView()
+    private let travelScrollView = UIScrollView()
     private let contentStack = UIStackView()
 
     // Icon section
@@ -52,8 +52,7 @@ class TravelPlansViewController: BaseOnboardingViewController {
     // MARK: - Lifecycle
     override func configure() {
         step = .travelPlans
-        setTitle("Planning to travel?",
-                subtitle: "Connect with locals where you're heading")
+        setTitle("Traveling?")
         setupSearchCompleter()
         setupScrollableContent()
 
@@ -103,15 +102,15 @@ class TravelPlansViewController: BaseOnboardingViewController {
     }
 
     private func setupScrollableContent() {
-        scrollView.showsVerticalScrollIndicator = false
-        scrollView.alwaysBounceVertical = true
-        scrollView.keyboardDismissMode = .onDrag
-        contentView.addSubview(scrollView)
+        travelScrollView.showsVerticalScrollIndicator = false
+        travelScrollView.alwaysBounceVertical = true
+        travelScrollView.keyboardDismissMode = .onDrag
+        contentView.addSubview(travelScrollView)
 
         contentStack.axis = .vertical
         contentStack.spacing = 24
         contentStack.alignment = .fill
-        scrollView.addSubview(contentStack)
+        travelScrollView.addSubview(contentStack)
 
         // Setup sections
         setupIconSection()
@@ -119,20 +118,20 @@ class TravelPlansViewController: BaseOnboardingViewController {
         setupDatesSection()
 
         // Layout
-        scrollView.translatesAutoresizingMaskIntoConstraints = false
+        travelScrollView.translatesAutoresizingMaskIntoConstraints = false
         contentStack.translatesAutoresizingMaskIntoConstraints = false
 
         NSLayoutConstraint.activate([
-            scrollView.topAnchor.constraint(equalTo: contentView.topAnchor),
-            scrollView.leadingAnchor.constraint(equalTo: contentView.leadingAnchor),
-            scrollView.trailingAnchor.constraint(equalTo: contentView.trailingAnchor),
-            scrollView.bottomAnchor.constraint(equalTo: contentView.bottomAnchor),
+            travelScrollView.topAnchor.constraint(equalTo: contentView.topAnchor),
+            travelScrollView.leadingAnchor.constraint(equalTo: contentView.leadingAnchor),
+            travelScrollView.trailingAnchor.constraint(equalTo: contentView.trailingAnchor),
+            travelScrollView.bottomAnchor.constraint(equalTo: contentView.bottomAnchor),
 
-            contentStack.topAnchor.constraint(equalTo: scrollView.topAnchor, constant: 16),
-            contentStack.leadingAnchor.constraint(equalTo: scrollView.leadingAnchor),
-            contentStack.trailingAnchor.constraint(equalTo: scrollView.trailingAnchor),
-            contentStack.bottomAnchor.constraint(equalTo: scrollView.bottomAnchor, constant: -20),
-            contentStack.widthAnchor.constraint(equalTo: scrollView.widthAnchor)
+            contentStack.topAnchor.constraint(equalTo: travelScrollView.topAnchor, constant: 16),
+            contentStack.leadingAnchor.constraint(equalTo: travelScrollView.leadingAnchor),
+            contentStack.trailingAnchor.constraint(equalTo: travelScrollView.trailingAnchor),
+            contentStack.bottomAnchor.constraint(equalTo: travelScrollView.bottomAnchor, constant: -20),
+            contentStack.widthAnchor.constraint(equalTo: travelScrollView.widthAnchor)
         ])
     }
 

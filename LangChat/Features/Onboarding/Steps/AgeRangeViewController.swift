@@ -17,8 +17,7 @@ class AgeRangeViewController: BaseOnboardingViewController {
     // MARK: - Lifecycle
     override func configure() {
         step = .ageRange
-        setTitle("Age preference",
-                subtitle: "Select the age range you'd like to match with")
+        setTitle("Age range?")
         setupSliders()
         updateContinueButton(enabled: true)
     }
@@ -72,7 +71,8 @@ class AgeRangeViewController: BaseOnboardingViewController {
 
             stackView.topAnchor.constraint(equalTo: rangeLabel.bottomAnchor, constant: 40),
             stackView.leadingAnchor.constraint(equalTo: contentView.leadingAnchor),
-            stackView.trailingAnchor.constraint(equalTo: contentView.trailingAnchor)
+            stackView.trailingAnchor.constraint(equalTo: contentView.trailingAnchor),
+            stackView.bottomAnchor.constraint(lessThanOrEqualTo: contentView.bottomAnchor, constant: -20)
         ])
     }
 

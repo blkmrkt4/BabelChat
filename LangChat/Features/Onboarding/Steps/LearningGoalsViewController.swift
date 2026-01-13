@@ -3,7 +3,7 @@ import UIKit
 class LearningGoalsViewController: BaseOnboardingViewController {
 
     // MARK: - UI Components
-    private let scrollView = UIScrollView()
+    private let goalsScrollView = UIScrollView()
     private let stackView = UIStackView()
     private let introLabel = UILabel()
     private let skipLabel = UILabel()
@@ -23,8 +23,7 @@ class LearningGoalsViewController: BaseOnboardingViewController {
     // MARK: - Lifecycle
     override func configure() {
         step = .learningGoals
-        setTitle("What style are you learning?",
-                subtitle: "Check all that apply - or skip if you're open to all styles")
+        setTitle("Style goals?")
         setupViews()
         // Optional - enable continue immediately
         updateContinueButton(enabled: true)
@@ -41,14 +40,14 @@ class LearningGoalsViewController: BaseOnboardingViewController {
         contentView.addSubview(introLabel)
 
         // Scroll view for styles
-        scrollView.showsVerticalScrollIndicator = false
-        contentView.addSubview(scrollView)
+        goalsScrollView.showsVerticalScrollIndicator = false
+        contentView.addSubview(goalsScrollView)
 
         // Stack view
         stackView.axis = .vertical
         stackView.spacing = 12
         stackView.alignment = .fill
-        scrollView.addSubview(stackView)
+        goalsScrollView.addSubview(stackView)
 
         // Create style option buttons
         for style in learningStyles {
@@ -66,7 +65,7 @@ class LearningGoalsViewController: BaseOnboardingViewController {
 
         // Layout
         introLabel.translatesAutoresizingMaskIntoConstraints = false
-        scrollView.translatesAutoresizingMaskIntoConstraints = false
+        goalsScrollView.translatesAutoresizingMaskIntoConstraints = false
         stackView.translatesAutoresizingMaskIntoConstraints = false
         skipLabel.translatesAutoresizingMaskIntoConstraints = false
 
@@ -75,16 +74,16 @@ class LearningGoalsViewController: BaseOnboardingViewController {
             introLabel.leadingAnchor.constraint(equalTo: contentView.leadingAnchor),
             introLabel.trailingAnchor.constraint(equalTo: contentView.trailingAnchor),
 
-            scrollView.topAnchor.constraint(equalTo: introLabel.bottomAnchor, constant: 20),
-            scrollView.leadingAnchor.constraint(equalTo: contentView.leadingAnchor),
-            scrollView.trailingAnchor.constraint(equalTo: contentView.trailingAnchor),
-            scrollView.bottomAnchor.constraint(equalTo: skipLabel.topAnchor, constant: -16),
+            goalsScrollView.topAnchor.constraint(equalTo: introLabel.bottomAnchor, constant: 20),
+            goalsScrollView.leadingAnchor.constraint(equalTo: contentView.leadingAnchor),
+            goalsScrollView.trailingAnchor.constraint(equalTo: contentView.trailingAnchor),
+            goalsScrollView.bottomAnchor.constraint(equalTo: skipLabel.topAnchor, constant: -16),
 
-            stackView.topAnchor.constraint(equalTo: scrollView.topAnchor),
-            stackView.leadingAnchor.constraint(equalTo: scrollView.leadingAnchor),
-            stackView.trailingAnchor.constraint(equalTo: scrollView.trailingAnchor),
-            stackView.bottomAnchor.constraint(equalTo: scrollView.bottomAnchor),
-            stackView.widthAnchor.constraint(equalTo: scrollView.widthAnchor),
+            stackView.topAnchor.constraint(equalTo: goalsScrollView.topAnchor),
+            stackView.leadingAnchor.constraint(equalTo: goalsScrollView.leadingAnchor),
+            stackView.trailingAnchor.constraint(equalTo: goalsScrollView.trailingAnchor),
+            stackView.bottomAnchor.constraint(equalTo: goalsScrollView.bottomAnchor),
+            stackView.widthAnchor.constraint(equalTo: goalsScrollView.widthAnchor),
 
             skipLabel.leadingAnchor.constraint(equalTo: contentView.leadingAnchor),
             skipLabel.trailingAnchor.constraint(equalTo: contentView.trailingAnchor),

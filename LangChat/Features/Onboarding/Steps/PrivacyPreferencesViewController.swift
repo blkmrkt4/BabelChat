@@ -14,8 +14,7 @@ class PrivacyPreferencesViewController: BaseOnboardingViewController {
     // MARK: - Lifecycle
     override func configure() {
         step = .privacyPreferences
-        setTitle("Privacy Settings",
-                subtitle: "Customize your experience")
+        setTitle("Privacy?")
         setupPreferenceToggles()
         updateContinueButton(enabled: true)
     }
@@ -32,7 +31,8 @@ class PrivacyPreferencesViewController: BaseOnboardingViewController {
         NSLayoutConstraint.activate([
             stackView.topAnchor.constraint(equalTo: contentView.topAnchor, constant: 20),
             stackView.leadingAnchor.constraint(equalTo: contentView.leadingAnchor),
-            stackView.trailingAnchor.constraint(equalTo: contentView.trailingAnchor)
+            stackView.trailingAnchor.constraint(equalTo: contentView.trailingAnchor),
+            stackView.bottomAnchor.constraint(lessThanOrEqualTo: contentView.bottomAnchor, constant: -20)
         ])
 
         // Strictly Platonic Toggle

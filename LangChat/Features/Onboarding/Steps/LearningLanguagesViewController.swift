@@ -19,8 +19,7 @@ class LearningLanguagesViewController: BaseOnboardingViewController {
     // MARK: - Lifecycle
     override func configure() {
         step = .learningLanguages
-        setTitle("Which languages are you learning?",
-                subtitle: "Select all that interest you (up to 5)")
+        setTitle("Learning?")
         setupViews()
 
         // Filter out native language from available options

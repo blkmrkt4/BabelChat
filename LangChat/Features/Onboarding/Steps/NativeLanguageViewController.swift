@@ -14,8 +14,7 @@ class NativeLanguageViewController: BaseOnboardingViewController {
     // MARK: - Lifecycle
     override func configure() {
         step = .nativeLanguage
-        setTitle("What's your native language?",
-                subtitle: "The language you speak fluently and can teach others")
+        setTitle("Native language?")
         setupViews()
         filteredLanguages = allLanguages
     }

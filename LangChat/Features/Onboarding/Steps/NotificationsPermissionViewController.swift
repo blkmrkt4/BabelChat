@@ -20,8 +20,7 @@ class NotificationsPermissionViewController: BaseOnboardingViewController {
     // MARK: - Lifecycle
     override func configure() {
         step = .notifications
-        setTitle("Stay Connected",
-                subtitle: "Get notified about new matches and messages")
+        setTitle("Stay Connected")
         setupViews()
 
         // Hide the default continue button
@@ -95,7 +94,8 @@ class NotificationsPermissionViewController: BaseOnboardingViewController {
             // Skip button
             skipButton.topAnchor.constraint(equalTo: enableButton.bottomAnchor, constant: 16),
             skipButton.centerXAnchor.constraint(equalTo: contentView.centerXAnchor),
-            skipButton.heightAnchor.constraint(equalToConstant: 44)
+            skipButton.heightAnchor.constraint(equalToConstant: 44),
+            skipButton.bottomAnchor.constraint(lessThanOrEqualTo: contentView.bottomAnchor, constant: -20)
         ])
     }
 

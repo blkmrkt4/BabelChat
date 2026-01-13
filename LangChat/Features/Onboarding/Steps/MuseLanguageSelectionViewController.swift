@@ -20,8 +20,7 @@ class MuseLanguageSelectionViewController: BaseOnboardingViewController {
     // MARK: - Lifecycle
     override func configure() {
         step = .museLanguages
-        setTitle("Choose Muse Languages",
-                subtitle: "Select languages that will appear when you message your AI Muse. You can change this anytime in Profile → Settings → Muse Languages.")
+        setTitle("Muse languages?")
         setupViews()
         loadAvailableLanguages()
     }

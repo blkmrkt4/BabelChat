@@ -4,9 +4,12 @@ class BaseOnboardingViewController: UIViewController {
 
     // MARK: - UI Components
     let progressView = UIProgressView(progressViewStyle: .bar)
+    let headerView = UIView()  // Container for back button and title
     let backButton = UIButton(type: .system)
     let titleLabel = UILabel()
-    let subtitleLabel = UILabel()
+    let subtitleLabel = UILabel()  // Optional, hidden by default in compact mode
+    let scrollView = UIScrollView()  // Scroll view for keyboard avoidance
+    let scrollContentView = UIView()  // Content container inside scroll view
     let contentView = UIView()
     let continueButton = UIButton(type: .system)
 
@@ -14,6 +17,11 @@ class BaseOnboardingViewController: UIViewController {
     weak var delegate: OnboardingStepDelegate?
     var step: OnboardingStep = .name
     var keyboardHeight: CGFloat = 0
+    var useCompactTitle: Bool = true  // Default to compact title layout
+
+    // Constraint references for keyboard handling
+    private var continueButtonBottomConstraint: NSLayoutConstraint?
+    private var scrollViewBottomConstraint: NSLayoutConstraint?
 
     #if DEBUG
     private let resetButton = UIButton(type: .system)
@@ -59,26 +67,40 @@ class BaseOnboardingViewController: UIViewController {
         progressView.trackTintColor = .systemGray5
         view.addSubview(progressView)
 
+        // Header view (contains back button and title)
+        view.addSubview(headerView)
+
         // Back button
         backButton.setImage(UIImage(systemName: "chevron.left"), for: .normal)
         backButton.tintColor = .white
         backButton.addTarget(self, action: #selector(backButtonTapped), for: .touchUpInside)
-        view.addSubview(backButton)
+        backButton.contentHorizontalAlignment = .left
+        headerView.addSubview(backButton)
 
-        // Title
-        titleLabel.font = .systemFont(ofSize: 28, weight: .bold)
+        // Title (compact: inline with back button)
+        titleLabel.font = useCompactTitle ? .systemFont(ofSize: 20, weight: .semibold) : .systemFont(ofSize: 28, weight: .bold)
         titleLabel.textColor = .white
-        titleLabel.numberOfLines = 0
-        view.addSubview(titleLabel)
+        titleLabel.numberOfLines = 1
+        headerView.addSubview(titleLabel)
 
-        // Subtitle
-        subtitleLabel.font = .systemFont(ofSize: 16, weight: .regular)
-        subtitleLabel.textColor = .white.withAlphaComponent(0.8)
-        subtitleLabel.numberOfLines = 0
+        // Subtitle (hidden in compact mode)
+        subtitleLabel.font = .systemFont(ofSize: 14, weight: .regular)
+        subtitleLabel.textColor = .white.withAlphaComponent(0.7)
+        subtitleLabel.numberOfLines = 2
+        subtitleLabel.isHidden = useCompactTitle
         view.addSubview(subtitleLabel)
 
+        // Scroll view for keyboard avoidance
+        scrollView.showsVerticalScrollIndicator = false
+        scrollView.keyboardDismissMode = .interactive
+        scrollView.alwaysBounceVertical = true
+        view.addSubview(scrollView)
+
+        // Scroll content view
+        scrollView.addSubview(scrollContentView)
+
         // Content view (for subclasses to add their content)
-        view.addSubview(contentView)
+        scrollContentView.addSubview(contentView)
 
         // Continue button
         continueButton.setTitle("Continue", for: .normal)
@@ -107,11 +129,18 @@ class BaseOnboardingViewController: UIViewController {
 
     private func setupConstraints() {
         progressView.translatesAutoresizingMaskIntoConstraints = false
+        headerView.translatesAutoresizingMaskIntoConstraints = false
         backButton.translatesAutoresizingMaskIntoConstraints = false
         titleLabel.translatesAutoresizingMaskIntoConstraints = false
         subtitleLabel.translatesAutoresizingMaskIntoConstraints = false
+        scrollView.translatesAutoresizingMaskIntoConstraints = false
+        scrollContentView.translatesAutoresizingMaskIntoConstraints = false
         contentView.translatesAutoresizingMaskIntoConstraints = false
         continueButton.translatesAutoresizingMaskIntoConstraints = false
+
+        // Create bottom constraint reference for keyboard handling
+        continueButtonBottomConstraint = continueButton.bottomAnchor.constraint(equalTo: view.safeAreaLayoutGuide.bottomAnchor, constant: -16)
+        scrollViewBottomConstraint = scrollView.bottomAnchor.constraint(equalTo: continueButton.topAnchor, constant: -16)
 
         NSLayoutConstraint.activate([
             // Progress view
@@ -120,40 +149,59 @@ class BaseOnboardingViewController: UIViewController {
             progressView.trailingAnchor.constraint(equalTo: view.trailingAnchor),
             progressView.heightAnchor.constraint(equalToConstant: 4),
 
-            // Back button
-            backButton.topAnchor.constraint(equalTo: progressView.bottomAnchor, constant: 16),
-            backButton.leadingAnchor.constraint(equalTo: view.leadingAnchor, constant: 16),
-            backButton.widthAnchor.constraint(equalToConstant: 44),
+            // Header view (contains back button + title)
+            headerView.topAnchor.constraint(equalTo: progressView.bottomAnchor, constant: 8),
+            headerView.leadingAnchor.constraint(equalTo: view.leadingAnchor, constant: 16),
+            headerView.trailingAnchor.constraint(equalTo: view.trailingAnchor, constant: -16),
+            headerView.heightAnchor.constraint(equalToConstant: 44),
+
+            // Back button (left side of header)
+            backButton.leadingAnchor.constraint(equalTo: headerView.leadingAnchor),
+            backButton.centerYAnchor.constraint(equalTo: headerView.centerYAnchor),
+            backButton.widthAnchor.constraint(equalToConstant: 32),
             backButton.heightAnchor.constraint(equalToConstant: 44),
 
-            // Title
-            titleLabel.topAnchor.constraint(equalTo: backButton.bottomAnchor, constant: 24),
-            titleLabel.leadingAnchor.constraint(equalTo: view.leadingAnchor, constant: 24),
-            titleLabel.trailingAnchor.constraint(equalTo: view.trailingAnchor, constant: -24),
+            // Title (inline with back button)
+            titleLabel.leadingAnchor.constraint(equalTo: backButton.trailingAnchor, constant: 4),
+            titleLabel.trailingAnchor.constraint(equalTo: headerView.trailingAnchor, constant: -48),  // Space for reset button
+            titleLabel.centerYAnchor.constraint(equalTo: headerView.centerYAnchor),
 
-            // Subtitle
-            subtitleLabel.topAnchor.constraint(equalTo: titleLabel.bottomAnchor, constant: 8),
+            // Subtitle (below header, if visible)
+            subtitleLabel.topAnchor.constraint(equalTo: headerView.bottomAnchor, constant: 4),
             subtitleLabel.leadingAnchor.constraint(equalTo: view.leadingAnchor, constant: 24),
             subtitleLabel.trailingAnchor.constraint(equalTo: view.trailingAnchor, constant: -24),
 
-            // Content view
-            contentView.topAnchor.constraint(equalTo: subtitleLabel.bottomAnchor, constant: 32),
-            contentView.leadingAnchor.constraint(equalTo: view.leadingAnchor, constant: 24),
-            contentView.trailingAnchor.constraint(equalTo: view.trailingAnchor, constant: -24),
-            contentView.bottomAnchor.constraint(equalTo: continueButton.topAnchor, constant: -24),
+            // Scroll view
+            scrollView.topAnchor.constraint(equalTo: useCompactTitle ? headerView.bottomAnchor : subtitleLabel.bottomAnchor, constant: 16),
+            scrollView.leadingAnchor.constraint(equalTo: view.leadingAnchor),
+            scrollView.trailingAnchor.constraint(equalTo: view.trailingAnchor),
+            scrollViewBottomConstraint!,
+
+            // Scroll content view (fills scroll view width)
+            scrollContentView.topAnchor.constraint(equalTo: scrollView.topAnchor),
+            scrollContentView.leadingAnchor.constraint(equalTo: scrollView.leadingAnchor),
+            scrollContentView.trailingAnchor.constraint(equalTo: scrollView.trailingAnchor),
+            scrollContentView.bottomAnchor.constraint(equalTo: scrollView.bottomAnchor),
+            scrollContentView.widthAnchor.constraint(equalTo: scrollView.widthAnchor),
+
+            // Content view (inside scroll content with padding)
+            contentView.topAnchor.constraint(equalTo: scrollContentView.topAnchor),
+            contentView.leadingAnchor.constraint(equalTo: scrollContentView.leadingAnchor, constant: 24),
+            contentView.trailingAnchor.constraint(equalTo: scrollContentView.trailingAnchor, constant: -24),
+            contentView.bottomAnchor.constraint(equalTo: scrollContentView.bottomAnchor, constant: -24),
 
             // Continue button
             continueButton.leadingAnchor.constraint(equalTo: view.leadingAnchor, constant: 24),
             continueButton.trailingAnchor.constraint(equalTo: view.trailingAnchor, constant: -24),
-            continueButton.bottomAnchor.constraint(equalTo: view.safeAreaLayoutGuide.bottomAnchor, constant: -24),
+            continueButtonBottomConstraint!,
             continueButton.heightAnchor.constraint(equalToConstant: 50)
         ])
 
         #if DEBUG
         resetButton.translatesAutoresizingMaskIntoConstraints = false
         NSLayoutConstraint.activate([
-            resetButton.topAnchor.constraint(equalTo: progressView.bottomAnchor, constant: 16),
-            resetButton.trailingAnchor.constraint(equalTo: view.trailingAnchor, constant: -16),
+            resetButton.centerYAnchor.constraint(equalTo: headerView.centerYAnchor),
+            resetButton.trailingAnchor.constraint(equalTo: headerView.trailingAnchor),
             resetButton.widthAnchor.constraint(equalToConstant: 40),
             resetButton.heightAnchor.constraint(equalToConstant: 40)
         ])
@@ -263,9 +311,17 @@ class BaseOnboardingViewController: UIViewController {
         }
 
         keyboardHeight = keyboardFrame.height
+        let safeAreaBottom = view.safeAreaInsets.bottom
 
+        // Adjust scroll view content inset to account for keyboard
+        let bottomInset = keyboardHeight - safeAreaBottom + 60  // Extra space for continue button
+        scrollView.contentInset.bottom = bottomInset
+        scrollView.verticalScrollIndicatorInsets.bottom = bottomInset
+
+        // Move continue button above keyboard
         UIView.animate(withDuration: duration) {
-            self.continueButton.transform = CGAffineTransform(translationX: 0, y: -self.keyboardHeight + self.view.safeAreaInsets.bottom)
+            self.continueButtonBottomConstraint?.constant = -self.keyboardHeight + safeAreaBottom - 8
+            self.view.layoutIfNeeded()
         }
     }
 
@@ -274,8 +330,14 @@ class BaseOnboardingViewController: UIViewController {
             return
         }
 
+        // Reset scroll view insets
+        scrollView.contentInset.bottom = 0
+        scrollView.verticalScrollIndicatorInsets.bottom = 0
+
+        // Reset continue button position
         UIView.animate(withDuration: duration) {
-            self.continueButton.transform = .identity
+            self.continueButtonBottomConstraint?.constant = -16
+            self.view.layoutIfNeeded()
         }
     }
 

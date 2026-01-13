@@ -32,8 +32,7 @@ class HometownViewController: BaseOnboardingViewController {
     // MARK: - Lifecycle
     override func configure() {
         step = .hometown
-        setTitle("Where are you located?",
-                subtitle: "This helps us find language partners nearby")
+        setTitle("Your location?")
         setupSearchCompleter()
         setupLocationInputs()
     }
@@ -220,7 +219,10 @@ class HometownViewController: BaseOnboardingViewController {
             privacyDescriptionLabel.topAnchor.constraint(equalTo: privacyLabel.bottomAnchor, constant: 4),
             privacyDescriptionLabel.leadingAnchor.constraint(equalTo: privacyContainer.leadingAnchor, constant: 16),
             privacyDescriptionLabel.trailingAnchor.constraint(equalTo: privacyToggle.leadingAnchor, constant: -16),
-            privacyDescriptionLabel.bottomAnchor.constraint(equalTo: privacyContainer.bottomAnchor, constant: -16)
+            privacyDescriptionLabel.bottomAnchor.constraint(equalTo: privacyContainer.bottomAnchor, constant: -16),
+
+            // Ensure content view has proper height
+            privacyContainer.bottomAnchor.constraint(lessThanOrEqualTo: contentView.bottomAnchor, constant: -20)
         ])
     }
 

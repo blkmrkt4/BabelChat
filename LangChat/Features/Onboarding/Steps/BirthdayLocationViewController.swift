@@ -3,7 +3,7 @@ import UIKit
 class BirthdayLocationViewController: BaseOnboardingViewController {
 
     // MARK: - UI Components
-    private let scrollView = UIScrollView()
+    private let innerScrollView = UIScrollView()
     private let stackView = UIStackView()
 
     // Birthday section
@@ -24,45 +24,44 @@ class BirthdayLocationViewController: BaseOnboardingViewController {
     // MARK: - Lifecycle
     override func configure() {
         step = .birthYear  // Note: This combined screen is deprecated, use separate screens instead
-        setTitle("A bit about you",
-                subtitle: "Help us find the perfect language partners")
+        setTitle("About you?")
         setupScrollableContent()
     }
 
     // MARK: - Setup
     private func setupScrollableContent() {
         // Add scroll view
-        scrollView.showsVerticalScrollIndicator = false
-        scrollView.alwaysBounceVertical = true
-        contentView.addSubview(scrollView)
+        innerScrollView.showsVerticalScrollIndicator = false
+        innerScrollView.alwaysBounceVertical = true
+        contentView.addSubview(innerScrollView)
 
         // Add stack view
         stackView.axis = .vertical
         stackView.spacing = 32
         stackView.alignment = .fill
-        scrollView.addSubview(stackView)
+        innerScrollView.addSubview(stackView)
 
         // Setup sections
         setupBirthdaySection()
         setupLocationSection()
 
         // Layout
-        scrollView.translatesAutoresizingMaskIntoConstraints = false
+        innerScrollView.translatesAutoresizingMaskIntoConstraints = false
         stackView.translatesAutoresizingMaskIntoConstraints = false
 
         NSLayoutConstraint.activate([
             // Scroll view
-            scrollView.topAnchor.constraint(equalTo: contentView.topAnchor),
-            scrollView.leadingAnchor.constraint(equalTo: contentView.leadingAnchor),
-            scrollView.trailingAnchor.constraint(equalTo: contentView.trailingAnchor),
-            scrollView.bottomAnchor.constraint(equalTo: contentView.bottomAnchor),
+            innerScrollView.topAnchor.constraint(equalTo: contentView.topAnchor),
+            innerScrollView.leadingAnchor.constraint(equalTo: contentView.leadingAnchor),
+            innerScrollView.trailingAnchor.constraint(equalTo: contentView.trailingAnchor),
+            innerScrollView.bottomAnchor.constraint(equalTo: contentView.bottomAnchor),
 
             // Stack view
-            stackView.topAnchor.constraint(equalTo: scrollView.topAnchor, constant: 20),
-            stackView.leadingAnchor.constraint(equalTo: scrollView.leadingAnchor),
-            stackView.trailingAnchor.constraint(equalTo: scrollView.trailingAnchor),
-            stackView.bottomAnchor.constraint(equalTo: scrollView.bottomAnchor, constant: -20),
-            stackView.widthAnchor.constraint(equalTo: scrollView.widthAnchor)
+            stackView.topAnchor.constraint(equalTo: innerScrollView.topAnchor, constant: 20),
+            stackView.leadingAnchor.constraint(equalTo: innerScrollView.leadingAnchor),
+            stackView.trailingAnchor.constraint(equalTo: innerScrollView.trailingAnchor),
+            stackView.bottomAnchor.constraint(equalTo: innerScrollView.bottomAnchor, constant: -20),
+            stackView.widthAnchor.constraint(equalTo: innerScrollView.widthAnchor)
         ])
     }
 

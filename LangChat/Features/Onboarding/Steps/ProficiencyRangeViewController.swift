@@ -14,8 +14,7 @@ class ProficiencyRangeViewController: BaseOnboardingViewController {
     // MARK: - Lifecycle
     override func configure() {
         step = .proficiencyRange
-        setTitle("Who do you want to match with?",
-                subtitle: "Select the proficiency range of language partners you'd like to connect with")
+        setTitle("Partner level?")
         setupViews()
     }
 
@@ -79,7 +78,8 @@ class ProficiencyRangeViewController: BaseOnboardingViewController {
 
             descriptionsStack.topAnchor.constraint(equalTo: hintLabel.bottomAnchor, constant: 32),
             descriptionsStack.leadingAnchor.constraint(equalTo: contentView.leadingAnchor),
-            descriptionsStack.trailingAnchor.constraint(equalTo: contentView.trailingAnchor)
+            descriptionsStack.trailingAnchor.constraint(equalTo: contentView.trailingAnchor),
+            descriptionsStack.bottomAnchor.constraint(lessThanOrEqualTo: contentView.bottomAnchor, constant: -20)
         ])
 
         updateRangeDisplayLabel()

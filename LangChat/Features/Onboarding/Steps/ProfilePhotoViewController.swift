@@ -15,8 +15,7 @@ class ProfilePhotoViewController: BaseOnboardingViewController {
     // MARK: - Lifecycle
     override func configure() {
         step = .profilePhoto
-        setTitle("Add photos of yourself",
-                subtitle: "Optional: You can add photos now or do it later from your profile")
+        setTitle("Photos?")
         setupViews()
     }
 
@@ -82,7 +81,8 @@ class ProfilePhotoViewController: BaseOnboardingViewController {
 
             tipsLabel.topAnchor.constraint(equalTo: photoGridView.bottomAnchor, constant: 24),
             tipsLabel.leadingAnchor.constraint(equalTo: contentView.leadingAnchor),
-            tipsLabel.trailingAnchor.constraint(equalTo: contentView.trailingAnchor)
+            tipsLabel.trailingAnchor.constraint(equalTo: contentView.trailingAnchor),
+            tipsLabel.bottomAnchor.constraint(lessThanOrEqualTo: contentView.bottomAnchor, constant: -20)
         ])
 
         // Always enable continue button (can skip)

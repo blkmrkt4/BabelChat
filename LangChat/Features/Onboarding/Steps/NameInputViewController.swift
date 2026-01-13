@@ -9,8 +9,7 @@ class NameInputViewController: BaseOnboardingViewController {
     // MARK: - Lifecycle
     override func configure() {
         step = .name
-        setTitle("What's your name?",
-                subtitle: "This is how you'll appear to language partners")
+        setTitle("Your name?")
         setupNameInputs()
     }
 
@@ -39,7 +38,8 @@ class NameInputViewController: BaseOnboardingViewController {
             lastNameTextField.topAnchor.constraint(equalTo: firstNameTextField.bottomAnchor, constant: 16),
             lastNameTextField.leadingAnchor.constraint(equalTo: contentView.leadingAnchor),
             lastNameTextField.trailingAnchor.constraint(equalTo: contentView.trailingAnchor),
-            lastNameTextField.heightAnchor.constraint(equalToConstant: 56)
+            lastNameTextField.heightAnchor.constraint(equalToConstant: 56),
+            lastNameTextField.bottomAnchor.constraint(lessThanOrEqualTo: contentView.bottomAnchor, constant: -20)
         ])
 
         // Auto-focus

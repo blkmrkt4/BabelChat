@@ -43,8 +43,7 @@ class BirthYearViewController: BaseOnboardingViewController {
     // MARK: - Lifecycle
     override func configure() {
         step = .birthYear
-        setTitle("When were you born?",
-                subtitle: "We use this to match you with appropriate language partners")
+        setTitle("Birthday?")
         setupDatePicker()
     }
 
@@ -110,7 +109,8 @@ class BirthYearViewController: BaseOnboardingViewController {
             // Age restriction label
             ageRestrictionLabel.topAnchor.constraint(equalTo: datePicker.bottomAnchor, constant: 24),
             ageRestrictionLabel.leadingAnchor.constraint(equalTo: contentView.leadingAnchor),
-            ageRestrictionLabel.trailingAnchor.constraint(equalTo: contentView.trailingAnchor)
+            ageRestrictionLabel.trailingAnchor.constraint(equalTo: contentView.trailingAnchor),
+            ageRestrictionLabel.bottomAnchor.constraint(lessThanOrEqualTo: contentView.bottomAnchor, constant: -20)
         ])
 
         updateContinueButton(enabled: true)

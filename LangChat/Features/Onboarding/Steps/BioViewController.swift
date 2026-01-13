@@ -26,8 +26,7 @@ class BioViewController: BaseOnboardingViewController {
     // MARK: - Lifecycle
     override func configure() {
         step = .bio
-        setTitle("Tell potential matches about yourself",
-                subtitle: "Optional - share anything you'd like others to know")
+        setTitle("About you?")
         setupViews()
         setupKeyboardToolbar()
     }
@@ -158,7 +157,8 @@ class BioViewController: BaseOnboardingViewController {
             // Skip label
             skipLabel.topAnchor.constraint(equalTo: promptsContainer.bottomAnchor, constant: 20),
             skipLabel.leadingAnchor.constraint(equalTo: contentView.leadingAnchor),
-            skipLabel.trailingAnchor.constraint(equalTo: contentView.trailingAnchor)
+            skipLabel.trailingAnchor.constraint(equalTo: contentView.trailingAnchor),
+            skipLabel.bottomAnchor.constraint(lessThanOrEqualTo: contentView.bottomAnchor, constant: -20)
         ])
 
         // Bio is OPTIONAL - enable continue button immediately

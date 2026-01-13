@@ -3,7 +3,7 @@ import UIKit
 class LocationPreferenceViewController: BaseOnboardingViewController {
 
     // MARK: - UI Components
-    private let scrollView = UIScrollView()
+    private let locationScrollView = UIScrollView()
     private let stackView = UIStackView()
     private var selectedPreference: LocationPreference = .anywhere
     private var preferenceButtons: [LocationPreference: UIButton] = [:]
@@ -26,8 +26,7 @@ class LocationPreferenceViewController: BaseOnboardingViewController {
     // MARK: - Lifecycle
     override func configure() {
         step = .locationPreference
-        setTitle("Where do you want to find language partners?",
-                subtitle: "Choose your preferred location range")
+        setTitle("Location range?")
         setupScrollView()
         setupPreferenceButtons()
         setupDistanceSlider()
@@ -36,30 +35,30 @@ class LocationPreferenceViewController: BaseOnboardingViewController {
 
     // MARK: - Setup
     private func setupScrollView() {
-        scrollView.showsVerticalScrollIndicator = false
-        contentView.addSubview(scrollView)
-        scrollView.translatesAutoresizingMaskIntoConstraints = false
+        locationScrollView.showsVerticalScrollIndicator = false
+        contentView.addSubview(locationScrollView)
+        locationScrollView.translatesAutoresizingMaskIntoConstraints = false
 
         NSLayoutConstraint.activate([
-            scrollView.topAnchor.constraint(equalTo: contentView.topAnchor),
-            scrollView.leadingAnchor.constraint(equalTo: contentView.leadingAnchor),
-            scrollView.trailingAnchor.constraint(equalTo: contentView.trailingAnchor),
-            scrollView.bottomAnchor.constraint(equalTo: contentView.bottomAnchor)
+            locationScrollView.topAnchor.constraint(equalTo: contentView.topAnchor),
+            locationScrollView.leadingAnchor.constraint(equalTo: contentView.leadingAnchor),
+            locationScrollView.trailingAnchor.constraint(equalTo: contentView.trailingAnchor),
+            locationScrollView.bottomAnchor.constraint(equalTo: contentView.bottomAnchor)
         ])
 
         stackView.axis = .vertical
         stackView.spacing = 12
         stackView.alignment = .fill
-        scrollView.addSubview(stackView)
+        locationScrollView.addSubview(stackView)
 
         stackView.translatesAutoresizingMaskIntoConstraints = false
 
         NSLayoutConstraint.activate([
-            stackView.topAnchor.constraint(equalTo: scrollView.topAnchor, constant: 20),
-            stackView.leadingAnchor.constraint(equalTo: scrollView.leadingAnchor),
-            stackView.trailingAnchor.constraint(equalTo: scrollView.trailingAnchor),
-            stackView.bottomAnchor.constraint(equalTo: scrollView.bottomAnchor, constant: -20),
-            stackView.widthAnchor.constraint(equalTo: scrollView.widthAnchor)
+            stackView.topAnchor.constraint(equalTo: locationScrollView.topAnchor, constant: 20),
+            stackView.leadingAnchor.constraint(equalTo: locationScrollView.leadingAnchor),
+            stackView.trailingAnchor.constraint(equalTo: locationScrollView.trailingAnchor),
+            stackView.bottomAnchor.constraint(equalTo: locationScrollView.bottomAnchor, constant: -20),
+            stackView.widthAnchor.constraint(equalTo: locationScrollView.widthAnchor)
         ])
     }
 
