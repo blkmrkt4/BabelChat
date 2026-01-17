@@ -92,7 +92,7 @@ class AuthenticationViewController: UIViewController {
 
         // Second tagline
         taglineLabel2.text = "Speaking like a local is the fastest path to fluency"
-        taglineLabel2.font = .systemFont(ofSize: 15, weight: .regular)
+        taglineLabel2.font = .systemFont(ofSize: 18, weight: .medium)
         taglineLabel2.textColor = .white.withAlphaComponent(0.7)
         taglineLabel2.textAlignment = .center
         taglineLabel2.numberOfLines = 0
