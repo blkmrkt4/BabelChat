@@ -168,6 +168,13 @@ class AIConfigurationManager {
             ChatMessage(role: "user", content: text)
         ]
 
+        // Debug logging
+        print("🔍 Grammar Check Debug:")
+        print("   Text to analyze: '\(text)'")
+        print("   Text length: \(text.count)")
+        print("   Learning language: \(learningLanguage)")
+        print("   Explanation language: \(explanationLanguage ?? nativeLanguage)")
+
         return try await executeWithFallback(
             config: config,
             messages: messages,

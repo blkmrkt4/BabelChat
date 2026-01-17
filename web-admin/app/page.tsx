@@ -78,6 +78,9 @@ export default function AIModelConfiguration() {
   // Cost threshold for comparison
   const [costThreshold, setCostThreshold] = useState<number>(90)
 
+  // Model search filter
+  const [modelSearch, setModelSearch] = useState<string>('')
+
   useEffect(() => {
     loadData()
     loadPromptTemplates()
@@ -526,13 +529,22 @@ export default function AIModelConfiguration() {
       <div className="bg-white rounded-lg shadow overflow-hidden">
         <div className="p-4 bg-gray-50 border-b">
           <div className="flex items-center justify-between">
-            <div>
-              <h2 className="text-lg font-semibold">
-                4. Select Models for {CATEGORY_OPTIONS.find(c => c.value === selectedCategory)?.label}
-              </h2>
-              <p className="text-sm text-gray-600 mt-1">
-                Choose 1 primary model and up to 4 fallback models
-              </p>
+            <div className="flex items-center gap-4">
+              <div>
+                <h2 className="text-lg font-semibold">
+                  4. Select Models for {CATEGORY_OPTIONS.find(c => c.value === selectedCategory)?.label}
+                </h2>
+                <p className="text-sm text-gray-600 mt-1">
+                  Choose 1 primary model and up to 4 fallback models
+                </p>
+              </div>
+              <input
+                type="text"
+                placeholder="Search models..."
+                value={modelSearch}
+                onChange={(e) => setModelSearch(e.target.value)}
+                className="px-3 py-2 border-2 border-gray-300 rounded-lg focus:border-blue-500 focus:outline-none w-64 text-sm"
+              />
             </div>
             <div className="flex items-center gap-3">
               <label className="text-sm font-medium text-gray-700">Cost Threshold:</label>
@@ -588,7 +600,16 @@ export default function AIModelConfiguration() {
                 </tr>
               </thead>
               <tbody className="divide-y">
-                {sortedModels.map((model) => (
+                {sortedModels
+                  .filter((model) => {
+                    if (!modelSearch.trim()) return true
+                    const search = modelSearch.toLowerCase()
+                    return (
+                      model.modelId.toLowerCase().includes(search) ||
+                      model.modelName.toLowerCase().includes(search)
+                    )
+                  })
+                  .map((model) => (
                   <tr key={model.modelId} className="hover:bg-gray-50">
                     {/* Primary Radio */}
                     <td className="px-4 py-3 text-center">

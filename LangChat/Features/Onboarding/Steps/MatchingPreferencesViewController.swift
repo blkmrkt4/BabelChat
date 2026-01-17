@@ -34,12 +34,17 @@ class MatchingPreferencesViewController: UIViewController {
     // Blur Photos
     private let blurPhotosSwitch = UISwitch()
 
+    // Looking For (Relationship Intent)
+    private var lookingForButtons: [UIButton] = []
+    private let lookingForOptions = ["Friendship", "Language Exchange", "Dating", "Networking", "Travel Buddy"]
+
     // Save confirmation
     private let saveConfirmationLabel = UILabel()
 
     // MARK: - Properties
     private var isStrictlyPlatonic: Bool = false
     private var blurPhotosUntilMatch: Bool = false
+    private var selectedRelationshipIntents: Set<String> = []
     private var selectedGender: Gender?
     private var selectedGenderPreference: GenderPreference = .all
     private var selectedLocationPreference: LocationPreference = .anywhere
@@ -106,6 +111,11 @@ class MatchingPreferencesViewController: UIViewController {
 
         // Proficiency
         selectedLevels = ProficiencySelection.fromDefaults()
+
+        // Relationship intents (Looking For)
+        if let intents = UserDefaults.standard.array(forKey: "relationshipIntents") as? [String] {
+            selectedRelationshipIntents = Set(intents)
+        }
     }
 
     // MARK: - Setup
@@ -127,7 +137,10 @@ class MatchingPreferencesViewController: UIViewController {
         // 2. Blur Photos section
         stackView.addArrangedSubview(createBlurPhotosSection())
 
-        // 3. Dating Preferences section (gender + preference)
+        // 3. Looking For section
+        stackView.addArrangedSubview(createLookingForSection())
+
+        // 4. Dating Preferences section (gender + preference)
         setupDatingPreferencesSection()
         stackView.addArrangedSubview(datingPreferencesContainer)
 
@@ -284,6 +297,127 @@ class MatchingPreferencesViewController: UIViewController {
                 print("✅ Saved blur photos: \(blurPhotosUntilMatch)")
             } catch {
                 print("❌ Failed to save blur photos: \(error)")
+            }
+        }
+    }
+
+    // MARK: - Looking For Section
+    private func createLookingForSection() -> UIView {
+        let container = UIView()
+        container.backgroundColor = .secondarySystemBackground
+        container.layer.cornerRadius = 12
+
+        let innerStack = UIStackView()
+        innerStack.axis = .vertical
+        innerStack.spacing = 12
+        innerStack.alignment = .fill
+        container.addSubview(innerStack)
+
+        // Title
+        let titleLabel = UILabel()
+        titleLabel.text = "Looking For"
+        titleLabel.font = .systemFont(ofSize: 17, weight: .semibold)
+        titleLabel.textColor = .label
+        innerStack.addArrangedSubview(titleLabel)
+
+        // Subtitle
+        let subtitleLabel = UILabel()
+        subtitleLabel.text = "Select all that apply"
+        subtitleLabel.font = .systemFont(ofSize: 14, weight: .regular)
+        subtitleLabel.textColor = .secondaryLabel
+        innerStack.addArrangedSubview(subtitleLabel)
+
+        // Options - using a flow layout with 2 columns
+        let optionsStack = UIStackView()
+        optionsStack.axis = .vertical
+        optionsStack.spacing = 8
+        optionsStack.alignment = .fill
+
+        // Create rows of 2 buttons each
+        var rowStack: UIStackView?
+        for (index, option) in lookingForOptions.enumerated() {
+            if index % 2 == 0 {
+                rowStack = UIStackView()
+                rowStack?.axis = .horizontal
+                rowStack?.spacing = 8
+                rowStack?.distribution = .fillEqually
+                optionsStack.addArrangedSubview(rowStack!)
+            }
+
+            let button = createLookingForButton(title: option, tag: index)
+            lookingForButtons.append(button)
+            rowStack?.addArrangedSubview(button)
+
+            // Highlight if selected
+            if selectedRelationshipIntents.contains(option) {
+                button.layer.borderColor = UIColor.systemBlue.cgColor
+                button.backgroundColor = UIColor.systemBlue.withAlphaComponent(0.1)
+            }
+        }
+
+        // Add empty view if odd number of options
+        if lookingForOptions.count % 2 != 0 {
+            let spacer = UIView()
+            rowStack?.addArrangedSubview(spacer)
+        }
+
+        innerStack.addArrangedSubview(optionsStack)
+
+        // Layout
+        innerStack.translatesAutoresizingMaskIntoConstraints = false
+
+        NSLayoutConstraint.activate([
+            innerStack.topAnchor.constraint(equalTo: container.topAnchor, constant: 16),
+            innerStack.leadingAnchor.constraint(equalTo: container.leadingAnchor, constant: 16),
+            innerStack.trailingAnchor.constraint(equalTo: container.trailingAnchor, constant: -16),
+            innerStack.bottomAnchor.constraint(equalTo: container.bottomAnchor, constant: -16)
+        ])
+
+        return container
+    }
+
+    private func createLookingForButton(title: String, tag: Int) -> UIButton {
+        let button = UIButton(type: .system)
+        button.setTitle(title, for: .normal)
+        button.titleLabel?.font = .systemFont(ofSize: 14, weight: .medium)
+        button.setTitleColor(.label, for: .normal)
+        button.backgroundColor = .tertiarySystemBackground
+        button.layer.cornerRadius = 8
+        button.layer.borderWidth = 2
+        button.layer.borderColor = UIColor.clear.cgColor
+        button.tag = tag
+        button.heightAnchor.constraint(equalToConstant: 44).isActive = true
+        button.addTarget(self, action: #selector(lookingForButtonTapped(_:)), for: .touchUpInside)
+        return button
+    }
+
+    @objc private func lookingForButtonTapped(_ sender: UIButton) {
+        let option = lookingForOptions[sender.tag]
+
+        if selectedRelationshipIntents.contains(option) {
+            selectedRelationshipIntents.remove(option)
+            sender.layer.borderColor = UIColor.clear.cgColor
+            sender.backgroundColor = .tertiarySystemBackground
+        } else {
+            selectedRelationshipIntents.insert(option)
+            sender.layer.borderColor = UIColor.systemBlue.cgColor
+            sender.backgroundColor = UIColor.systemBlue.withAlphaComponent(0.1)
+        }
+
+        saveLookingForPreferences()
+        UIImpactFeedbackGenerator(style: .light).impactOccurred()
+    }
+
+    private func saveLookingForPreferences() {
+        UserDefaults.standard.set(Array(selectedRelationshipIntents), forKey: "relationshipIntents")
+
+        Task {
+            do {
+                try await SupabaseService.shared.updateProfile(ProfileUpdate(relationshipIntents: Array(selectedRelationshipIntents)))
+                await MainActor.run { showSaveConfirmation() }
+                print("✅ Saved relationship intents: \(selectedRelationshipIntents)")
+            } catch {
+                print("❌ Failed to save relationship intents: \(error)")
             }
         }
     }

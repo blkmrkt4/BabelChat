@@ -46,6 +46,9 @@ class AppDelegate: UIResponder, UIApplicationDelegate {
         // Pre-initialize TTS service to see debug logs
         _ = TTSService.shared
 
+        // Clear AI config cache on launch to ensure fresh prompts
+        AIConfigService.shared.clearCache()
+
         // Override point for customization after application launch.
         return true
     }

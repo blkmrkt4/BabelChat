@@ -39,6 +39,13 @@ class AIConfigService {
         _ = try await getConfiguration(for: .scoring)
     }
 
+    /// Clear all cached configurations (forces fresh fetch on next request)
+    func clearCache() {
+        cachedConfigs.removeAll()
+        lastFetchTime = nil
+        print("🗑️ AI Config cache cleared")
+    }
+
     // MARK: - Private Helpers
 
     private func isCacheValid() -> Bool {

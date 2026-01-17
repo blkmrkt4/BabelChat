@@ -1261,6 +1261,7 @@ struct ProfileUpdate: Codable {
     var maxProficiencyLevel: String?
     var openToLanguages: [String]?
     var profilePhotos: [String]?
+    var relationshipIntents: [String]?
 
     enum CodingKeys: String, CodingKey {
         case bio, location, city, country, latitude, longitude, gender
@@ -1282,6 +1283,7 @@ struct ProfileUpdate: Codable {
         case maxProficiencyLevel = "max_proficiency_level"
         case openToLanguages = "open_to_languages"
         case profilePhotos = "profile_photos"
+        case relationshipIntents = "relationship_intents"
     }
 }
 

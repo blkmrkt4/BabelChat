@@ -28,7 +28,7 @@ class ProfileSettingsViewController: UIViewController {
             case .languages:
                 return [.nativeLanguage, .learningLanguages]
             case .preferences:
-                return [.relationshipIntent, .learningGoals, .strictlyPlatonic]
+                return [.learningGoals]
             }
         }
     }
