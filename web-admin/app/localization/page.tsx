@@ -51,6 +51,7 @@ const SUPPORTED_LANGUAGES = [
 
 export default function LocalizationPage() {
   const [translations, setTranslations] = useState<Translation[]>([])
+  const [englishStrings, setEnglishStrings] = useState<Translation[]>([])
   const [stats, setStats] = useState<{
     totalStrings: number
     languageStats: Record<string, LanguageStats>
@@ -68,8 +69,20 @@ export default function LocalizationPage() {
   const [importResult, setImportResult] = useState<{ imported: number; skipped: number; errors?: string[] } | null>(null)
   const fileInputRef = useRef<HTMLInputElement>(null)
 
+  // Translation state
+  const [showTranslateModal, setShowTranslateModal] = useState(false)
+  const [translateTarget, setTranslateTarget] = useState<string>('')
+  const [translating, setTranslating] = useState(false)
+  const [translateProgress, setTranslateProgress] = useState<{
+    status: string
+    successful?: number
+    failed?: number
+    total?: number
+  } | null>(null)
+
   useEffect(() => {
     loadStats()
+    loadEnglishStrings()
   }, [])
 
   useEffect(() => {
@@ -90,6 +103,18 @@ export default function LocalizationPage() {
       setStats(result)
     } catch (error) {
       console.error('Failed to load stats:', error)
+    }
+  }
+
+  async function loadEnglishStrings() {
+    try {
+      const response = await fetch('/api/localization?language_code=en')
+      const result = await response.json()
+      if (response.ok) {
+        setEnglishStrings(result.data || [])
+      }
+    } catch (error) {
+      console.error('Failed to load English strings:', error)
     }
   }
 
@@ -175,6 +200,7 @@ export default function LocalizationPage() {
 
       setImportResult(result)
       loadStats()
+      loadEnglishStrings()
       loadTranslations(selectedLanguage)
     } catch (error) {
       console.error('Failed to import:', error)
@@ -197,6 +223,71 @@ export default function LocalizationPage() {
     window.open(url, '_blank')
   }
 
+  async function handleTranslate(targetLang: string) {
+    if (englishStrings.length === 0) {
+      alert('No English source strings found. Please import English strings first.')
+      return
+    }
+
+    setTranslateTarget(targetLang)
+    setShowTranslateModal(true)
+  }
+
+  async function runTranslation() {
+    if (!translateTarget || englishStrings.length === 0) return
+
+    setTranslating(true)
+    setTranslateProgress({ status: 'Starting translation...' })
+
+    try {
+      const strings = englishStrings.map(s => ({
+        string_key: s.string_key,
+        value: s.value,
+        context: s.context,
+      }))
+
+      setTranslateProgress({
+        status: `Translating ${strings.length} strings to ${SUPPORTED_LANGUAGES.find(l => l.code === translateTarget)?.name}...`,
+        total: strings.length,
+      })
+
+      const response = await fetch('/api/localization/translate', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          strings,
+          targetLanguage: translateTarget,
+        }),
+      })
+
+      const result = await response.json()
+
+      if (!response.ok) {
+        throw new Error(result.error || 'Translation failed')
+      }
+
+      setTranslateProgress({
+        status: 'Translation complete!',
+        successful: result.successful,
+        failed: result.failed,
+        total: result.total,
+      })
+
+      // Refresh data
+      loadStats()
+      if (selectedLanguage === translateTarget) {
+        loadTranslations(translateTarget)
+      }
+    } catch (error) {
+      console.error('Translation error:', error)
+      setTranslateProgress({
+        status: `Error: ${error instanceof Error ? error.message : 'Translation failed'}`,
+      })
+    } finally {
+      setTranslating(false)
+    }
+  }
+
   const filteredTranslations = translations.filter(
     t =>
       t.string_key.toLowerCase().includes(filter.toLowerCase()) ||
@@ -214,6 +305,8 @@ export default function LocalizationPage() {
     return { ...lang, total, verified, percentage, verifiedPercentage }
   })
 
+  const englishStats = languageCompletion.find(l => l.code === 'en')
+
   return (
     <div className="space-y-6">
       <div className="flex justify-between items-center">
@@ -221,7 +314,7 @@ export default function LocalizationPage() {
           <h2 className="text-2xl font-bold">App Localization</h2>
           <p className="text-gray-600 mt-1">
             Manage UI string translations for the Fluenca iOS app.
-            {stats && ` ${stats.totalStrings} unique strings.`}
+            {englishStats && ` ${englishStats.total} source strings.`}
           </p>
         </div>
         <div className="flex gap-2">
@@ -246,44 +339,83 @@ export default function LocalizationPage() {
         </div>
       </div>
 
+      {/* Quick Start Guide */}
+      {englishStrings.length === 0 && (
+        <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
+          <h3 className="font-semibold text-blue-900 mb-2">Getting Started</h3>
+          <ol className="list-decimal list-inside space-y-1 text-sm text-blue-800">
+            <li>Click <strong>Import</strong> and add your English source strings</li>
+            <li>Format: <code className="bg-blue-100 px-1 rounded">{`[{"string_key": "welcome", "value": "Welcome", "language_code": "en", "context": "Home screen"}]`}</code></li>
+            <li>Once imported, click <strong>Translate</strong> on any language to auto-translate using AI</li>
+          </ol>
+        </div>
+      )}
+
       {/* Language Grid */}
       <div className="bg-gray-50 rounded-lg p-4">
-        <h3 className="text-lg font-semibold mb-3">Translation Coverage</h3>
-        <div className="grid grid-cols-3 md:grid-cols-5 lg:grid-cols-7 gap-2">
+        <div className="flex justify-between items-center mb-3">
+          <h3 className="text-lg font-semibold">Translation Coverage</h3>
+          {englishStrings.length > 0 && (
+            <span className="text-sm text-gray-500">
+              Click a language card to view, or click Translate to generate translations
+            </span>
+          )}
+        </div>
+        <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-7 gap-2">
           {languageCompletion.map(lang => (
-            <button
+            <div
               key={lang.code}
-              onClick={() => setSelectedLanguage(lang.code)}
-              className={`p-3 rounded-lg text-left transition-all ${
+              className={`p-3 rounded-lg transition-all ${
                 selectedLanguage === lang.code
                   ? 'bg-blue-600 text-white ring-2 ring-blue-400'
-                  : 'bg-white hover:bg-gray-100 border'
+                  : 'bg-white border'
               }`}
             >
-              <div className="font-medium text-sm truncate">{lang.name}</div>
-              <div className={`text-xs ${selectedLanguage === lang.code ? 'text-blue-100' : 'text-gray-500'}`}>
-                {lang.code.toUpperCase()}
-              </div>
-              <div className="mt-1">
+              <button
+                onClick={() => setSelectedLanguage(lang.code)}
+                className="w-full text-left"
+              >
+                <div className="font-medium text-sm truncate">{lang.name}</div>
                 <div className={`text-xs ${selectedLanguage === lang.code ? 'text-blue-100' : 'text-gray-500'}`}>
-                  {lang.total} / {stats?.totalStrings || 0}
+                  {lang.code.toUpperCase()}
                 </div>
-                <div className="w-full bg-gray-200 rounded-full h-1.5 mt-1">
-                  <div
-                    className={`h-1.5 rounded-full ${
-                      lang.percentage === 100 ? 'bg-green-500' : lang.percentage > 50 ? 'bg-yellow-500' : 'bg-red-400'
-                    }`}
-                    style={{ width: `${lang.percentage}%` }}
-                  />
+                <div className="mt-1">
+                  <div className={`text-xs ${selectedLanguage === lang.code ? 'text-blue-100' : 'text-gray-500'}`}>
+                    {lang.total} / {englishStats?.total || 0}
+                  </div>
+                  <div className="w-full bg-gray-200 rounded-full h-1.5 mt-1">
+                    <div
+                      className={`h-1.5 rounded-full ${
+                        lang.percentage === 100 ? 'bg-green-500' : lang.percentage > 50 ? 'bg-yellow-500' : 'bg-red-400'
+                      }`}
+                      style={{ width: `${lang.percentage}%` }}
+                    />
+                  </div>
                 </div>
-              </div>
-            </button>
+              </button>
+              {/* Translate button for non-English languages with less than 100% coverage */}
+              {lang.code !== 'en' && lang.percentage < 100 && englishStrings.length > 0 && (
+                <button
+                  onClick={(e) => {
+                    e.stopPropagation()
+                    handleTranslate(lang.code)
+                  }}
+                  className={`mt-2 w-full text-xs px-2 py-1 rounded font-medium ${
+                    selectedLanguage === lang.code
+                      ? 'bg-white/20 text-white hover:bg-white/30'
+                      : 'bg-purple-100 text-purple-700 hover:bg-purple-200'
+                  }`}
+                >
+                  Translate
+                </button>
+              )}
+            </div>
           ))}
         </div>
       </div>
 
       {/* Legend */}
-      <div className="flex items-center gap-4 text-sm text-gray-600">
+      <div className="flex items-center gap-4 text-sm text-gray-600 flex-wrap">
         <div className="flex items-center gap-1">
           <div className="w-3 h-3 rounded bg-green-500" /> 100% translated
         </div>
@@ -298,6 +430,12 @@ export default function LocalizationPage() {
         </div>
         <div className="flex items-center gap-1">
           <span className="text-yellow-600 font-bold">?</span> Needs Review
+        </div>
+        <div className="flex items-center gap-1">
+          <span className="bg-purple-100 text-purple-700 text-xs px-2 py-0.5 rounded">llm</span> AI-translated
+        </div>
+        <div className="flex items-center gap-1">
+          <span className="bg-blue-100 text-blue-700 text-xs px-2 py-0.5 rounded">human</span> Human-edited
         </div>
       </div>
 
@@ -322,7 +460,9 @@ export default function LocalizationPage() {
       ) : filteredTranslations.length === 0 ? (
         <div className="text-center py-8 text-gray-500">
           {translations.length === 0
-            ? `No translations found for ${selectedLanguage}. Import some translations to get started.`
+            ? selectedLanguage === 'en'
+              ? 'No English source strings yet. Click Import to add them.'
+              : `No translations for ${SUPPORTED_LANGUAGES.find(l => l.code === selectedLanguage)?.name} yet. Click Translate to generate them.`
             : 'No strings match your search.'}
         </div>
       ) : (
@@ -331,7 +471,9 @@ export default function LocalizationPage() {
             <thead className="bg-gray-50">
               <tr>
                 <th className="px-4 py-3 text-left text-sm font-semibold text-gray-700">Key</th>
-                <th className="px-4 py-3 text-left text-sm font-semibold text-gray-700">Translation</th>
+                <th className="px-4 py-3 text-left text-sm font-semibold text-gray-700">
+                  {selectedLanguage === 'en' ? 'Source Text' : 'Translation'}
+                </th>
                 <th className="px-4 py-3 text-left text-sm font-semibold text-gray-700 w-24">Source</th>
                 <th className="px-4 py-3 text-left text-sm font-semibold text-gray-700 w-24">Status</th>
                 <th className="px-4 py-3 text-left text-sm font-semibold text-gray-700 w-32">Actions</th>
@@ -421,6 +563,10 @@ export default function LocalizationPage() {
             <h3 className="text-xl font-bold mb-4">Import Translations</h3>
 
             <div className="space-y-4">
+              <div className="bg-gray-50 p-3 rounded text-sm">
+                <strong>Tip:</strong> Start by importing English source strings with <code className="bg-gray-200 px-1 rounded">language_code: "en"</code>
+              </div>
+
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-1">
                   Upload JSON File
@@ -446,10 +592,18 @@ export default function LocalizationPage() {
   {
     "string_key": "welcome_title",
     "context": "Main screen title",
-    "language_code": "es",
-    "value": "Bienvenido",
-    "source": "llm",
-    "verified": false
+    "language_code": "en",
+    "value": "Welcome to Fluenca",
+    "source": "human",
+    "verified": true
+  },
+  {
+    "string_key": "start_learning_button",
+    "context": "CTA button on onboarding",
+    "language_code": "en",
+    "value": "Start Learning",
+    "source": "human",
+    "verified": true
   }
 ]`}
                   className="w-full border rounded px-3 py-2 font-mono text-sm"
@@ -501,6 +655,65 @@ export default function LocalizationPage() {
               >
                 {saving ? 'Importing...' : 'Import'}
               </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Translate Modal */}
+      {showTranslateModal && (
+        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
+          <div className="bg-white rounded-lg shadow-xl p-6 w-full max-w-md">
+            <h3 className="text-xl font-bold mb-4">
+              Translate to {SUPPORTED_LANGUAGES.find(l => l.code === translateTarget)?.name}
+            </h3>
+
+            <div className="space-y-4">
+              <div className="bg-purple-50 border border-purple-200 rounded p-3">
+                <div className="text-sm">
+                  <strong>{englishStrings.length}</strong> English strings will be translated using AI.
+                </div>
+                <div className="text-xs text-gray-600 mt-1">
+                  Translations will be marked as "llm" source and need review.
+                </div>
+              </div>
+
+              {translateProgress && (
+                <div className={`p-3 rounded ${
+                  translateProgress.status.includes('Error') ? 'bg-red-50' :
+                  translateProgress.status.includes('complete') ? 'bg-green-50' : 'bg-blue-50'
+                }`}>
+                  <div className="font-medium text-sm">{translateProgress.status}</div>
+                  {translateProgress.successful !== undefined && (
+                    <div className="text-sm mt-1">
+                      Successful: {translateProgress.successful} | Failed: {translateProgress.failed || 0}
+                    </div>
+                  )}
+                </div>
+              )}
+            </div>
+
+            <div className="flex justify-end gap-2 mt-6">
+              <button
+                onClick={() => {
+                  setShowTranslateModal(false)
+                  setTranslateTarget('')
+                  setTranslateProgress(null)
+                }}
+                disabled={translating}
+                className="px-4 py-2 bg-gray-100 text-gray-700 rounded hover:bg-gray-200 disabled:opacity-50"
+              >
+                {translateProgress?.status.includes('complete') ? 'Done' : 'Cancel'}
+              </button>
+              {!translateProgress?.status.includes('complete') && (
+                <button
+                  onClick={runTranslation}
+                  disabled={translating}
+                  className="px-4 py-2 bg-purple-600 text-white rounded hover:bg-purple-700 disabled:bg-purple-400"
+                >
+                  {translating ? 'Translating...' : 'Start Translation'}
+                </button>
+              )}
             </div>
           </div>
         </div>
