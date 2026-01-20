@@ -9,40 +9,50 @@ const supabase = createClient(supabaseUrl, supabaseKey)
 // GET - Fetch translation statistics by language
 export async function GET() {
   try {
-    // Get all translations
-    const { data: translations, error } = await supabase
+    // Get total count of English strings (our source)
+    const { count: totalStrings, error: countError } = await supabase
       .from('app_translations')
-      .select('language_code, verified')
+      .select('*', { count: 'exact', head: true })
+      .eq('language_code', 'en')
 
-    if (error) {
-      console.error('Error fetching translation stats:', error)
-      return NextResponse.json({ error: error.message }, { status: 500 })
+    if (countError) {
+      console.error('Error fetching total count:', countError)
+      return NextResponse.json({ error: countError.message }, { status: 500 })
     }
 
-    // Get unique string keys to know total count
-    const { data: uniqueKeys, error: keysError } = await supabase
+    // Get all distinct language codes
+    const { data: languages, error: langError } = await supabase
       .from('app_translations')
-      .select('string_key')
+      .select('language_code')
 
-    if (keysError) {
-      console.error('Error fetching unique keys:', keysError)
-      return NextResponse.json({ error: keysError.message }, { status: 500 })
+    if (langError) {
+      console.error('Error fetching languages:', langError)
+      return NextResponse.json({ error: langError.message }, { status: 500 })
     }
 
-    // Count unique string keys
-    const uniqueKeySet = new Set(uniqueKeys?.map(k => k.string_key) || [])
-    const totalStrings = uniqueKeySet.size
+    // Get unique language codes
+    const uniqueLanguages = [...new Set(languages?.map(l => l.language_code) || [])]
 
-    // Group by language
+    // Get counts for each language
     const stats: Record<string, { total: number; verified: number }> = {}
 
-    for (const t of translations || []) {
-      if (!stats[t.language_code]) {
-        stats[t.language_code] = { total: 0, verified: 0 }
-      }
-      stats[t.language_code].total++
-      if (t.verified) {
-        stats[t.language_code].verified++
+    for (const langCode of uniqueLanguages) {
+      // Get total count for this language
+      const { count: total } = await supabase
+        .from('app_translations')
+        .select('*', { count: 'exact', head: true })
+        .eq('language_code', langCode)
+
+      // Get verified count for this language
+      const { count: verified } = await supabase
+        .from('app_translations')
+        .select('*', { count: 'exact', head: true })
+        .eq('language_code', langCode)
+        .eq('verified', true)
+
+      stats[langCode] = {
+        total: total || 0,
+        verified: verified || 0,
       }
     }
 
