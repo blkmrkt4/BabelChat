@@ -560,13 +560,89 @@ export default function LocalizationPage() {
       {showImportModal && (
         <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
           <div className="bg-white rounded-lg shadow-xl p-6 w-full max-w-2xl max-h-[80vh] overflow-y-auto">
-            <h3 className="text-xl font-bold mb-4">Import Translations</h3>
+            <h3 className="text-xl font-bold mb-4">Import Source Strings</h3>
 
             <div className="space-y-4">
-              <div className="bg-gray-50 p-3 rounded text-sm">
-                <strong>Tip:</strong> Start by importing English source strings with <code className="bg-gray-200 px-1 rounded">language_code: "en"</code>
+              {/* Excel Upload - Primary Option */}
+              <div className="bg-green-50 border-2 border-green-200 rounded-lg p-4">
+                <label className="block text-sm font-semibold text-green-800 mb-2">
+                  Upload Excel File (Recommended)
+                </label>
+                <p className="text-xs text-green-700 mb-2">
+                  Upload your localization spreadsheet. Must have "String Key" and "English" columns.
+                </p>
+                <input
+                  type="file"
+                  accept=".xlsx,.xls"
+                  onChange={async (e) => {
+                    const file = e.target.files?.[0]
+                    if (!file) return
+
+                    setSaving(true)
+                    setImportResult(null)
+
+                    try {
+                      const formData = new FormData()
+                      formData.append('file', file)
+
+                      const parseResponse = await fetch('/api/localization/parse-excel', {
+                        method: 'POST',
+                        body: formData,
+                      })
+
+                      const parseResult = await parseResponse.json()
+
+                      if (!parseResponse.ok) {
+                        alert(`Failed to parse Excel: ${parseResult.error}`)
+                        setSaving(false)
+                        return
+                      }
+
+                      // Now import the parsed translations
+                      const importResponse = await fetch('/api/localization/import', {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({
+                          translations: parseResult.translations,
+                          overwrite: importOverwrite
+                        }),
+                      })
+
+                      const importResult = await importResponse.json()
+
+                      if (!importResponse.ok) {
+                        throw new Error(importResult.error || 'Failed to import')
+                      }
+
+                      setImportResult({
+                        imported: importResult.imported,
+                        skipped: importResult.skipped,
+                        errors: importResult.errors
+                      })
+
+                      loadStats()
+                      loadEnglishStrings()
+                      loadTranslations(selectedLanguage)
+                    } catch (error) {
+                      console.error('Excel import error:', error)
+                      alert('Failed to import Excel file')
+                    } finally {
+                      setSaving(false)
+                    }
+                  }}
+                  className="w-full border border-green-300 rounded px-3 py-2 bg-white"
+                  disabled={saving}
+                />
               </div>
 
+              {/* Divider */}
+              <div className="flex items-center gap-4">
+                <div className="flex-1 border-t border-gray-300" />
+                <span className="text-sm text-gray-500">or</span>
+                <div className="flex-1 border-t border-gray-300" />
+              </div>
+
+              {/* JSON Upload - Secondary Option */}
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-1">
                   Upload JSON File
@@ -587,25 +663,8 @@ export default function LocalizationPage() {
                 <textarea
                   value={importText}
                   onChange={(e) => setImportText(e.target.value)}
-                  rows={10}
-                  placeholder={`[
-  {
-    "string_key": "welcome_title",
-    "context": "Main screen title",
-    "language_code": "en",
-    "value": "Welcome to Fluenca",
-    "source": "human",
-    "verified": true
-  },
-  {
-    "string_key": "start_learning_button",
-    "context": "CTA button on onboarding",
-    "language_code": "en",
-    "value": "Start Learning",
-    "source": "human",
-    "verified": true
-  }
-]`}
+                  rows={6}
+                  placeholder={`[{"string_key": "welcome", "value": "Welcome", "language_code": "en", "context": "Home screen"}]`}
                   className="w-full border rounded px-3 py-2 font-mono text-sm"
                 />
               </div>
@@ -653,7 +712,7 @@ export default function LocalizationPage() {
                 disabled={!importText.trim() || saving}
                 className="px-4 py-2 bg-blue-600 text-white rounded hover:bg-blue-700 disabled:bg-blue-400"
               >
-                {saving ? 'Importing...' : 'Import'}
+                {saving ? 'Importing...' : 'Import JSON'}
               </button>
             </div>
           </div>
