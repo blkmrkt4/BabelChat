@@ -73,10 +73,12 @@ export default function LocalizationPage() {
   const [showTranslateModal, setShowTranslateModal] = useState(false)
   const [translateTarget, setTranslateTarget] = useState<string>('')
   const [translating, setTranslating] = useState(false)
+  const [retranslateAll, setRetranslateAll] = useState(false)
   const [translateProgress, setTranslateProgress] = useState<{
     status: string
     successful?: number
     failed?: number
+    skipped?: number
     total?: number
   } | null>(null)
 
@@ -246,8 +248,11 @@ export default function LocalizationPage() {
         context: s.context,
       }))
 
+      const targetLangName = SUPPORTED_LANGUAGES.find(l => l.code === translateTarget)?.name
       setTranslateProgress({
-        status: `Translating ${strings.length} strings to ${SUPPORTED_LANGUAGES.find(l => l.code === translateTarget)?.name}...`,
+        status: retranslateAll
+          ? `Re-translating all ${strings.length} strings to ${targetLangName}...`
+          : `Translating missing strings to ${targetLangName}...`,
         total: strings.length,
       })
 
@@ -257,6 +262,7 @@ export default function LocalizationPage() {
         body: JSON.stringify({
           strings,
           targetLanguage: translateTarget,
+          retranslateAll,
         }),
       })
 
@@ -266,10 +272,16 @@ export default function LocalizationPage() {
         throw new Error(result.error || 'Translation failed')
       }
 
+      const statusParts = []
+      if (result.skipped > 0) statusParts.push(`${result.skipped} already translated`)
+      if (result.successful > 0) statusParts.push(`${result.successful} new translations`)
+      if (result.failed > 0) statusParts.push(`${result.failed} failed`)
+
       setTranslateProgress({
-        status: 'Translation complete!',
+        status: result.message || `Translation complete! ${statusParts.join(', ')}`,
         successful: result.successful,
         failed: result.failed,
+        skipped: result.skipped,
         total: result.total,
       })
 
@@ -393,8 +405,8 @@ export default function LocalizationPage() {
                   </div>
                 </div>
               </button>
-              {/* Translate button for non-English languages with less than 100% coverage */}
-              {lang.code !== 'en' && lang.percentage < 100 && englishStrings.length > 0 && (
+              {/* Translate button for non-English languages */}
+              {lang.code !== 'en' && englishStrings.length > 0 && (
                 <button
                   onClick={(e) => {
                     e.stopPropagation()
@@ -403,10 +415,12 @@ export default function LocalizationPage() {
                   className={`mt-2 w-full text-xs px-2 py-1 rounded font-medium ${
                     selectedLanguage === lang.code
                       ? 'bg-white/20 text-white hover:bg-white/30'
-                      : 'bg-purple-100 text-purple-700 hover:bg-purple-200'
+                      : lang.percentage === 100
+                        ? 'bg-gray-100 text-gray-600 hover:bg-gray-200'
+                        : 'bg-purple-100 text-purple-700 hover:bg-purple-200'
                   }`}
                 >
-                  Translate
+                  {lang.percentage === 100 ? 'Re-translate' : 'Translate'}
                 </button>
               )}
             </div>
@@ -728,24 +742,57 @@ export default function LocalizationPage() {
             </h3>
 
             <div className="space-y-4">
-              <div className="bg-purple-50 border border-purple-200 rounded p-3">
-                <div className="text-sm">
-                  <strong>{englishStrings.length}</strong> English strings will be translated using AI.
-                </div>
-                <div className="text-xs text-gray-600 mt-1">
-                  Translations will be marked as "llm" source and need review.
-                </div>
+              {(() => {
+                const targetStats = stats?.languageStats[translateTarget]
+                const existingCount = targetStats?.total || 0
+                const missingCount = englishStrings.length - existingCount
+                return (
+                  <div className="bg-purple-50 border border-purple-200 rounded p-3">
+                    <div className="text-sm space-y-1">
+                      <div><strong>{englishStrings.length}</strong> total English source strings</div>
+                      <div className="text-green-700"><strong>{existingCount}</strong> already translated</div>
+                      <div className="text-orange-600"><strong>{missingCount}</strong> missing translations</div>
+                    </div>
+                    <div className="text-xs text-gray-600 mt-2">
+                      New translations will be marked as "llm" source and need review.
+                    </div>
+                  </div>
+                )
+              })()}
+
+              <div className="flex items-center gap-2">
+                <input
+                  type="checkbox"
+                  id="retranslateAll"
+                  checked={retranslateAll}
+                  onChange={(e) => setRetranslateAll(e.target.checked)}
+                  disabled={translating}
+                />
+                <label htmlFor="retranslateAll" className="text-sm">
+                  Re-translate all strings (overwrite existing)
+                </label>
               </div>
+              <p className="text-xs text-gray-500 ml-6 -mt-2">
+                Use this when you want to use a better model or improve all translations.
+              </p>
 
               {translateProgress && (
                 <div className={`p-3 rounded ${
                   translateProgress.status.includes('Error') ? 'bg-red-50' :
-                  translateProgress.status.includes('complete') ? 'bg-green-50' : 'bg-blue-50'
+                  translateProgress.status.includes('complete') || translateProgress.status.includes('already') ? 'bg-green-50' : 'bg-blue-50'
                 }`}>
                   <div className="font-medium text-sm">{translateProgress.status}</div>
-                  {translateProgress.successful !== undefined && (
-                    <div className="text-sm mt-1">
-                      Successful: {translateProgress.successful} | Failed: {translateProgress.failed || 0}
+                  {(translateProgress.successful !== undefined || translateProgress.skipped !== undefined) && (
+                    <div className="text-sm mt-1 space-y-0.5">
+                      {translateProgress.skipped !== undefined && translateProgress.skipped > 0 && (
+                        <div className="text-gray-600">Skipped (existing): {translateProgress.skipped}</div>
+                      )}
+                      {translateProgress.successful !== undefined && translateProgress.successful > 0 && (
+                        <div className="text-green-700">Translated: {translateProgress.successful}</div>
+                      )}
+                      {translateProgress.failed !== undefined && translateProgress.failed > 0 && (
+                        <div className="text-red-600">Failed: {translateProgress.failed}</div>
+                      )}
                     </div>
                   )}
                 </div>
@@ -758,19 +805,20 @@ export default function LocalizationPage() {
                   setShowTranslateModal(false)
                   setTranslateTarget('')
                   setTranslateProgress(null)
+                  setRetranslateAll(false)
                 }}
                 disabled={translating}
                 className="px-4 py-2 bg-gray-100 text-gray-700 rounded hover:bg-gray-200 disabled:opacity-50"
               >
-                {translateProgress?.status.includes('complete') ? 'Done' : 'Cancel'}
+                {translateProgress?.status.includes('complete') || translateProgress?.status.includes('already') ? 'Done' : 'Cancel'}
               </button>
-              {!translateProgress?.status.includes('complete') && (
+              {!translateProgress?.status.includes('complete') && !translateProgress?.status.includes('already') && (
                 <button
                   onClick={runTranslation}
                   disabled={translating}
                   className="px-4 py-2 bg-purple-600 text-white rounded hover:bg-purple-700 disabled:bg-purple-400"
                 >
-                  {translating ? 'Translating...' : 'Start Translation'}
+                  {translating ? 'Translating...' : retranslateAll ? 'Re-translate All' : 'Translate Missing'}
                 </button>
               )}
             </div>

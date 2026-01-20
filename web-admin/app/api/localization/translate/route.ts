@@ -73,6 +73,7 @@ interface TranslateRequest {
   }>
   targetLanguage: string
   modelId?: string // Optional override
+  retranslateAll?: boolean // If true, re-translate all strings; if false (default), skip existing
 }
 
 // POST - Translate strings to a target language
@@ -82,7 +83,7 @@ export async function POST(request: Request) {
       return NextResponse.json({ error: 'OpenRouter API key not configured' }, { status: 500 })
     }
 
-    const { strings, targetLanguage, modelId }: TranslateRequest = await request.json()
+    const { strings, targetLanguage, modelId, retranslateAll = false }: TranslateRequest = await request.json()
 
     if (!strings || !Array.isArray(strings) || strings.length === 0) {
       return NextResponse.json({ error: 'strings array is required' }, { status: 400 })
@@ -96,7 +97,41 @@ export async function POST(request: Request) {
     const model = modelId || RECOMMENDED_MODELS[targetLanguage] || RECOMMENDED_MODELS.default
     const targetLangName = LANGUAGE_NAMES[targetLanguage] || targetLanguage
 
-    console.log(`🌐 Translating ${strings.length} strings to ${targetLangName} using ${model}`)
+    // Filter out strings that already have translations (unless retranslateAll is true)
+    let stringsToTranslate = strings
+    let skippedCount = 0
+
+    if (!retranslateAll) {
+      // Get existing translations for this language
+      const { data: existingTranslations } = await supabase
+        .from('app_translations')
+        .select('string_key')
+        .eq('language_code', targetLanguage)
+
+      if (existingTranslations && existingTranslations.length > 0) {
+        const existingKeys = new Set(existingTranslations.map(t => t.string_key))
+        stringsToTranslate = strings.filter(s => !existingKeys.has(s.string_key))
+        skippedCount = strings.length - stringsToTranslate.length
+      }
+    }
+
+    // If all strings already have translations, return early
+    if (stringsToTranslate.length === 0) {
+      return NextResponse.json({
+        success: true,
+        model,
+        targetLanguage,
+        total: strings.length,
+        skipped: skippedCount,
+        successful: 0,
+        failed: 0,
+        saved: 0,
+        message: 'All strings already have translations. Use "Re-translate all" to overwrite.',
+        results: [],
+      })
+    }
+
+    console.log(`🌐 Translating ${stringsToTranslate.length} strings to ${targetLangName} using ${model}${skippedCount > 0 ? ` (skipping ${skippedCount} existing)` : ''}`)
 
     const results: Array<{
       string_key: string
@@ -107,11 +142,11 @@ export async function POST(request: Request) {
 
     // Process in batches of 5 for more reliable responses
     const batchSize = 5
-    for (let i = 0; i < strings.length; i += batchSize) {
-      const batch = strings.slice(i, i + batchSize)
+    for (let i = 0; i < stringsToTranslate.length; i += batchSize) {
+      const batch = stringsToTranslate.slice(i, i + batchSize)
 
       // Build the translation prompt
-      const stringsToTranslate = batch.map((s, idx) => {
+      const batchPrompt = batch.map((s, idx) => {
         const contextNote = s.context ? ` (Context: ${s.context})` : ''
         return `${idx + 1}. "${s.value}"${contextNote}`
       }).join('\n')
@@ -131,7 +166,7 @@ Respond with ONLY a JSON array of translations in the same order, like:
 
 Do not include any explanation or markdown formatting.`
 
-      const userMessage = `Translate these ${batch.length} UI strings to ${targetLangName}:\n\n${stringsToTranslate}`
+      const userMessage = `Translate these ${batch.length} UI strings to ${targetLangName}:\n\n${batchPrompt}`
 
       // Retry logic for failed batches
       const maxRetries = 2
@@ -248,7 +283,7 @@ Do not include any explanation or markdown formatting.`
       }
 
       // Small delay between batches to avoid rate limiting
-      if (i + batchSize < strings.length) {
+      if (i + batchSize < stringsToTranslate.length) {
         await new Promise(resolve => setTimeout(resolve, 300))
       }
     }
@@ -268,7 +303,7 @@ Do not include any explanation or markdown formatting.`
               value: result.translation,
               source: 'llm',
               verified: false,
-              context: strings.find(s => s.string_key === result.string_key)?.context || null,
+              context: stringsToTranslate.find(s => s.string_key === result.string_key)?.context || null,
             }, {
               onConflict: 'string_key,language_code'
             })
@@ -287,13 +322,14 @@ Do not include any explanation or markdown formatting.`
     const successful = results.filter(r => r.success).length
     const failed = results.filter(r => !r.success).length
 
-    console.log(`✅ Translation complete: ${successful} successful, ${failed} failed, ${saved} saved`)
+    console.log(`✅ Translation complete: ${successful} successful, ${failed} failed, ${skippedCount} skipped, ${saved} saved`)
 
     return NextResponse.json({
       success: true,
       model,
       targetLanguage,
       total: strings.length,
+      skipped: skippedCount,
       successful,
       failed,
       saved,
