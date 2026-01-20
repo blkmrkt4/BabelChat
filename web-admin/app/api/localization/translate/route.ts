@@ -33,7 +33,7 @@ const RECOMMENDED_MODELS: Record<string, string> = {
   tl: 'anthropic/claude-3.5-sonnet',
 
   // Other
-  ar: 'anthropic/claude-3.5-sonnet',
+  ar: 'meta-llama/llama-3.3-70b-instruct', // Top performer for Arabic
   hi: 'anthropic/claude-3.5-sonnet',
 
   // Default
@@ -105,8 +105,8 @@ export async function POST(request: Request) {
       error?: string
     }> = []
 
-    // Process in batches of 10 to avoid rate limits and long responses
-    const batchSize = 10
+    // Process in batches of 5 for more reliable responses
+    const batchSize = 5
     for (let i = 0; i < strings.length; i += batchSize) {
       const batch = strings.slice(i, i + batchSize)
 
@@ -133,86 +133,123 @@ Do not include any explanation or markdown formatting.`
 
       const userMessage = `Translate these ${batch.length} UI strings to ${targetLangName}:\n\n${stringsToTranslate}`
 
-      try {
-        const response = await fetch('https://openrouter.ai/api/v1/chat/completions', {
-          method: 'POST',
-          headers: {
-            'Authorization': `Bearer ${openRouterApiKey}`,
-            'Content-Type': 'application/json',
-            'HTTP-Referer': process.env.NEXT_PUBLIC_BASE_URL || 'https://admin.silentseer.com',
-          },
-          body: JSON.stringify({
-            model,
-            messages: [
-              { role: 'system', content: systemPrompt },
-              { role: 'user', content: userMessage },
-            ],
-            temperature: 0.3, // Lower temperature for more consistent translations
-            max_tokens: 2000,
-          }),
-        })
+      // Retry logic for failed batches
+      const maxRetries = 2
+      let batchSuccess = false
 
-        if (!response.ok) {
-          const errorText = await response.text()
-          console.error(`OpenRouter error for batch ${i / batchSize + 1}:`, errorText)
-
-          // Mark all in batch as failed
-          for (const s of batch) {
-            results.push({
-              string_key: s.string_key,
-              translation: '',
-              success: false,
-              error: `API error: ${response.status}`,
-            })
-          }
-          continue
-        }
-
-        const data = await response.json()
-        const content = data.choices[0]?.message?.content || ''
-
-        // Parse the JSON array response
-        let translations: string[]
+      for (let attempt = 1; attempt <= maxRetries && !batchSuccess; attempt++) {
         try {
-          // Clean up potential markdown formatting
+          const response = await fetch('https://openrouter.ai/api/v1/chat/completions', {
+            method: 'POST',
+            headers: {
+              'Authorization': `Bearer ${openRouterApiKey}`,
+              'Content-Type': 'application/json',
+              'HTTP-Referer': process.env.NEXT_PUBLIC_BASE_URL || 'https://admin.silentseer.com',
+            },
+            body: JSON.stringify({
+              model,
+              messages: [
+                { role: 'system', content: systemPrompt },
+                { role: 'user', content: userMessage },
+              ],
+              temperature: 0.1, // Very low temperature for consistent JSON output
+              max_tokens: 1500,
+            }),
+          })
+
+          if (!response.ok) {
+            const errorText = await response.text()
+            console.error(`OpenRouter error for batch ${i / batchSize + 1} (attempt ${attempt}):`, errorText)
+            if (attempt === maxRetries) {
+              for (const s of batch) {
+                results.push({
+                  string_key: s.string_key,
+                  translation: '',
+                  success: false,
+                  error: `API error: ${response.status}`,
+                })
+              }
+            }
+            continue
+          }
+
+          const data = await response.json()
+          const content = data.choices[0]?.message?.content || ''
+
+          // Parse the JSON array response
+          let translations: string[]
           let cleaned = content.trim()
+
+          // Clean up potential markdown formatting
           if (cleaned.startsWith('```')) {
             cleaned = cleaned.replace(/^```(?:json)?\s*\n?/, '').replace(/\n?```$/, '')
           }
-          translations = JSON.parse(cleaned)
-        } catch (parseError) {
-          console.error('Failed to parse translation response:', content)
-          // Try to extract translations line by line as fallback
-          translations = content.split('\n')
-            .filter((line: string) => line.trim())
-            .map((line: string) => line.replace(/^\d+\.\s*"?|"?,?$/g, '').trim())
-        }
 
-        // Match translations to original strings
-        for (let j = 0; j < batch.length; j++) {
-          const translation = translations[j] || ''
-          results.push({
-            string_key: batch[j].string_key,
-            translation: translation.trim(),
-            success: !!translation.trim(),
-            error: translation.trim() ? undefined : 'Empty translation',
-          })
-        }
-      } catch (batchError) {
-        console.error(`Error processing batch ${i / batchSize + 1}:`, batchError)
-        for (const s of batch) {
-          results.push({
-            string_key: s.string_key,
-            translation: '',
-            success: false,
-            error: String(batchError),
-          })
+          // Check if it looks like valid JSON array
+          if (!cleaned.startsWith('[')) {
+            console.error(`Invalid response format (attempt ${attempt}):`, cleaned.substring(0, 100))
+            if (attempt < maxRetries) {
+              await new Promise(resolve => setTimeout(resolve, 1000)) // Wait before retry
+              continue
+            }
+          }
+
+          try {
+            translations = JSON.parse(cleaned)
+          } catch (parseError) {
+            console.error(`Failed to parse JSON (attempt ${attempt}):`, cleaned.substring(0, 100))
+            if (attempt < maxRetries) {
+              await new Promise(resolve => setTimeout(resolve, 1000))
+              continue
+            }
+            // Final attempt failed - mark batch as failed
+            for (const s of batch) {
+              results.push({
+                string_key: s.string_key,
+                translation: '',
+                success: false,
+                error: 'Invalid response format',
+              })
+            }
+            batchSuccess = true // Exit retry loop
+            continue
+          }
+
+          // Validate we got the right number of translations
+          if (translations.length !== batch.length) {
+            console.error(`Mismatch: expected ${batch.length}, got ${translations.length}`)
+          }
+
+          // Match translations to original strings
+          for (let j = 0; j < batch.length; j++) {
+            const translation = translations[j] || ''
+            results.push({
+              string_key: batch[j].string_key,
+              translation: translation.trim(),
+              success: !!translation.trim(),
+              error: translation.trim() ? undefined : 'Empty translation',
+            })
+          }
+          batchSuccess = true
+
+        } catch (batchError) {
+          console.error(`Error processing batch ${i / batchSize + 1} (attempt ${attempt}):`, batchError)
+          if (attempt === maxRetries) {
+            for (const s of batch) {
+              results.push({
+                string_key: s.string_key,
+                translation: '',
+                success: false,
+                error: String(batchError),
+              })
+            }
+          }
         }
       }
 
       // Small delay between batches to avoid rate limiting
       if (i + batchSize < strings.length) {
-        await new Promise(resolve => setTimeout(resolve, 500))
+        await new Promise(resolve => setTimeout(resolve, 300))
       }
     }
 
