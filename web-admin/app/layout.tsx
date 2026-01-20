@@ -28,6 +28,7 @@ export default function RootLayout({
     { href: '/moderation', label: 'Moderation' },
     { href: '/pricing', label: 'Pricing' },
     { href: '/voices', label: 'TTS Voices' },
+    { href: '/localization', label: 'Localization' },
     { href: '/settings', label: 'Settings' },
   ]
 
