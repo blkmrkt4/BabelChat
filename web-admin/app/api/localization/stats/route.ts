@@ -6,6 +6,12 @@ const supabaseKey = process.env.SUPABASE_SERVICE_ROLE_KEY!
 
 const supabase = createClient(supabaseUrl, supabaseKey)
 
+// Supported language codes (same as in page.tsx)
+const SUPPORTED_LANGUAGE_CODES = [
+  'en', 'es', 'fr', 'de', 'it', 'pt', 'ja', 'ko', 'zh', 'ru',
+  'ar', 'hi', 'nl', 'sv', 'da', 'fi', 'no', 'pl', 'id', 'tl', 'th'
+]
+
 // GET - Fetch translation statistics by language
 export async function GET() {
   try {
@@ -20,40 +26,31 @@ export async function GET() {
       return NextResponse.json({ error: countError.message }, { status: 500 })
     }
 
-    // Get all distinct language codes
-    const { data: languages, error: langError } = await supabase
-      .from('app_translations')
-      .select('language_code')
-
-    if (langError) {
-      console.error('Error fetching languages:', langError)
-      return NextResponse.json({ error: langError.message }, { status: 500 })
-    }
-
-    // Get unique language codes
-    const uniqueLanguages = [...new Set(languages?.map(l => l.language_code) || [])]
-
-    // Get counts for each language
+    // Get counts for each supported language
     const stats: Record<string, { total: number; verified: number }> = {}
 
-    for (const langCode of uniqueLanguages) {
-      // Get total count for this language
-      const { count: total } = await supabase
-        .from('app_translations')
-        .select('*', { count: 'exact', head: true })
-        .eq('language_code', langCode)
+    // Query all languages in parallel for better performance
+    const results = await Promise.all(
+      SUPPORTED_LANGUAGE_CODES.map(async (langCode) => {
+        // Get total count for this language
+        const { count: total } = await supabase
+          .from('app_translations')
+          .select('*', { count: 'exact', head: true })
+          .eq('language_code', langCode)
 
-      // Get verified count for this language
-      const { count: verified } = await supabase
-        .from('app_translations')
-        .select('*', { count: 'exact', head: true })
-        .eq('language_code', langCode)
-        .eq('verified', true)
+        // Get verified count for this language
+        const { count: verified } = await supabase
+          .from('app_translations')
+          .select('*', { count: 'exact', head: true })
+          .eq('language_code', langCode)
+          .eq('verified', true)
 
-      stats[langCode] = {
-        total: total || 0,
-        verified: verified || 0,
-      }
+        return { langCode, total: total || 0, verified: verified || 0 }
+      })
+    )
+
+    for (const { langCode, total, verified } of results) {
+      stats[langCode] = { total, verified }
     }
 
     // Get list of supported languages from tts_voices
