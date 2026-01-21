@@ -8,7 +8,7 @@ const supabase = createClient(supabaseUrl, supabaseKey)
 
 // Supported language codes (same as in page.tsx)
 const SUPPORTED_LANGUAGE_CODES = [
-  'en', 'es', 'fr', 'de', 'it', 'pt', 'ja', 'ko', 'zh', 'ru',
+  'en', 'es', 'fr', 'de', 'it', 'pt-BR', 'pt-PT', 'ja', 'ko', 'zh', 'ru',
   'ar', 'hi', 'nl', 'sv', 'da', 'fi', 'no', 'pl', 'id', 'tl', 'th'
 ]
 

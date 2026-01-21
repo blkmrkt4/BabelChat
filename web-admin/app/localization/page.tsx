@@ -24,14 +24,15 @@ interface SupportedLanguage {
   language_name: string
 }
 
-// Supported languages for Fluenca (21 languages)
+// Supported languages for Fluenca (22 languages)
 const SUPPORTED_LANGUAGES = [
   { code: 'en', name: 'English' },
   { code: 'es', name: 'Spanish' },
   { code: 'fr', name: 'French' },
   { code: 'de', name: 'German' },
   { code: 'it', name: 'Italian' },
-  { code: 'pt', name: 'Portuguese' },
+  { code: 'pt-BR', name: 'Portuguese (Brazil)' },
+  { code: 'pt-PT', name: 'Portuguese (Portugal)' },
   { code: 'ja', name: 'Japanese' },
   { code: 'ko', name: 'Korean' },
   { code: 'zh', name: 'Chinese' },

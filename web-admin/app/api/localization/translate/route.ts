@@ -15,7 +15,8 @@ const RECOMMENDED_MODELS: Record<string, string> = {
   fr: 'anthropic/claude-3.5-sonnet',
   de: 'anthropic/claude-3.5-sonnet',
   it: 'anthropic/claude-3.5-sonnet',
-  pt: 'anthropic/claude-3.5-sonnet',
+  'pt-BR': 'anthropic/claude-3.5-sonnet', // Brazilian Portuguese
+  'pt-PT': 'anthropic/claude-3.5-sonnet', // European Portuguese
   nl: 'anthropic/claude-3.5-sonnet',
   sv: 'anthropic/claude-3.5-sonnet',
   da: 'anthropic/claude-3.5-sonnet',
@@ -47,7 +48,8 @@ const LANGUAGE_NAMES: Record<string, string> = {
   fr: 'French',
   de: 'German',
   it: 'Italian',
-  pt: 'Portuguese',
+  'pt-BR': 'Brazilian Portuguese',
+  'pt-PT': 'European Portuguese (Portugal)',
   ja: 'Japanese',
   ko: 'Korean',
   zh: 'Chinese (Simplified)',
