@@ -9,21 +9,23 @@ class LearningGoalsViewController: BaseOnboardingViewController {
     private let skipLabel = UILabel()
 
     // MARK: - Properties
-    private let learningStyles: [(id: String, emoji: String, title: String, description: String)] = [
-        ("formal", "👔", "Formal / Professional", "Business meetings, presentations, formal writing"),
-        ("casual", "😊", "Casual / Conversational", "Everyday chat, making friends, natural speech"),
-        ("academic", "📚", "Academic / Literary", "Essays, literature, advanced grammar"),
-        ("slang", "🔥", "Slang / Street Talk", "Modern expressions, youth language, pop culture"),
-        ("travel", "✈️", "Travel / Survival", "Ordering food, directions, basic phrases"),
-        ("technical", "💻", "Technical / Specialized", "Industry-specific vocabulary, jargon")
-    ]
+    private var learningStyles: [(id: String, emoji: String, title: String, description: String)] {
+        return [
+            ("formal", "👔", "goal_formal_title".localized, "goal_formal_desc".localized),
+            ("casual", "😊", "goal_casual_title".localized, "goal_casual_desc".localized),
+            ("academic", "📚", "goal_academic_title".localized, "goal_academic_desc".localized),
+            ("slang", "🔥", "goal_slang_title".localized, "goal_slang_desc".localized),
+            ("travel", "✈️", "goal_travel_title".localized, "goal_travel_desc".localized),
+            ("technical", "💻", "goal_technical_title".localized, "goal_technical_desc".localized)
+        ]
+    }
 
     private var selectedStyles: Set<String> = []
 
     // MARK: - Lifecycle
     override func configure() {
         step = .learningGoals
-        setTitle("Style goals?")
+        setTitle("onboarding_goals_title".localized)
         setupViews()
         // Optional - enable continue immediately
         updateContinueButton(enabled: true)
@@ -32,7 +34,7 @@ class LearningGoalsViewController: BaseOnboardingViewController {
     // MARK: - Setup
     private func setupViews() {
         // Intro label
-        introLabel.text = "Matching you with partners who share your learning focus helps you practice what matters most."
+        introLabel.text = "onboarding_goals_intro".localized
         introLabel.font = .systemFont(ofSize: 14, weight: .regular)
         introLabel.textColor = .secondaryLabel
         introLabel.numberOfLines = 0
@@ -56,7 +58,7 @@ class LearningGoalsViewController: BaseOnboardingViewController {
         }
 
         // Skip label
-        skipLabel.text = "Leave empty if you're open to practicing all styles"
+        skipLabel.text = "onboarding_goals_skip".localized
         skipLabel.font = .systemFont(ofSize: 13, weight: .regular)
         skipLabel.textColor = .tertiaryLabel
         skipLabel.textAlignment = .center
@@ -115,7 +117,7 @@ class LearningGoalsViewController: BaseOnboardingViewController {
         titleLabel.text = style.title
         titleLabel.font = .systemFont(ofSize: 16, weight: .semibold)
         titleLabel.textColor = .label
-        titleLabel.tag = 1
+        titleLabel.tag = 101
         container.addSubview(titleLabel)
 
         // Description
@@ -130,7 +132,7 @@ class LearningGoalsViewController: BaseOnboardingViewController {
         let checkbox = UIImageView()
         checkbox.image = UIImage(systemName: "circle")
         checkbox.tintColor = .systemGray3
-        checkbox.tag = 2
+        checkbox.tag = 102
         container.addSubview(checkbox)
 
         // Layout
@@ -191,21 +193,21 @@ class LearningGoalsViewController: BaseOnboardingViewController {
         if selected {
             container.backgroundColor = UIColor.systemBlue.withAlphaComponent(0.1)
             container.layer.borderColor = UIColor.systemBlue.cgColor
-            if let checkbox = container.viewWithTag(2) as? UIImageView {
+            if let checkbox = container.viewWithTag(102) as? UIImageView {
                 checkbox.image = UIImage(systemName: "checkmark.circle.fill")
                 checkbox.tintColor = .systemBlue
             }
-            if let title = container.viewWithTag(1) as? UILabel {
+            if let title = container.viewWithTag(101) as? UILabel {
                 title.textColor = .systemBlue
             }
         } else {
             container.backgroundColor = .secondarySystemBackground
             container.layer.borderColor = UIColor.clear.cgColor
-            if let checkbox = container.viewWithTag(2) as? UIImageView {
+            if let checkbox = container.viewWithTag(102) as? UIImageView {
                 checkbox.image = UIImage(systemName: "circle")
                 checkbox.tintColor = .systemGray3
             }
-            if let title = container.viewWithTag(1) as? UILabel {
+            if let title = container.viewWithTag(101) as? UILabel {
                 title.textColor = .label
             }
         }

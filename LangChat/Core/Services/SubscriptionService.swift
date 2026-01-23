@@ -6,6 +6,7 @@
 //
 
 import Foundation
+import UIKit
 import RevenueCat
 
 class SubscriptionService: NSObject {
@@ -29,6 +30,10 @@ class SubscriptionService: NSObject {
     private(set) var cachedOfferings: [SubscriptionOffering] = []
     private(set) var isLoadingOfferings: Bool = false
     private var cachedPricingConfig: PricingConfig?
+
+    /// Indicates whether RevenueCat has been properly configured
+    /// If false, purchases will fail with a configuration error
+    private(set) var isConfigured: Bool = false
 
     /// Check if current locale should show weekly pricing (uses remote config)
     var shouldShowWeeklyPricing: Bool {
@@ -131,11 +136,29 @@ class SubscriptionService: NSObject {
             return
         }
 
+        print("🔧 [RevenueCat] Configuring with API key: \(apiKey.prefix(10))...")
         Purchases.logLevel = .debug
         Purchases.configure(withAPIKey: apiKey)
         Purchases.shared.delegate = self
+        isConfigured = true
+
+        // Log device and environment info
+        print("📱 [RevenueCat] Device: \(UIDevice.current.model), iOS \(UIDevice.current.systemVersion)")
+        print("🌍 [RevenueCat] Locale: \(Locale.current.identifier), Currency: \(Locale.current.currency?.identifier ?? "unknown")")
+
         checkSubscriptionStatus()
-        print("✅ RevenueCat configured successfully")
+
+        // Prefetch offerings on configuration
+        fetchOfferings { result in
+            switch result {
+            case .success(let offerings):
+                print("✅ [RevenueCat] Prefetched \(offerings.count) offerings")
+            case .failure(let error):
+                print("⚠️ [RevenueCat] Prefetch offerings failed: \(error.localizedDescription)")
+            }
+        }
+
+        print("✅ [RevenueCat] Configuration complete")
     }
 
     // MARK: - Fetch Offerings
@@ -169,19 +192,71 @@ class SubscriptionService: NSObject {
             return
         }
 
+        // Check if RevenueCat is configured
+        if !isConfigured {
+            print("❌ [RevenueCat] Not configured - cannot fetch offerings")
+            completion(.failure(SubscriptionError.revenueCatNotConfigured))
+            return
+        }
+
         isLoadingOfferings = true
+        print("📦 [RevenueCat] Fetching offerings...")
 
         Purchases.shared.getOfferings { [weak self] offerings, error in
             self?.isLoadingOfferings = false
 
             if let error = error {
-                completion(.failure(error))
+                // Convert to user-friendly error
+                let userFriendlyError = SubscriptionError.from(error)
+                print("❌ [RevenueCat] Offerings fetch FAILED")
+                print("   Raw error: \(error)")
+                print("   Error code: \((error as NSError).code)")
+                print("   Error domain: \((error as NSError).domain)")
+                print("   User info: \((error as NSError).userInfo)")
+
+                // Log to crash reporting
+                CrashReportingService.shared.captureError(error, context: [
+                    "stage": "fetch_offerings",
+                    "error_code": "\((error as NSError).code)",
+                    "error_domain": (error as NSError).domain
+                ])
+
+                completion(.failure(userFriendlyError))
                 return
             }
 
-            guard let offerings = offerings, let current = offerings.current else {
-                completion(.success([]))
+            print("📦 [RevenueCat] Offerings response received")
+
+            guard let offerings = offerings else {
+                print("⚠️ [RevenueCat] Offerings object is nil")
+                completion(.failure(SubscriptionError.productNotFound))
                 return
+            }
+
+            print("📦 [RevenueCat] All offering identifiers: \(offerings.all.keys.joined(separator: ", "))")
+
+            guard let current = offerings.current else {
+                print("⚠️ [RevenueCat] No current offering set!")
+                print("   This usually means:")
+                print("   1. No 'current' offering is set in RevenueCat dashboard")
+                print("   2. Products are not created in App Store Connect")
+                print("   3. Products are not linked to RevenueCat")
+                completion(.failure(SubscriptionError.productNotFound))
+                return
+            }
+
+            print("📦 [RevenueCat] Current offering: \(current.identifier)")
+            print("📦 [RevenueCat] Available packages: \(current.availablePackages.count)")
+
+            // Log all available packages for debugging
+            for (index, package) in current.availablePackages.enumerated() {
+                let product = package.storeProduct
+                print("   Package \(index + 1):")
+                print("     - Package ID: \(package.identifier)")
+                print("     - Product ID: \(product.productIdentifier)")
+                print("     - Price: \(product.localizedPriceString)")
+                print("     - Currency: \(product.currencyCode ?? "unknown")")
+                print("     - Subscription period: \(product.subscriptionPeriod?.unit.rawValue ?? -1)")
             }
 
             // Convert RevenueCat packages to our model with full pricing info
@@ -194,10 +269,13 @@ class SubscriptionService: NSObject {
                 } else if productId == "pro_monthly" {
                     tier = .pro
                 } else {
+                    print("⚠️ [RevenueCat] Unknown product ID '\(productId)' - skipping")
                     return nil
                 }
 
                 let product = package.storeProduct
+                print("✅ [RevenueCat] Mapped '\(productId)' -> \(tier.displayName)")
+
                 return SubscriptionOffering(
                     tier: tier,
                     package: package,
@@ -207,6 +285,14 @@ class SubscriptionService: NSObject {
                     currencyCode: product.currencyCode ?? "USD",
                     trialDays: product.introductoryDiscount?.subscriptionPeriod.value ?? 0
                 )
+            }
+
+            if subscriptionOfferings.isEmpty {
+                print("⚠️ [RevenueCat] No matching offerings found!")
+                print("   Expected product IDs: 'premium_monthly', 'pro_monthly'")
+                print("   Make sure these products exist in App Store Connect")
+            } else {
+                print("✅ [RevenueCat] Successfully mapped \(subscriptionOfferings.count) offerings")
             }
 
             self?.cachedOfferings = subscriptionOfferings
@@ -252,9 +338,19 @@ class SubscriptionService: NSObject {
     // MARK: - Purchase
     /// Purchase a subscription tier
     func purchase(tier: SubscriptionTier, completion: @escaping (Result<SubscriptionStatus, Error>) -> Void) {
+        print("💳 [Purchase] Starting purchase for tier: \(tier.displayName)")
+
+        // Check if RevenueCat is configured (unless in development mode)
+        if !isDevelopmentMode && !isConfigured {
+            print("❌ [Purchase] RevenueCat is not configured!")
+            print("   Make sure REVENUECAT_API_KEY is set in Secrets.xcconfig")
+            completion(.failure(SubscriptionError.revenueCatNotConfigured))
+            return
+        }
+
         // In development mode, simulate a successful premium purchase
         if isDevelopmentMode {
-            print("⚠️ Development Mode: Simulating premium purchase")
+            print("⚠️ [Purchase] Development Mode: Simulating premium purchase")
             let status = SubscriptionStatus(
                 tier: .premium,
                 isActive: true,
@@ -269,30 +365,103 @@ class SubscriptionService: NSObject {
         }
 
         guard let productId = tier.productIdentifier else {
+            print("❌ [Purchase] No product identifier for tier: \(tier.displayName)")
             completion(.failure(SubscriptionError.noProductForFreeTier))
             return
         }
 
+        print("💳 [Purchase] Looking for product ID: \(productId)")
+
         Purchases.shared.getOfferings { [weak self] offerings, error in
             if let error = error {
-                completion(.failure(error))
+                print("❌ [Purchase] Failed to get offerings: \(error)")
+                print("   Error code: \((error as NSError).code)")
+                print("   Error domain: \((error as NSError).domain)")
+
+                CrashReportingService.shared.captureError(error, context: [
+                    "stage": "purchase_get_offerings",
+                    "tier": tier.displayName,
+                    "product_id": productId
+                ])
+
+                completion(.failure(SubscriptionError.from(error)))
                 return
             }
 
-            guard let package = offerings?.current?.availablePackages.first(where: { $0.storeProduct.productIdentifier == productId }) else {
+            // Log offerings state
+            if let current = offerings?.current {
+                print("📦 [Purchase] Current offering: \(current.identifier)")
+                print("📦 [Purchase] Available packages: \(current.availablePackages.map { $0.storeProduct.productIdentifier })")
+            } else {
+                print("⚠️ [Purchase] No current offering available!")
+                print("   This is likely because:")
+                print("   1. In-App Purchases not created in App Store Connect")
+                print("   2. Products not synced to RevenueCat")
+                print("   3. No 'current' offering set in RevenueCat dashboard")
+
+                CrashReportingService.shared.captureMessage("No current offering available for purchase - tier: \(tier.displayName), product_id: \(productId)")
+
                 completion(.failure(SubscriptionError.productNotFound))
                 return
             }
 
+            guard let package = offerings?.current?.availablePackages.first(where: { $0.storeProduct.productIdentifier == productId }) else {
+                print("❌ [Purchase] Product '\(productId)' not found in available packages!")
+                print("   Available product IDs: \(offerings?.current?.availablePackages.map { $0.storeProduct.productIdentifier } ?? [])")
+                print("   This means the product ID '\(productId)' doesn't exist in App Store Connect")
+                print("   or is not linked to the current RevenueCat offering")
+
+                CrashReportingService.shared.captureMessage("Product not found in offerings - requested: \(productId)")
+
+                completion(.failure(SubscriptionError.productNotFound))
+                return
+            }
+
+            print("✅ [Purchase] Found package for '\(productId)'")
+            print("   Price: \(package.storeProduct.localizedPriceString)")
+            print("   Currency: \(package.storeProduct.currencyCode ?? "unknown")")
+            print("💳 [Purchase] Initiating App Store purchase...")
+
             Purchases.shared.purchase(package: package) { transaction, customerInfo, error, userCancelled in
                 if userCancelled {
+                    print("ℹ️ [Purchase] User cancelled the purchase")
                     completion(.failure(SubscriptionError.userCancelled))
                     return
                 }
 
                 if let error = error {
-                    completion(.failure(error))
+                    // Convert to user-friendly error
+                    let userFriendlyError = SubscriptionError.from(error)
+                    print("❌ [Purchase] Purchase FAILED!")
+                    print("   Raw error: \(error)")
+                    print("   Error code: \((error as NSError).code)")
+                    print("   Error domain: \((error as NSError).domain)")
+                    print("   User info: \((error as NSError).userInfo)")
+                    print("   Friendly message: \(userFriendlyError.localizedDescription ?? "Unknown")")
+
+                    CrashReportingService.shared.captureError(error, context: [
+                        "stage": "purchase_transaction",
+                        "tier": tier.displayName,
+                        "product_id": productId,
+                        "error_code": "\((error as NSError).code)",
+                        "error_domain": (error as NSError).domain
+                    ])
+
+                    completion(.failure(userFriendlyError))
                     return
+                }
+
+                print("✅ [Purchase] Purchase successful!")
+
+                // Log transaction details if available
+                if let transaction = transaction {
+                    print("   Transaction ID: \(transaction.transactionIdentifier ?? "unknown")")
+                }
+
+                // Log customer info
+                if let customerInfo = customerInfo {
+                    print("   Active entitlements: \(customerInfo.entitlements.active.keys.joined(separator: ", "))")
+                    print("   All purchased products: \(customerInfo.allPurchasedProductIdentifiers.joined(separator: ", "))")
                 }
 
                 // Update subscription status
@@ -305,16 +474,35 @@ class SubscriptionService: NSObject {
     // MARK: - Restore Purchases
     /// Restore previous purchases
     func restorePurchases(completion: @escaping (Result<SubscriptionStatus, Error>) -> Void) {
+        print("🔄 [Restore] Starting restore purchases...")
+
         if isDevelopmentMode {
-            print("⚠️ Development Mode: Restore not available")
+            print("⚠️ [Restore] Development Mode: Restore not available")
             completion(.success(currentStatus))
             return
         }
 
         Purchases.shared.restorePurchases { [weak self] customerInfo, error in
             if let error = error {
-                completion(.failure(error))
+                // Convert to user-friendly error
+                let userFriendlyError = SubscriptionError.from(error)
+                print("❌ [Restore] Restore FAILED!")
+                print("   Raw error: \(error)")
+                print("   Error code: \((error as NSError).code)")
+
+                CrashReportingService.shared.captureError(error, context: [
+                    "stage": "restore_purchases",
+                    "error_code": "\((error as NSError).code)"
+                ])
+
+                completion(.failure(userFriendlyError))
                 return
+            }
+
+            print("✅ [Restore] Restore completed")
+            if let customerInfo = customerInfo {
+                print("   Active entitlements: \(customerInfo.entitlements.active.keys.joined(separator: ", "))")
+                print("   All purchases: \(customerInfo.allPurchasedProductIdentifiers.joined(separator: ", "))")
             }
 
             self?.updateStatus(from: customerInfo)
@@ -325,28 +513,45 @@ class SubscriptionService: NSObject {
     // MARK: - Check Status
     /// Check current subscription status from RevenueCat
     func checkSubscriptionStatus() {
+        print("🔍 [Status] Checking subscription status...")
+
         if isDevelopmentMode {
-            print("⚠️ Development Mode: Using local subscription status")
+            print("⚠️ [Status] Development Mode: Using local subscription status")
             return
         }
 
         Purchases.shared.getCustomerInfo { [weak self] customerInfo, error in
             if let error = error {
-                print("❌ Failed to get customer info: \(error.localizedDescription)")
+                print("❌ [Status] Failed to get customer info: \(error.localizedDescription)")
+                print("   Error code: \((error as NSError).code)")
                 return
             }
 
+            print("✅ [Status] Customer info received")
             self?.updateStatus(from: customerInfo)
         }
     }
 
     // MARK: - Private Helpers
     private func updateStatus(from customerInfo: CustomerInfo?) {
-        guard let customerInfo = customerInfo else { return }
+        guard let customerInfo = customerInfo else {
+            print("⚠️ [Status] CustomerInfo is nil")
+            return
+        }
+
+        // Log all entitlements for debugging
+        print("📋 [Status] All entitlements: \(customerInfo.entitlements.all.keys.joined(separator: ", "))")
+        print("📋 [Status] Active entitlements: \(customerInfo.entitlements.active.keys.joined(separator: ", "))")
+        print("📋 [Status] All purchased products: \(customerInfo.allPurchasedProductIdentifiers.joined(separator: ", "))")
 
         // Check for Pro tier first (higher tier)
-        if let entitlement = customerInfo.entitlements["pro"],
-           entitlement.isActive {
+        // Try both "pro" and "Pro" for compatibility
+        let proEntitlement = customerInfo.entitlements["pro"] ?? customerInfo.entitlements["Pro"]
+        if let entitlement = proEntitlement, entitlement.isActive {
+            print("✅ [Status] Pro entitlement is ACTIVE")
+            print("   Expires: \(entitlement.expirationDate?.description ?? "never")")
+            print("   Is trialing: \(entitlement.periodType == .trial)")
+
             let status = SubscriptionStatus(
                 tier: .pro,
                 isActive: true,
@@ -358,8 +563,13 @@ class SubscriptionService: NSObject {
             self.currentStatus = status
         }
         // Check for Premium tier
-        else if let entitlement = customerInfo.entitlements["Premium"],
+        // Try both "premium" and "Premium" for compatibility
+        else if let entitlement = customerInfo.entitlements["premium"] ?? customerInfo.entitlements["Premium"],
            entitlement.isActive {
+            print("✅ [Status] Premium entitlement is ACTIVE")
+            print("   Expires: \(entitlement.expirationDate?.description ?? "never")")
+            print("   Is trialing: \(entitlement.periodType == .trial)")
+
             let status = SubscriptionStatus(
                 tier: .premium,
                 isActive: true,
@@ -370,8 +580,11 @@ class SubscriptionService: NSObject {
             )
             self.currentStatus = status
         } else {
+            print("ℹ️ [Status] No active entitlements - setting to FREE tier")
             self.currentStatus = .free
         }
+
+        print("📊 [Status] Current status: \(currentStatus.tier.displayName), Active: \(currentStatus.isActive)")
     }
 
     private func saveStatus() {
@@ -513,17 +726,48 @@ enum SubscriptionError: LocalizedError {
     case productNotFound
     case userCancelled
     case revenueCatNotConfigured
+    case networkError
+    case storeUnavailable
+    case paymentNotAllowed
+    case unknown(String)
 
     var errorDescription: String? {
         switch self {
         case .noProductForFreeTier:
             return "Free tier does not require a purchase"
         case .productNotFound:
-            return "Subscription product not found"
+            return "Unable to load subscription. Please try again later."
         case .userCancelled:
-            return "Purchase cancelled by user"
+            return "Purchase cancelled"
         case .revenueCatNotConfigured:
-            return "RevenueCat SDK not configured"
+            return "Subscriptions are temporarily unavailable. Please try again later."
+        case .networkError:
+            return "Please check your internet connection and try again."
+        case .storeUnavailable:
+            return "The App Store is temporarily unavailable. Please try again later."
+        case .paymentNotAllowed:
+            return "Purchases are not allowed on this device. Please check your parental controls or device restrictions."
+        case .unknown(let message):
+            return message
+        }
+    }
+
+    /// Convert RevenueCat errors to user-friendly errors
+    static func from(_ error: Error) -> SubscriptionError {
+        let errorMessage = error.localizedDescription.lowercased()
+
+        if errorMessage.contains("cancel") || errorMessage.contains("cancelled") {
+            return .userCancelled
+        } else if errorMessage.contains("network") || errorMessage.contains("connection") || errorMessage.contains("internet") {
+            return .networkError
+        } else if errorMessage.contains("not allowed") || errorMessage.contains("restricted") || errorMessage.contains("parental") {
+            return .paymentNotAllowed
+        } else if errorMessage.contains("store") || errorMessage.contains("unavailable") {
+            return .storeUnavailable
+        } else if errorMessage.contains("product") || errorMessage.contains("configuration") {
+            return .productNotFound
+        } else {
+            return .unknown("Something went wrong. Please try again.")
         }
     }
 }

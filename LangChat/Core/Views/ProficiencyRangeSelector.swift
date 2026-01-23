@@ -28,9 +28,9 @@ struct ProficiencySelection: Codable, Equatable {
     /// Display string for the selection
     var displayString: String {
         if selectedLevels.isEmpty {
-            return "None selected"
+            return "proficiency_none_selected".localized
         } else if selectedLevels.count == ProficiencySelection.orderedLevels.count {
-            return "All levels"
+            return "proficiency_all_levels".localized
         } else {
             return levels.map { $0.displayName }.joined(separator: ", ")
         }
@@ -165,11 +165,37 @@ class ProficiencyLevelSelector: UIView {
     private func createLevelButton(for level: LanguageProficiency, at index: Int) -> UIButton {
         let button = UIButton(type: .system)
         button.tag = index
-        button.setTitle(level.abbreviation, for: .normal)
-        button.titleLabel?.font = .systemFont(ofSize: 14, weight: .semibold)
         button.layer.cornerRadius = 10
         button.clipsToBounds = true
         button.addTarget(self, action: #selector(levelTapped(_:)), for: .touchUpInside)
+
+        // Configure button with text and optional icon
+        var config = UIButton.Configuration.filled()
+        config.cornerStyle = .medium
+        config.baseForegroundColor = selectedTextColor
+        config.baseBackgroundColor = selectedColor
+
+        if level == .native {
+            // Native gets person.fill.checkmark icon + "Native" text
+            config.image = UIImage(systemName: "person.fill.checkmark")
+            config.imagePadding = 4
+            config.preferredSymbolConfigurationForImage = UIImage.SymbolConfiguration(scale: .small)
+            config.title = "Native"
+            config.titleTextAttributesTransformer = UIConfigurationTextAttributesTransformer { incoming in
+                var outgoing = incoming
+                outgoing.font = UIFont.systemFont(ofSize: 12, weight: .semibold)
+                return outgoing
+            }
+        } else {
+            config.title = level.abbreviation
+            config.titleTextAttributesTransformer = UIConfigurationTextAttributesTransformer { incoming in
+                var outgoing = incoming
+                outgoing.font = UIFont.systemFont(ofSize: 11, weight: .semibold)
+                return outgoing
+            }
+        }
+
+        button.configuration = config
 
         // Add long press for more info
         let longPress = UILongPressGestureRecognizer(target: self, action: #selector(levelLongPressed(_:)))
@@ -275,8 +301,11 @@ class ProficiencyLevelSelector: UIView {
             let isSelected = selection.contains(level)
 
             UIView.animate(withDuration: 0.2) {
-                button.backgroundColor = isSelected ? self.selectedColor : self.unselectedColor
-                button.setTitleColor(isSelected ? self.selectedTextColor : self.unselectedTextColor, for: .normal)
+                if var config = button.configuration {
+                    config.baseBackgroundColor = isSelected ? self.selectedColor : self.unselectedColor
+                    config.baseForegroundColor = isSelected ? self.selectedTextColor : self.unselectedTextColor
+                    button.configuration = config
+                }
             }
         }
     }

@@ -320,6 +320,7 @@ extension SupabaseService {
 
     /// Check if current user has completed their profile (onboarding)
     /// Returns true if profile exists and has essential fields filled
+    /// Throws on network errors so caller can show offline screen
     func hasCompletedProfile() async throws -> Bool {
         guard currentUserId != nil else {
             return false
@@ -339,8 +340,21 @@ extension SupabaseService {
 
             return isProfileComplete
         } catch {
-            // Profile doesn't exist or error fetching
-            print("⚠️ Profile check failed: \(error)")
+            // Check if this is a network error - if so, throw it so caller can handle appropriately
+            let nsError = error as NSError
+            if nsError.domain == NSURLErrorDomain ||
+               nsError.domain == "NSPOSIXErrorDomain" ||
+               nsError.code == -1009 || // No internet
+               nsError.code == -1001 || // Timeout
+               nsError.code == -1004 || // Could not connect
+               nsError.code == -1005 || // Network connection lost
+               nsError.code == -1020 {  // Data not allowed
+                print("❌ Network error during profile check: \(error)")
+                throw error
+            }
+
+            // Profile doesn't exist or other non-network error - return false
+            print("⚠️ Profile check failed (non-network): \(error)")
             return false
         }
     }
@@ -1578,6 +1592,88 @@ extension SupabaseService {
             .value
 
         return reports
+    }
+
+    /// Report a user's profile (not just a photo)
+    func reportUser(
+        reportedUserId: String,
+        reason: String,
+        description: String? = nil
+    ) async throws {
+        guard let currentUserId = currentUserId?.uuidString else {
+            throw NSError(domain: "SupabaseService", code: -1,
+                         userInfo: [NSLocalizedDescriptionKey: "Not authenticated"])
+        }
+
+        let report = ReportCreate(
+            reporterId: currentUserId,
+            reportedId: reportedUserId,
+            reason: reason,
+            description: description,
+            photoUrl: nil  // No photo URL for profile reports
+        )
+
+        try await client.database
+            .from("reported_users")
+            .insert(report)
+            .execute()
+
+        print("✅ User profile reported successfully")
+    }
+
+    /// Block a user - adds them to the blocked_users list and removes from matches
+    func blockUser(userId: String) async throws {
+        guard let currentUserId = currentUserId?.uuidString else {
+            throw NSError(domain: "SupabaseService", code: -1,
+                         userInfo: [NSLocalizedDescriptionKey: "Not authenticated"])
+        }
+
+        // Call the database function to handle blocking
+        // This adds to blocked_users array and removes any existing matches
+        try await client.database
+            .rpc("block_user", params: ["blocker_id": currentUserId, "blocked_id": userId])
+            .execute()
+
+        print("✅ User blocked successfully: \(userId)")
+    }
+
+    /// Unblock a user - removes them from the blocked_users list
+    func unblockUser(userId: String) async throws {
+        guard let currentUserId = currentUserId?.uuidString else {
+            throw NSError(domain: "SupabaseService", code: -1,
+                         userInfo: [NSLocalizedDescriptionKey: "Not authenticated"])
+        }
+
+        // Call the database function to handle unblocking
+        try await client.database
+            .rpc("unblock_user", params: ["unblocker_id": currentUserId, "unblocked_id": userId])
+            .execute()
+
+        print("✅ User unblocked successfully: \(userId)")
+    }
+
+    /// Get list of blocked user IDs
+    func getBlockedUsers() async throws -> [String] {
+        guard let currentUserId = currentUserId?.uuidString else {
+            return []
+        }
+
+        struct BlockedUsersResponse: Codable {
+            let blockedUsers: [String]?
+
+            enum CodingKeys: String, CodingKey {
+                case blockedUsers = "blocked_users"
+            }
+        }
+
+        let response: [BlockedUsersResponse] = try await client.database
+            .from("user_preferences")
+            .select("blocked_users")
+            .eq("user_id", value: currentUserId)
+            .execute()
+            .value
+
+        return response.first?.blockedUsers ?? []
     }
 }
 

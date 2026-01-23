@@ -205,7 +205,7 @@ class ChatViewController: UIViewController {
         inputContainerView.addSubview(museButton)
 
         // Setup input text field
-        inputTextField.placeholder = "Type a message..."
+        inputTextField.placeholder = "chat_input_placeholder".localized
         inputTextField.font = .systemFont(ofSize: 16)
         inputTextField.borderStyle = .none
         inputTextField.returnKeyType = .send
@@ -584,7 +584,7 @@ class ChatViewController: UIViewController {
             // Use local ID for AI bot conversations
             conversationId = "local_\(user.id)"
             isConversationReady = true
-            inputTextField.placeholder = "Type a message..."
+            inputTextField.placeholder = "chat_input_placeholder".localized
             sendButton.isEnabled = !(inputTextField.text?.isEmpty ?? true)
             print("✅ AI bot conversation ready (local only): \(user.firstName)")
             return
@@ -595,7 +595,7 @@ class ChatViewController: UIViewController {
             // Local conversation without a match record
             conversationId = "local_conv_\(user.id)"
             isConversationReady = true
-            inputTextField.placeholder = "Type a message..."
+            inputTextField.placeholder = "chat_input_placeholder".localized
             sendButton.isEnabled = !(inputTextField.text?.isEmpty ?? true)
             print("✅ Local conversation ready (no Supabase): \(user.firstName)")
             return
@@ -609,7 +609,7 @@ class ChatViewController: UIViewController {
                 // Disable send button while setting up
                 await MainActor.run {
                     self.sendButton.isEnabled = false
-                    self.inputTextField.placeholder = "Setting up conversation..."
+                    self.inputTextField.placeholder = "chat_setting_up".localized
                 }
 
                 print("🔍 Setting up conversation for match: \(self.match.id)")
@@ -625,7 +625,7 @@ class ChatViewController: UIViewController {
                 await MainActor.run {
                     self.conversationId = conversation.id
                     self.isConversationReady = true
-                    self.inputTextField.placeholder = "Type a message..."
+                    self.inputTextField.placeholder = "chat_input_placeholder".localized
                     // Re-enable if there's text
                     self.sendButton.isEnabled = !(self.inputTextField.text?.isEmpty ?? true)
                     print("✅ Conversation ready: \(conversation.id)")
@@ -635,7 +635,7 @@ class ChatViewController: UIViewController {
             } catch {
                 await MainActor.run { [weak self] in
                     guard let self = self else { return }
-                    self.inputTextField.placeholder = "Failed to connect"
+                    self.inputTextField.placeholder = "chat_connection_failed".localized
                     print("❌ Failed to setup conversation: \(error)")
                     print("❌ Error details: \(error.localizedDescription)")
                     if let decodingError = error as? DecodingError {
@@ -648,10 +648,10 @@ class ChatViewController: UIViewController {
                         message: "Failed to setup conversation: \(error.localizedDescription)\n\nUser: \(self.user.id)\nAuthenticated: \(SupabaseService.shared.isAuthenticated)",
                         preferredStyle: .alert
                     )
-                    alert.addAction(UIAlertAction(title: "Retry", style: .default) { _ in
+                    alert.addAction(UIAlertAction(title: "common_retry".localized, style: .default) { _ in
                         self.setupConversation()
                     })
-                    alert.addAction(UIAlertAction(title: "Cancel", style: .cancel))
+                    alert.addAction(UIAlertAction(title: "common_cancel".localized, style: .cancel))
                     self.present(alert, animated: true)
                 }
             }
@@ -680,7 +680,7 @@ class ChatViewController: UIViewController {
 
         // Title
         let titleLabel = UILabel()
-        titleLabel.text = "Ask your Muse"
+        titleLabel.text = "chat_ask_muse".localized
         titleLabel.font = .systemFont(ofSize: 18, weight: .semibold)
         titleLabel.textAlignment = .center
         titleLabel.translatesAutoresizingMaskIntoConstraints = false
@@ -708,7 +708,7 @@ class ChatViewController: UIViewController {
 
         // Placeholder label
         let placeholderLabel = UILabel()
-        placeholderLabel.text = "e.g., How do I say 'I love this restaurant'?"
+        placeholderLabel.text = "chat_ask_example".localized
         placeholderLabel.font = .systemFont(ofSize: 16)
         placeholderLabel.textColor = .placeholderText
         placeholderLabel.translatesAutoresizingMaskIntoConstraints = false
@@ -724,7 +724,7 @@ class ChatViewController: UIViewController {
 
         // Cancel button
         let cancelButton = UIButton(type: .system)
-        cancelButton.setTitle("Cancel", for: .normal)
+        cancelButton.setTitle("common_cancel".localized, for: .normal)
         cancelButton.titleLabel?.font = .systemFont(ofSize: 16, weight: .medium)
         cancelButton.backgroundColor = .systemGray5
         cancelButton.setTitleColor(.label, for: .normal)
@@ -733,7 +733,7 @@ class ChatViewController: UIViewController {
 
         // Ask button
         let askButton = UIButton(type: .system)
-        askButton.setTitle("Ask", for: .normal)
+        askButton.setTitle("common_ask".localized, for: .normal)
         askButton.titleLabel?.font = .systemFont(ofSize: 16, weight: .semibold)
         askButton.backgroundColor = .systemBlue
         askButton.setTitleColor(.white, for: .normal)
@@ -896,7 +896,7 @@ class ChatViewController: UIViewController {
             preferredStyle: .alert
         )
 
-        let useAction = UIAlertAction(title: "Use This", style: .default) { [weak self] _ in
+        let useAction = UIAlertAction(title: "common_use_this".localized, style: .default) { [weak self] _ in
             // Insert the response into the text field
             if let currentText = self?.inputTextField.text, !currentText.isEmpty {
                 self?.inputTextField.text = currentText + " " + response
@@ -906,13 +906,13 @@ class ChatViewController: UIViewController {
             self?.sendButton.isEnabled = true
         }
 
-        let copyAction = UIAlertAction(title: "Copy", style: .default) { _ in
+        let copyAction = UIAlertAction(title: "common_copy".localized, style: .default) { _ in
             UIPasteboard.general.string = response
         }
 
         alert.addAction(useAction)
         alert.addAction(copyAction)
-        alert.addAction(UIAlertAction(title: "Dismiss", style: .cancel))
+        alert.addAction(UIAlertAction(title: "common_dismiss".localized, style: .cancel))
 
         present(alert, animated: true)
     }
@@ -923,12 +923,32 @@ class ChatViewController: UIViewController {
             message: "Please try again. Error: \(error.localizedDescription)",
             preferredStyle: .alert
         )
-        alert.addAction(UIAlertAction(title: "OK", style: .default))
+        alert.addAction(UIAlertAction(title: "common_ok".localized, style: .default))
         present(alert, animated: true)
     }
 
     @objc private func sendButtonTapped() {
         guard let text = inputTextField.text, !text.isEmpty else { return }
+
+        // Content filter check (Apple Guideline 1.2 compliance)
+        let contentCheck = ContentFilterService.shared.checkContent(text)
+        if contentCheck.shouldBlock {
+            // Severe violation - block the message
+            let alert = UIAlertController(
+                title: "content_blocked_title".localized,
+                message: "content_blocked_message".localized,
+                preferredStyle: .alert
+            )
+            alert.addAction(UIAlertAction(title: "common_ok".localized, style: .default))
+            present(alert, animated: true)
+
+            // Report to moderation
+            ContentFilterService.shared.reportContent(text, userId: "currentUser", reason: "Auto-blocked content")
+            return
+        }
+
+        // Filter profanity if present (mask with asterisks)
+        let filteredText = contentCheck.isClean ? text : ContentFilterService.shared.filterProfanity(text)
 
         // Wait for conversation to be ready
         guard isConversationReady, let conversationId = conversationId else {
@@ -938,7 +958,7 @@ class ChatViewController: UIViewController {
                 message: "Setting up conversation...",
                 preferredStyle: .alert
             )
-            alert.addAction(UIAlertAction(title: "OK", style: .default))
+            alert.addAction(UIAlertAction(title: "common_ok".localized, style: .default))
             present(alert, animated: true)
             return
         }
@@ -948,7 +968,7 @@ class ChatViewController: UIViewController {
             id: UUID().uuidString,
             senderId: "currentUser",
             recipientId: user.id,
-            text: text,
+            text: filteredText,
             timestamp: Date(),
             isRead: false,
             originalLanguage: conversationLearningLanguage,
@@ -967,7 +987,7 @@ class ChatViewController: UIViewController {
         AnalyticsService.shared.trackMessageSent(
             conversationId: conversationId,
             isAI: user.isAI,
-            characterCount: text.count
+            characterCount: filteredText.count
         )
 
         let indexPath = IndexPath(row: messages.count - 1, section: 0)
@@ -1048,7 +1068,7 @@ class ChatViewController: UIViewController {
             preferredStyle: .alert
         )
 
-        alert.addAction(UIAlertAction(title: "Retry", style: .default) { [weak self] _ in
+        alert.addAction(UIAlertAction(title: "common_retry".localized, style: .default) { [weak self] _ in
             guard let self = self else { return }
 
             // Remove the failed message from UI
@@ -1062,7 +1082,7 @@ class ChatViewController: UIViewController {
             self.sendButtonTapped()
         })
 
-        alert.addAction(UIAlertAction(title: "Delete Message", style: .destructive) { [weak self] _ in
+        alert.addAction(UIAlertAction(title: "common_delete_message".localized, style: .destructive) { [weak self] _ in
             guard let self = self else { return }
 
             // Remove the failed message from UI and saved messages
@@ -1073,7 +1093,7 @@ class ChatViewController: UIViewController {
             }
         })
 
-        alert.addAction(UIAlertAction(title: "Dismiss", style: .cancel))
+        alert.addAction(UIAlertAction(title: "common_dismiss".localized, style: .cancel))
 
         present(alert, animated: true)
     }
@@ -1239,14 +1259,14 @@ class ChatViewController: UIViewController {
     private func getStatusText() -> String {
         // AI Muses are always active
         if user.isAI {
-            return "Your Muse is Active Now"
+            return "chats_muse_active".localized
         }
 
         // Real users - check their online status
         if user.isOnline {
-            return "Active now"
+            return "chat_status_active".localized
         } else {
-            return "Offline"
+            return "chat_status_offline".localized
         }
     }
 
@@ -1347,8 +1367,8 @@ extension ChatViewController: SwipeableMessageCellDelegate {
             preferredStyle: .alert
         )
 
-        alert.addAction(UIAlertAction(title: "Cancel", style: .cancel))
-        alert.addAction(UIAlertAction(title: "Delete", style: .destructive) { [weak self] _ in
+        alert.addAction(UIAlertAction(title: "common_cancel".localized, style: .cancel))
+        alert.addAction(UIAlertAction(title: "common_delete".localized, style: .destructive) { [weak self] _ in
             guard let self = self else { return }
 
             // Remove from array
@@ -1380,6 +1400,92 @@ extension ChatViewController: SwipeableMessageCellDelegate {
         // Move cursor after the quote
         if let newPosition = inputTextField.position(from: inputTextField.endOfDocument, offset: 0) {
             inputTextField.selectedTextRange = inputTextField.textRange(from: newPosition, to: newPosition)
+        }
+    }
+
+    func cell(_ cell: SwipeableMessageCell, didRequestReportMessage message: Message) {
+        showReportMessageOptions(message: message)
+    }
+
+    private func showReportMessageOptions(message: Message) {
+        let alertController = UIAlertController(
+            title: "report_message_title".localized,
+            message: "report_message_prompt".localized,
+            preferredStyle: .actionSheet
+        )
+
+        let reportReasons = [
+            "report_reason_inappropriate".localized,
+            "report_reason_spam".localized,
+            "report_reason_harassment".localized,
+            "report_reason_hate_speech".localized,
+            "report_reason_other".localized
+        ]
+
+        for reason in reportReasons {
+            alertController.addAction(UIAlertAction(title: reason, style: .default) { [weak self] _ in
+                self?.confirmReportMessage(message: message, reason: reason)
+            })
+        }
+
+        alertController.addAction(UIAlertAction(title: "cancel".localized, style: .cancel))
+
+        // For iPad support
+        if let popoverController = alertController.popoverPresentationController {
+            popoverController.sourceView = view
+            popoverController.sourceRect = CGRect(x: view.bounds.midX, y: view.bounds.midY, width: 0, height: 0)
+            popoverController.permittedArrowDirections = []
+        }
+
+        present(alertController, animated: true)
+    }
+
+    private func confirmReportMessage(message: Message, reason: String) {
+        let confirmAlert = UIAlertController(
+            title: "confirm_report_title".localized,
+            message: String(format: "confirm_report_message_text".localized, reason.lowercased()),
+            preferredStyle: .alert
+        )
+
+        confirmAlert.addAction(UIAlertAction(title: "report".localized, style: .destructive) { [weak self] _ in
+            self?.submitMessageReport(message: message, reason: reason)
+        })
+
+        confirmAlert.addAction(UIAlertAction(title: "cancel".localized, style: .cancel))
+
+        present(confirmAlert, animated: true)
+    }
+
+    private func submitMessageReport(message: Message, reason: String) {
+        Task {
+            do {
+                // Use reportUser with the message sender ID and include message content in description
+                try await SupabaseService.shared.reportUser(
+                    reportedUserId: message.senderId,
+                    reason: "Message: \(reason)",
+                    description: "Reported message: \"\(message.text)\""
+                )
+
+                await MainActor.run {
+                    let successAlert = UIAlertController(
+                        title: "report_submitted_title".localized,
+                        message: "report_submitted_message".localized,
+                        preferredStyle: .alert
+                    )
+                    successAlert.addAction(UIAlertAction(title: "ok".localized, style: .default))
+                    self.present(successAlert, animated: true)
+                }
+            } catch {
+                await MainActor.run {
+                    let errorAlert = UIAlertController(
+                        title: "report_failed_title".localized,
+                        message: String(format: "report_failed_message".localized, error.localizedDescription),
+                        preferredStyle: .alert
+                    )
+                    errorAlert.addAction(UIAlertAction(title: "ok".localized, style: .default))
+                    self.present(errorAlert, animated: true)
+                }
+            }
         }
     }
 }

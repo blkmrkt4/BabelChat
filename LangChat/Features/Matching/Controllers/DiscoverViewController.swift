@@ -36,7 +36,7 @@ class DiscoverViewController: UIViewController {
     }
 
     private func setupNavigationBar() {
-        title = "Discover"
+        title = "tab_discover".localized
         navigationController?.navigationBar.prefersLargeTitles = true
 
         let filterButton = UIBarButtonItem(
@@ -55,7 +55,7 @@ class DiscoverViewController: UIViewController {
         view.addSubview(cardStackView)
         cardStackView.translatesAutoresizingMaskIntoConstraints = false
 
-        emptyStateLabel.text = "No profiles available\nNew users are joining daily!"
+        emptyStateLabel.text = "discover_no_profiles".localized + "\n" + "discover_users_joining".localized
         emptyStateLabel.textAlignment = .center
         emptyStateLabel.numberOfLines = 0
         emptyStateLabel.font = .systemFont(ofSize: 18, weight: .medium)
@@ -64,7 +64,7 @@ class DiscoverViewController: UIViewController {
         view.addSubview(emptyStateLabel)
         emptyStateLabel.translatesAutoresizingMaskIntoConstraints = false
 
-        reloadButton.setTitle("Reload", for: .normal)
+        reloadButton.setTitle("discover_reload".localized, for: .normal)
         reloadButton.titleLabel?.font = .systemFont(ofSize: 16, weight: .semibold)
         reloadButton.addTarget(self, action: #selector(reloadTapped), for: .touchUpInside)
         reloadButton.isHidden = true
@@ -185,20 +185,20 @@ class DiscoverViewController: UIViewController {
                     // Determine user-friendly error message
                     let errorMessage: String
                     if error.localizedDescription.contains("offline") || error.localizedDescription.contains("network") {
-                        errorMessage = "Please check your internet connection and try again."
+                        errorMessage = "discover_check_connection".localized
                     } else {
-                        errorMessage = "We couldn't load profiles right now. Please try again later."
+                        errorMessage = "discover_couldnt_load".localized
                     }
 
                     let alert = UIAlertController(
-                        title: "Unable to Load Profiles",
+                        title: "discover_unable_to_load".localized,
                         message: errorMessage,
                         preferredStyle: .alert
                     )
-                    alert.addAction(UIAlertAction(title: "Try Again", style: .default) { _ in
+                    alert.addAction(UIAlertAction(title: "discover_try_again".localized, style: .default) { _ in
                         self.loadCards()
                     })
-                    alert.addAction(UIAlertAction(title: "OK", style: .cancel) { _ in
+                    alert.addAction(UIAlertAction(title: "common_ok".localized, style: .cancel) { _ in
                         self.showEmptyState()
                     })
                     self.present(alert, animated: true)
@@ -632,7 +632,9 @@ class DiscoverViewController: UIViewController {
     }
 
     @objc private func filterTapped() {
-        print("Filter tapped")
+        let preferencesVC = PreferencesViewController()
+        let navController = UINavigationController(rootViewController: preferencesVC)
+        present(navController, animated: true)
     }
 
     @objc private func reloadTapped() {

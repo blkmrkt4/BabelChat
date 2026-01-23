@@ -9,18 +9,18 @@ enum LanguageProficiency: String, CaseIterable, Codable {
 
     var displayName: String {
         switch self {
-        case .beginner: return "Beginner"
-        case .intermediate: return "Intermediate"
-        case .advanced: return "Advanced"
-        case .native: return "Native"
+        case .beginner: return "proficiency_beginner".localized
+        case .intermediate: return "proficiency_intermediate".localized
+        case .advanced: return "proficiency_advanced".localized
+        case .native: return "proficiency_native".localized
         }
     }
 
     var abbreviation: String {
         switch self {
-        case .beginner: return "Beg"
-        case .intermediate: return "Int"
-        case .advanced: return "Adv"
+        case .beginner: return "BEG A1-A2"
+        case .intermediate: return "INT B1-B2"
+        case .advanced: return "ADV C1-C2"
         case .native: return "Native"
         }
     }

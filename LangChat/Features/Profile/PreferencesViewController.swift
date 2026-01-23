@@ -11,9 +11,9 @@ class PreferencesViewController: UIViewController {
 
         var title: String {
             switch self {
-            case .discovery: return "Discovery Preferences"
-            case .matching: return "Matching Preferences"
-            case .communication: return "Communication"
+            case .discovery: return "preferences_discovery_header".localized
+            case .matching: return "preferences_matching_header".localized
+            case .communication: return "preferences_communication_header".localized
             }
         }
     }
@@ -27,7 +27,7 @@ class PreferencesViewController: UIViewController {
     }
 
     private func setupViews() {
-        title = "Preferences"
+        title = "preferences_title".localized
         navigationItem.largeTitleDisplayMode = .never
         view.backgroundColor = .systemGroupedBackground
 
@@ -103,7 +103,7 @@ extension PreferencesViewController: UITableViewDataSource {
                     return UITableViewCell()
                 }
                 cell.configure(
-                    title: "Age Range",
+                    title: "preferences_age_range".localized,
                     minValue: 18,
                     maxValue: 99,
                     currentMin: Float(preferences.minAge),
@@ -120,7 +120,7 @@ extension PreferencesViewController: UITableViewDataSource {
                     return UITableViewCell()
                 }
                 cell.configure(
-                    title: "Maximum Distance",
+                    title: "preferences_max_distance".localized,
                     minValue: 1,
                     maxValue: 100,
                     currentMin: 1,
@@ -135,7 +135,7 @@ extension PreferencesViewController: UITableViewDataSource {
             case 2: // Show me
                 let cell = tableView.dequeueReusableCell(withIdentifier: "PreferenceCell", for: indexPath)
                 var config = cell.defaultContentConfiguration()
-                config.text = "Show Me"
+                config.text = "matching_show_me".localized
                 config.secondaryText = preferences.showMe
                 cell.contentConfiguration = config
                 cell.accessoryType = .disclosureIndicator
@@ -152,7 +152,7 @@ extension PreferencesViewController: UITableViewDataSource {
                     return UITableViewCell()
                 }
                 cell.configure(
-                    title: "Auto-match Similar Proficiency",
+                    title: "preferences_auto_match".localized,
                     icon: "sparkles",
                     isOn: preferences.autoMatchSimilarProficiency
                 )
@@ -166,7 +166,7 @@ extension PreferencesViewController: UITableViewDataSource {
                     return UITableViewCell()
                 }
                 cell.configure(
-                    title: "Prioritize Active Users",
+                    title: "preferences_prioritize_active".localized,
                     icon: "clock",
                     isOn: preferences.prioritizeActiveUsers
                 )
@@ -186,7 +186,7 @@ extension PreferencesViewController: UITableViewDataSource {
                     return UITableViewCell()
                 }
                 cell.configure(
-                    title: "Show Online Status",
+                    title: "preferences_show_online".localized,
                     icon: "circle.fill",
                     isOn: preferences.showOnlineStatus
                 )
@@ -200,7 +200,7 @@ extension PreferencesViewController: UITableViewDataSource {
                     return UITableViewCell()
                 }
                 cell.configure(
-                    title: "Read Receipts",
+                    title: "preferences_read_receipts".localized,
                     icon: "checkmark.message",
                     isOn: preferences.readReceipts
                 )
@@ -214,7 +214,7 @@ extension PreferencesViewController: UITableViewDataSource {
                     return UITableViewCell()
                 }
                 cell.configure(
-                    title: "Typing Indicators",
+                    title: "preferences_typing_indicators".localized,
                     icon: "ellipsis.bubble",
                     isOn: preferences.typingIndicators
                 )
@@ -239,17 +239,22 @@ extension PreferencesViewController: UITableViewDelegate {
 
         if prefSection == .discovery && indexPath.row == 2 {
             // Show me options
-            let alert = UIAlertController(title: "Show Me", message: nil, preferredStyle: .actionSheet)
-            let options = ["Everyone", "Men", "Women", "Non-binary"]
+            let alert = UIAlertController(title: "preferences_show_me".localized, message: nil, preferredStyle: .actionSheet)
+            let options = [
+                ("Everyone", "preferences_everyone".localized),
+                ("Men", "preferences_men".localized),
+                ("Women", "preferences_women".localized),
+                ("Non-binary", "preferences_non_binary".localized)
+            ]
 
-            for option in options {
-                alert.addAction(UIAlertAction(title: option, style: .default) { [weak self] _ in
-                    self?.preferences.showMe = option
+            for (value, displayName) in options {
+                alert.addAction(UIAlertAction(title: displayName, style: .default) { [weak self] _ in
+                    self?.preferences.showMe = value
                     self?.tableView.reloadRows(at: [indexPath], with: .none)
                 })
             }
 
-            alert.addAction(UIAlertAction(title: "Cancel", style: .cancel))
+            alert.addAction(UIAlertAction(title: "common_cancel".localized, style: .cancel))
 
             if let popover = alert.popoverPresentationController,
                let cell = tableView.cellForRow(at: indexPath) {
@@ -330,7 +335,7 @@ class SliderTableViewCell: UITableViewCell {
 
         if isSingleValue {
             slider.value = currentMax
-            valueLabel.text = "\(Int(currentMax)) km"
+            valueLabel.text = String(format: "preferences_km_unit".localized, Int(currentMax))
         } else {
             // For range, we'll use the average for now (iOS doesn't have native range slider)
             slider.value = (currentMin + currentMax) / 2
@@ -340,7 +345,7 @@ class SliderTableViewCell: UITableViewCell {
 
     @objc private func sliderChanged() {
         if isSingleValue {
-            valueLabel.text = "\(Int(slider.value)) km"
+            valueLabel.text = String(format: "preferences_km_unit".localized, Int(slider.value))
             valuesChanged?(slider.minimumValue, slider.value)
         } else {
             // Simplified for demo - in production would use custom range slider

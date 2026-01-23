@@ -74,7 +74,7 @@ class AuthenticationViewController: UIViewController {
         view.addSubview(logoLabel)
 
         // Tagline
-        taglineLabel.text = "Science says your brain learns faster when it cares"
+        taglineLabel.text = "tagline_1".localized
         taglineLabel.font = .systemFont(ofSize: 18, weight: .medium)
         taglineLabel.textColor = .white.withAlphaComponent(0.9)
         taglineLabel.textAlignment = .center
@@ -91,7 +91,7 @@ class AuthenticationViewController: UIViewController {
         self.separatorLine = separatorLine
 
         // Second tagline
-        taglineLabel2.text = "Speaking like a local is the fastest path to fluency"
+        taglineLabel2.text = "tagline_2".localized
         taglineLabel2.font = .systemFont(ofSize: 18, weight: .medium)
         taglineLabel2.textColor = .white.withAlphaComponent(0.7)
         taglineLabel2.textAlignment = .center
@@ -118,7 +118,7 @@ class AuthenticationViewController: UIViewController {
         dividerView.backgroundColor = .white.withAlphaComponent(0.3)
         dividerContainer.addSubview(dividerView)
 
-        dividerLabel.text = "or"
+        dividerLabel.text = "auth_or_divider".localized
         dividerLabel.font = .systemFont(ofSize: 14, weight: .medium)
         dividerLabel.textColor = .white.withAlphaComponent(0.7)
         dividerLabel.textAlignment = .center
@@ -144,7 +144,7 @@ class AuthenticationViewController: UIViewController {
         buttonsStackView.addArrangedSubview(dividerContainer)
 
         // Email Sign In button
-        emailButton.setTitle("Continue with Email", for: .normal)
+        emailButton.setTitle("auth_continue_email".localized, for: .normal)
         emailButton.titleLabel?.font = .systemFont(ofSize: 18, weight: .semibold)
         emailButton.backgroundColor = .clear
         emailButton.setTitleColor(.white, for: .normal)
@@ -156,7 +156,7 @@ class AuthenticationViewController: UIViewController {
 
         #if DEBUG
         // Reset button (development only) - appears at top
-        resetButton.setTitle("🔄 Reset All Data", for: .normal)
+        resetButton.setTitle("auto_reset_all_data".localized, for: .normal)
         resetButton.titleLabel?.font = .systemFont(ofSize: 16, weight: .semibold)
         resetButton.backgroundColor = .systemRed.withAlphaComponent(0.8)
         resetButton.setTitleColor(.white, for: .normal)
@@ -166,7 +166,7 @@ class AuthenticationViewController: UIViewController {
 
         // Debug login button (development only)
         // Uses credentials from DebugConfig.swift - change them there if needed
-        debugLoginButton.setTitle("🔧 DEV: Quick Login", for: .normal)
+        debugLoginButton.setTitle("auto_dev_quick_login".localized, for: .normal)
         debugLoginButton.titleLabel?.font = .systemFont(ofSize: 16, weight: .semibold)
         debugLoginButton.backgroundColor = .systemOrange.withAlphaComponent(0.8)
         debugLoginButton.setTitleColor(.white, for: .normal)
@@ -358,8 +358,46 @@ class AuthenticationViewController: UIViewController {
             } catch SignInWithAppleError.userCancelled {
                 // User cancelled - don't show error
                 print("ℹ️ Apple Sign In cancelled by user")
+            } catch let signInError as SignInWithAppleError {
+                // Handle specific Sign in with Apple errors
+                print("❌ Apple Sign In error: \(signInError)")
+
+                // Track login failure
+                AnalyticsService.shared.track(.loginFailed, properties: [
+                    "method": "apple",
+                    "error": signInError.errorDescription ?? "Unknown"
+                ])
+
+                await MainActor.run {
+                    let message: String
+                    switch signInError {
+                    case .invalidCredential, .invalidIdentityToken, .missingIdentityToken:
+                        message = "Unable to verify your Apple ID. Please try again."
+                    case .missingNonce:
+                        message = "A security error occurred. Please try again."
+                    case .authorizationFailed(let underlying):
+                        message = "Authorization failed: \(underlying.localizedDescription)"
+                    case .invalidResponse:
+                        message = "Received an invalid response from Apple. Please try again."
+                    case .notHandled:
+                        message = "Sign in was not handled. Please try again."
+                    case .unknown(let underlying):
+                        message = "An unexpected error occurred: \(underlying.localizedDescription)"
+                    case .userCancelled:
+                        return // Should not reach here
+                    }
+
+                    let alert = UIAlertController(
+                        title: "Sign In Failed",
+                        message: message,
+                        preferredStyle: .alert
+                    )
+                    alert.addAction(UIAlertAction(title: "common_ok".localized, style: .default))
+                    self.present(alert, animated: true)
+                }
             } catch {
-                print("❌ Apple Sign In failed: \(error)")
+                // Handle other errors (likely Supabase auth errors)
+                print("❌ Sign In failed: \(error)")
 
                 // Track login failure
                 AnalyticsService.shared.track(.loginFailed, properties: [
@@ -368,13 +406,22 @@ class AuthenticationViewController: UIViewController {
                 ])
 
                 await MainActor.run {
+                    // Check if it's a network error
+                    let nsError = error as NSError
+                    let message: String
+                    if nsError.domain == NSURLErrorDomain {
+                        message = "Unable to connect to the server. Please check your internet connection and try again."
+                    } else {
+                        message = "Could not complete sign in: \(error.localizedDescription)"
+                    }
+
                     let alert = UIAlertController(
                         title: "Sign In Failed",
-                        message: "Could not sign in with Apple: \(error.localizedDescription)",
+                        message: message,
                         preferredStyle: .alert
                     )
-                    alert.addAction(UIAlertAction(title: "OK", style: .default))
-                    present(alert, animated: true)
+                    alert.addAction(UIAlertAction(title: "common_ok".localized, style: .default))
+                    self.present(alert, animated: true)
                 }
             }
         }
@@ -391,24 +438,24 @@ class AuthenticationViewController: UIViewController {
         )
 
         alert.addTextField { textField in
-            textField.placeholder = "Email"
+            textField.placeholder = "contact_email".localized
             textField.keyboardType = .emailAddress
             textField.autocapitalizationType = .none
         }
 
         alert.addTextField { textField in
-            textField.placeholder = "Password"
+            textField.placeholder = "auth_password_placeholder".localized
             textField.isSecureTextEntry = true
         }
 
-        alert.addAction(UIAlertAction(title: "Cancel", style: .cancel))
+        alert.addAction(UIAlertAction(title: "common_cancel".localized, style: .cancel))
 
         alert.addAction(UIAlertAction(title: "Sign In", style: .default) { [weak self, weak alert] _ in
             guard let email = alert?.textFields?[0].text,
                   let password = alert?.textFields?[1].text,
                   !email.isEmpty, !password.isEmpty else {
                 let errorAlert = UIAlertController(title: "Error", message: "Please enter both email and password", preferredStyle: .alert)
-                errorAlert.addAction(UIAlertAction(title: "OK", style: .default))
+                errorAlert.addAction(UIAlertAction(title: "common_ok".localized, style: .default))
                 self?.present(errorAlert, animated: true)
                 return
             }
@@ -421,7 +468,7 @@ class AuthenticationViewController: UIViewController {
                   let password = alert?.textFields?[1].text,
                   !email.isEmpty, !password.isEmpty else {
                 let errorAlert = UIAlertController(title: "Error", message: "Please enter both email and password", preferredStyle: .alert)
-                errorAlert.addAction(UIAlertAction(title: "OK", style: .default))
+                errorAlert.addAction(UIAlertAction(title: "common_ok".localized, style: .default))
                 self?.present(errorAlert, animated: true)
                 return
             }
@@ -473,7 +520,7 @@ class AuthenticationViewController: UIViewController {
                         message: error.localizedDescription,
                         preferredStyle: .alert
                     )
-                    alert.addAction(UIAlertAction(title: "OK", style: .default))
+                    alert.addAction(UIAlertAction(title: "common_ok".localized, style: .default))
                     present(alert, animated: true)
                 }
             }
@@ -510,7 +557,7 @@ class AuthenticationViewController: UIViewController {
                         message: error.localizedDescription,
                         preferredStyle: .alert
                     )
-                    alert.addAction(UIAlertAction(title: "OK", style: .default))
+                    alert.addAction(UIAlertAction(title: "common_ok".localized, style: .default))
                     present(alert, animated: true)
                 }
             }
@@ -527,9 +574,9 @@ class AuthenticationViewController: UIViewController {
             preferredStyle: .alert
         )
 
-        alert.addAction(UIAlertAction(title: "Cancel", style: .cancel))
+        alert.addAction(UIAlertAction(title: "common_cancel".localized, style: .cancel))
 
-        alert.addAction(UIAlertAction(title: "Reset", style: .destructive) { [weak self] _ in
+        alert.addAction(UIAlertAction(title: "common_reset".localized, style: .destructive) { [weak self] _ in
             Task {
                 do {
                     // Sign out from Supabase
@@ -543,22 +590,26 @@ class AuthenticationViewController: UIViewController {
                     // Clear all user data
                     DebugConfig.resetAllUserData()
 
-                    // Reload the app to see welcome screen
-                    if let windowScene = UIApplication.shared.connectedScenes.first as? UIWindowScene,
-                       let window = windowScene.windows.first {
-
-                        let welcomeVC = WelcomeViewController()
-                        let navController = UINavigationController(rootViewController: welcomeVC)
-                        window.rootViewController = navController
-
-                        UIView.transition(with: window,
-                                        duration: 0.3,
-                                        options: .transitionCrossDissolve,
-                                        animations: nil,
-                                        completion: nil)
-
-                        print("✅ App reset complete - showing welcome screen")
+                    // Reload the app to see welcome screen - find key window for iPad support
+                    guard let windowScene = UIApplication.shared.connectedScenes
+                        .compactMap({ $0 as? UIWindowScene })
+                        .first(where: { $0.activationState == .foregroundActive }),
+                          let window = windowScene.windows.first(where: { $0.isKeyWindow }) ?? windowScene.windows.first else {
+                        print("❌ Could not find window for reset")
+                        return
                     }
+
+                    let welcomeVC = WelcomeViewController()
+                    let navController = UINavigationController(rootViewController: welcomeVC)
+                    window.rootViewController = navController
+
+                    UIView.transition(with: window,
+                                    duration: 0.3,
+                                    options: .transitionCrossDissolve,
+                                    animations: nil,
+                                    completion: nil)
+
+                    print("✅ App reset complete - showing welcome screen")
                 }
             }
         })
@@ -594,7 +645,7 @@ class AuthenticationViewController: UIViewController {
                         message: "Could not sign in with test credentials: \(error.localizedDescription)",
                         preferredStyle: .alert
                     )
-                    alert.addAction(UIAlertAction(title: "OK", style: .default))
+                    alert.addAction(UIAlertAction(title: "common_ok".localized, style: .default))
                     present(alert, animated: true)
                 }
             }
@@ -603,21 +654,46 @@ class AuthenticationViewController: UIViewController {
     #endif
 
     private func startOnboarding() {
-        onboardingCoordinator = OnboardingCoordinator(navigationController: navigationController)
+        // Ensure we have a navigation controller for onboarding
+        guard let navController = navigationController else {
+            print("❌ No navigation controller for onboarding - creating one")
+            // Create a new navigation controller if none exists
+            guard let windowScene = UIApplication.shared.connectedScenes
+                .compactMap({ $0 as? UIWindowScene })
+                .first(where: { $0.activationState == .foregroundActive }),
+                  let window = windowScene.windows.first(where: { $0.isKeyWindow }) ?? windowScene.windows.first else {
+                print("❌ Could not find window for onboarding")
+                return
+            }
+
+            let newNavController = UINavigationController(rootViewController: self)
+            window.rootViewController = newNavController
+            onboardingCoordinator = OnboardingCoordinator(navigationController: newNavController)
+            onboardingCoordinator?.start()
+            return
+        }
+
+        onboardingCoordinator = OnboardingCoordinator(navigationController: navController)
         onboardingCoordinator?.start()
     }
 
     private func transitionToMainApp() {
-        if let windowScene = UIApplication.shared.connectedScenes.first as? UIWindowScene,
-           let window = windowScene.windows.first {
-            let tabBarController = MainTabBarController()
-            window.rootViewController = tabBarController
-            UIView.transition(with: window,
-                            duration: 0.5,
-                            options: .transitionCrossDissolve,
-                            animations: nil,
-                            completion: nil)
+        // Find the key window - important for iPad with multiple windows
+        guard let windowScene = UIApplication.shared.connectedScenes
+            .compactMap({ $0 as? UIWindowScene })
+            .first(where: { $0.activationState == .foregroundActive }),
+              let window = windowScene.windows.first(where: { $0.isKeyWindow }) ?? windowScene.windows.first else {
+            print("❌ Could not find window for transition")
+            return
         }
+
+        let tabBarController = MainTabBarController()
+        window.rootViewController = tabBarController
+        UIView.transition(with: window,
+                        duration: 0.5,
+                        options: .transitionCrossDissolve,
+                        animations: nil,
+                        completion: nil)
     }
 }
 
