@@ -12,10 +12,10 @@ class ProfileSettingsViewController: UIViewController {
 
         var title: String? {
             switch self {
-            case .basicInfo: return "Basic Info"
-            case .location: return "Location"
-            case .languages: return "Languages"
-            case .preferences: return "Preferences"
+            case .basicInfo: return "profile_section_basic_info".localized
+            case .location: return "common_location".localized
+            case .languages: return "profile_section_languages".localized
+            case .preferences: return "profile_section_preferences".localized
             }
         }
 
@@ -47,16 +47,16 @@ class ProfileSettingsViewController: UIViewController {
 
         var title: String {
             switch self {
-            case .name: return "Name"
-            case .birthYear: return "Birth Year"
-            case .bio: return "Bio"
-            case .hometown: return "Hometown"
-            case .travelPlans: return "Travel Plans"
-            case .nativeLanguage: return "Native Language"
-            case .learningLanguages: return "Learning Languages"
-            case .relationshipIntent: return "Looking For"
-            case .learningGoals: return "Learning Goals"
-            case .strictlyPlatonic: return "Strictly Platonic"
+            case .name: return "profile_field_name".localized
+            case .birthYear: return "profile_field_birth_year".localized
+            case .bio: return "profile_field_bio".localized
+            case .hometown: return "profile_field_hometown".localized
+            case .travelPlans: return "profile_field_travel_plans".localized
+            case .nativeLanguage: return "profile_field_native_language".localized
+            case .learningLanguages: return "profile_field_learning_languages".localized
+            case .relationshipIntent: return "profile_field_looking_for".localized
+            case .learningGoals: return "profile_field_learning_goals".localized
+            case .strictlyPlatonic: return "profile_field_strictly_platonic".localized
             }
         }
 
@@ -77,16 +77,16 @@ class ProfileSettingsViewController: UIViewController {
 
         var placeholder: String {
             switch self {
-            case .name: return "Tap to set name"
-            case .birthYear: return "Tap to set birth year"
-            case .bio: return "Tell others about yourself..."
-            case .hometown: return "Tap to set location"
-            case .travelPlans: return "Where are you traveling?"
-            case .nativeLanguage: return "Select your native language"
-            case .learningLanguages: return "Select languages you're learning"
-            case .relationshipIntent: return "What are you looking for?"
-            case .learningGoals: return "Select your learning goals"
-            case .strictlyPlatonic: return "Language exchange only"
+            case .name: return "profile_placeholder_name".localized
+            case .birthYear: return "profile_placeholder_birth_year".localized
+            case .bio: return "profile_placeholder_bio".localized
+            case .hometown: return "profile_placeholder_hometown".localized
+            case .travelPlans: return "profile_placeholder_travel_plans".localized
+            case .nativeLanguage: return "profile_placeholder_native_language".localized
+            case .learningLanguages: return "profile_placeholder_learning_languages".localized
+            case .relationshipIntent: return "profile_placeholder_looking_for".localized
+            case .learningGoals: return "profile_placeholder_learning_goals".localized
+            case .strictlyPlatonic: return "profile_placeholder_strictly_platonic".localized
             }
         }
 
@@ -106,7 +106,7 @@ class ProfileSettingsViewController: UIViewController {
     }
 
     private func setupViews() {
-        title = "Profile Settings"
+        title = "settings_profile_settings".localized
         navigationItem.largeTitleDisplayMode = .never
         view.backgroundColor = .systemGroupedBackground
 
@@ -152,11 +152,12 @@ class ProfileSettingsViewController: UIViewController {
                 }
 
                 // Format display string
+                let yearsOldText = "profile_years_old".localized
                 if birthMonth > 0 {
                     let monthName = DateFormatter().monthSymbols[birthMonth - 1]
-                    return "\(monthName) \(birthYear) (\(age) years old)"
+                    return "\(monthName) \(birthYear) (\(age) \(yearsOldText))"
                 } else {
-                    return "\(birthYear) (\(age) years old)"
+                    return "\(birthYear) (\(age) \(yearsOldText))"
                 }
             }
             return ""
@@ -189,19 +190,33 @@ class ProfileSettingsViewController: UIViewController {
             return ""
 
         case .relationshipIntent:
-            if let intents = UserDefaults.standard.array(forKey: "relationshipIntents") as? [String] {
+            // Try plural key first, then singular key (onboarding stores singular)
+            if let intents = UserDefaults.standard.array(forKey: "relationshipIntents") as? [String], !intents.isEmpty {
                 return intents.joined(separator: ", ")
+            } else if let intent = UserDefaults.standard.string(forKey: "relationshipIntent"), !intent.isEmpty {
+                // Convert raw value to display value if needed
+                if let intentEnum = RelationshipIntent(rawValue: intent) {
+                    return intentEnum.displayName
+                }
+                return intent
             }
             return ""
 
         case .learningGoals:
             if let goals = UserDefaults.standard.array(forKey: "learningContexts") as? [String] {
-                return goals.joined(separator: ", ")
+                // Convert raw values to display names if needed
+                let displayGoals = goals.map { goal -> String in
+                    if let context = LearningContext(rawValue: goal) {
+                        return context.displayName
+                    }
+                    return goal
+                }
+                return displayGoals.joined(separator: ", ")
             }
             return ""
 
         case .strictlyPlatonic:
-            return UserDefaults.standard.bool(forKey: "strictlyPlatonic") ? "Yes" : "No"
+            return UserDefaults.standard.bool(forKey: "strictlyPlatonic") ? "common_yes".localized : "common_no".localized
         }
     }
 
@@ -226,22 +241,22 @@ class ProfileSettingsViewController: UIViewController {
         let currentFirstName = UserDefaults.standard.string(forKey: "firstName") ?? ""
         let currentLastName = UserDefaults.standard.string(forKey: "lastName") ?? ""
 
-        let alert = UIAlertController(title: "Update Name", message: nil, preferredStyle: .alert)
+        let alert = UIAlertController(title: "profile_update_name".localized, message: nil, preferredStyle: .alert)
 
         alert.addTextField { textField in
-            textField.placeholder = "First Name"
+            textField.placeholder = "common_first_name".localized
             textField.text = currentFirstName
             textField.autocapitalizationType = .words
         }
 
         alert.addTextField { textField in
-            textField.placeholder = "Last Name (optional)"
+            textField.placeholder = "profile_last_name_optional".localized
             textField.text = currentLastName
             textField.autocapitalizationType = .words
         }
 
-        alert.addAction(UIAlertAction(title: "Cancel", style: .cancel))
-        alert.addAction(UIAlertAction(title: "Save", style: .default) { [weak self, weak alert] _ in
+        alert.addAction(UIAlertAction(title: "common_cancel".localized, style: .cancel))
+        alert.addAction(UIAlertAction(title: "common_save".localized, style: .default) { [weak self, weak alert] _ in
             guard let firstName = alert?.textFields?[0].text, !firstName.isEmpty else { return }
             let lastName = alert?.textFields?[1].text ?? ""
 
@@ -306,9 +321,13 @@ class ProfileSettingsViewController: UIViewController {
     }
 
     private func showNativeLanguagePicker() {
+        // Convert stored language to display name for picker
+        let storedLanguage = UserDefaults.standard.string(forKey: "nativeLanguage") ?? ""
+        let displayLanguage = convertToLanguageDisplayName(storedLanguage)
+
         let vc = LanguagePickerViewController(
-            title: "Native Language",
-            selectedLanguages: [UserDefaults.standard.string(forKey: "nativeLanguage") ?? ""],
+            title: "profile_field_native_language".localized,
+            selectedLanguages: [displayLanguage],
             allowsMultipleSelection: false
         )
         vc.onSave = { [weak self] languages in
@@ -324,6 +343,34 @@ class ProfileSettingsViewController: UIViewController {
         }
         let nav = UINavigationController(rootViewController: vc)
         present(nav, animated: true)
+    }
+
+    /// Convert stored language value to picker display name
+    /// Handles both language codes (EN, ES) and full names (English, Spanish)
+    private func convertToLanguageDisplayName(_ stored: String) -> String {
+        // First try to parse as a Language enum (code format)
+        if let language = Language(rawValue: stored) {
+            return language.name
+        }
+        // Try common two-letter codes
+        if let language = Language.from(languageCode: stored) {
+            return language.name
+        }
+        // Try to parse as a language name
+        if let language = Language.from(name: stored) {
+            return language.name
+        }
+        // Handle legacy format "Chinese (Mandarin)" -> "Mandarin Chinese"
+        if stored == "Chinese (Mandarin)" {
+            return "Mandarin Chinese"
+        }
+        // Already a display name, return as-is
+        return stored
+    }
+
+    /// Convert stored language values to picker display names
+    private func convertToLanguageDisplayNames(_ stored: [String]) -> [String] {
+        return stored.map { convertToLanguageDisplayName($0) }
     }
 
     private func updateNativeLanguageInUserLanguages(languageName: String) {
@@ -359,6 +406,9 @@ class ProfileSettingsViewController: UIViewController {
     private func showLearningLanguagesPicker() {
         let currentLanguages = UserDefaults.standard.array(forKey: "learningLanguages") as? [String] ?? []
 
+        // Convert stored languages to display names for picker
+        let displayLanguages = convertToLanguageDisplayNames(currentLanguages)
+
         // Load existing proficiency levels
         var currentProficiencies: [String: String] = [:]
         if let data = UserDefaults.standard.data(forKey: "userLanguages"),
@@ -369,8 +419,8 @@ class ProfileSettingsViewController: UIViewController {
         }
 
         let vc = LanguagePickerViewController(
-            title: "Learning Languages",
-            selectedLanguages: currentLanguages,
+            title: "profile_field_learning_languages".localized,
+            selectedLanguages: displayLanguages,
             allowsMultipleSelection: true,
             showProficiency: true,
             proficiencies: currentProficiencies
@@ -427,13 +477,29 @@ class ProfileSettingsViewController: UIViewController {
     }
 
     private func showRelationshipIntentPicker() {
-        let options = ["Friendship", "Language Exchange", "Dating", "Networking", "Travel Buddy"]
-        let currentIntents = UserDefaults.standard.array(forKey: "relationshipIntents") as? [String] ?? []
+        let options = [
+            "profile_intent_friendship".localized,
+            "profile_intent_language_exchange".localized,
+            "profile_intent_dating".localized,
+            "profile_intent_networking".localized,
+            "profile_intent_travel_buddy".localized
+        ]
+
+        // Try to get from plural key first, then singular key (onboarding stores singular)
+        var currentIntents: [String] = []
+        if let intents = UserDefaults.standard.array(forKey: "relationshipIntents") as? [String], !intents.isEmpty {
+            currentIntents = intents
+        } else if let singleIntent = UserDefaults.standard.string(forKey: "relationshipIntent"), !singleIntent.isEmpty {
+            currentIntents = [singleIntent]
+        }
+
+        // Convert stored values to display values for picker
+        let displayIntents = currentIntents.map { convertToIntentDisplayName($0, options: options) }
 
         let vc = MultiSelectPickerViewController(
-            title: "Looking For",
+            title: "profile_field_looking_for".localized,
             options: options,
-            selectedOptions: currentIntents
+            selectedOptions: displayIntents
         )
         vc.onSave = { [weak self] selected in
             UserDefaults.standard.set(selected, forKey: "relationshipIntents")
@@ -444,14 +510,52 @@ class ProfileSettingsViewController: UIViewController {
         present(nav, animated: true)
     }
 
+    /// Convert stored relationship intent value to display name
+    private func convertToIntentDisplayName(_ stored: String, options: [String]) -> String {
+        // If it's already a display value, return as-is
+        if options.contains(stored) {
+            return stored
+        }
+
+        // Map RelationshipIntent raw values to profile intent display names
+        switch stored.lowercased() {
+        case "language_practice_only":
+            return "profile_intent_language_exchange".localized
+        case "friendship":
+            return "profile_intent_friendship".localized
+        case "open_to_dating":
+            return "profile_intent_dating".localized
+        default:
+            // Try to find a matching option
+            for option in options {
+                if option.lowercased().contains(stored.lowercased()) ||
+                   stored.lowercased().contains(option.lowercased().replacingOccurrences(of: "_", with: " ")) {
+                    return option
+                }
+            }
+            return stored
+        }
+    }
+
     private func showLearningGoalsPicker() {
-        let options = ["Conversation Practice", "Grammar Help", "Pronunciation", "Cultural Exchange", "Professional/Business", "Travel Preparation", "Academic Study"]
+        let options = [
+            "profile_goal_conversation".localized,
+            "profile_goal_grammar".localized,
+            "profile_goal_pronunciation".localized,
+            "profile_goal_cultural".localized,
+            "profile_goal_professional".localized,
+            "profile_goal_travel".localized,
+            "profile_goal_academic".localized
+        ]
         let currentGoals = UserDefaults.standard.array(forKey: "learningContexts") as? [String] ?? []
 
+        // Convert stored values to display values for picker
+        let displayGoals = currentGoals.map { convertToGoalDisplayName($0, options: options) }
+
         let vc = MultiSelectPickerViewController(
-            title: "Learning Goals",
+            title: "profile_field_learning_goals".localized,
             options: options,
-            selectedOptions: currentGoals
+            selectedOptions: displayGoals
         )
         vc.onSave = { [weak self] selected in
             UserDefaults.standard.set(selected, forKey: "learningContexts")
@@ -462,14 +566,48 @@ class ProfileSettingsViewController: UIViewController {
         present(nav, animated: true)
     }
 
+    /// Convert stored learning goal value to display name
+    /// Maps raw enum values (casual, formal, etc.) to localized display strings
+    private func convertToGoalDisplayName(_ stored: String, options: [String]) -> String {
+        // If it's already a display value (contains the stored value), return as-is
+        if options.contains(stored) {
+            return stored
+        }
+
+        // Map LearningContext raw values to profile goal display names
+        switch stored.lowercased() {
+        case "casual":
+            return "profile_goal_conversation".localized
+        case "formal":
+            return "profile_goal_professional".localized
+        case "academic":
+            return "profile_goal_academic".localized
+        case "travel":
+            return "profile_goal_travel".localized
+        case "slang":
+            return "profile_goal_conversation".localized  // Map slang to conversation
+        case "technical":
+            return "profile_goal_professional".localized  // Map technical to professional
+        default:
+            // Try to find a matching option by partial match
+            for option in options {
+                if option.lowercased().contains(stored.lowercased()) ||
+                   stored.lowercased().contains(option.lowercased()) {
+                    return option
+                }
+            }
+            return stored
+        }
+    }
+
     private func toggleStrictlyPlatonic(_ isOn: Bool) {
         UserDefaults.standard.set(isOn, forKey: "strictlyPlatonic")
         saveToSupabase()
     }
 
     private func showError(_ message: String) {
-        let alert = UIAlertController(title: "Error", message: message, preferredStyle: .alert)
-        alert.addAction(UIAlertAction(title: "OK", style: .default))
+        let alert = UIAlertController(title: "common_error".localized, message: message, preferredStyle: .alert)
+        alert.addAction(UIAlertAction(title: "common_ok".localized, style: .default))
         present(alert, animated: true)
     }
 
@@ -660,7 +798,7 @@ class BioEditorViewController: UIViewController {
     }
 
     private func setupViews() {
-        title = "Edit Bio"
+        title = "profile_edit_bio".localized
         view.backgroundColor = .systemBackground
 
         navigationItem.leftBarButtonItem = UIBarButtonItem(barButtonSystemItem: .cancel, target: self, action: #selector(cancel))
@@ -731,10 +869,11 @@ class LanguagePickerViewController: UIViewController {
     var onSaveWithProficiency: (([String], [String: String]) -> Void)?
 
     private let languages = [
-        "English", "Spanish", "French", "German", "Italian", "Portuguese",
-        "Chinese (Mandarin)", "Japanese", "Korean", "Russian", "Arabic",
+        "English", "Spanish", "French", "German", "Italian",
+        "Portuguese (BR)", "Portuguese (PT)",  // Both Portuguese variants
+        "Mandarin Chinese", "Japanese", "Korean", "Russian", "Arabic",
         "Hindi", "Dutch", "Polish", "Swedish", "Danish", "Norwegian",
-        "Finnish", "Indonesian", "Filipino", "Vietnamese", "Thai", "Turkish"
+        "Finnish", "Indonesian", "Filipino"
     ]
 
     private let proficiencyLevels = ["beginner", "intermediate", "advanced"]
@@ -792,17 +931,17 @@ class LanguagePickerViewController: UIViewController {
 
     private func proficiencyDisplayName(_ proficiency: String) -> String {
         switch proficiency {
-        case "beginner": return "Beginner"
-        case "intermediate": return "Intermediate"
-        case "advanced": return "Advanced"
+        case "beginner": return "proficiency_beginner".localized
+        case "intermediate": return "proficiency_intermediate".localized
+        case "advanced": return "proficiency_advanced".localized
         default: return proficiency.capitalized
         }
     }
 
     private func showProficiencyPicker(for language: String, isNewSelection: Bool) {
         let alertController = UIAlertController(
-            title: isNewSelection ? "Select Proficiency" : "Change Proficiency",
-            message: "How well do you speak \(language)?",
+            title: isNewSelection ? "profile_select_proficiency".localized : "profile_change_proficiency".localized,
+            message: String(format: "profile_how_well_speak".localized, language),
             preferredStyle: .actionSheet
         )
 
@@ -823,14 +962,14 @@ class LanguagePickerViewController: UIViewController {
         }
 
         if !isNewSelection {
-            alertController.addAction(UIAlertAction(title: "Remove Language", style: .destructive) { [weak self] _ in
+            alertController.addAction(UIAlertAction(title: "profile_remove_language".localized, style: .destructive) { [weak self] _ in
                 self?.selectedLanguages.remove(language)
                 self?.languageProficiencies.removeValue(forKey: language)
                 self?.tableView.reloadData()
             })
         }
 
-        alertController.addAction(UIAlertAction(title: "Cancel", style: .cancel) { [weak self] _ in
+        alertController.addAction(UIAlertAction(title: "common_cancel".localized, style: .cancel) { [weak self] _ in
             // If this was a new selection and user cancelled, don't add the language
             if isNewSelection {
                 self?.tableView.reloadData()
@@ -853,7 +992,7 @@ extension LanguagePickerViewController: UITableViewDataSource, UITableViewDelega
 
     func tableView(_ tableView: UITableView, titleForFooterInSection section: Int) -> String? {
         if showProficiency && allowsMultipleSelection {
-            return "Tap to add a language and set proficiency. Tap again to change level or remove."
+            return "profile_language_picker_footer".localized
         }
         return nil
     }
@@ -872,7 +1011,7 @@ extension LanguagePickerViewController: UITableViewDataSource, UITableViewDelega
                 config.secondaryText = proficiencyDisplayName(proficiency)
                 config.secondaryTextProperties.color = .systemBlue
             } else {
-                config.secondaryText = "Tap to set level"
+                config.secondaryText = "profile_tap_to_set_level".localized
                 config.secondaryTextProperties.color = .systemOrange
             }
         }
@@ -1007,7 +1146,7 @@ class BirthDatePickerViewController: UIViewController {
     }
 
     private func setupViews() {
-        title = "Birth Date"
+        title = "profile_birth_date".localized
         view.backgroundColor = .systemBackground
 
         navigationItem.leftBarButtonItem = UIBarButtonItem(
@@ -1039,8 +1178,8 @@ class BirthDatePickerViewController: UIViewController {
         minComponents.day = 1
         datePicker.minimumDate = Calendar.current.date(from: minComponents)
 
-        // Must be at least 13 years old
-        datePicker.maximumDate = Calendar.current.date(byAdding: .year, value: -13, to: Date())
+        // Must be at least 18 years old
+        datePicker.maximumDate = Calendar.current.date(byAdding: .year, value: -18, to: Date())
 
         // Set current date
         if let year = currentYear {
