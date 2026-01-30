@@ -2,6 +2,21 @@ import Foundation
 import UIKit
 import Supabase
 
+/// Type-erased Encodable wrapper for building dynamic dictionaries
+struct AnyEncodable: Encodable {
+    private let _encode: (Encoder) throws -> Void
+
+    init<T: Encodable>(_ value: T) {
+        _encode = { encoder in
+            try value.encode(to: encoder)
+        }
+    }
+
+    func encode(to encoder: Encoder) throws {
+        try _encode(encoder)
+    }
+}
+
 /// Central service for managing all Supabase interactions
 class SupabaseService {
 
@@ -64,6 +79,17 @@ class SupabaseService {
     var isAuthenticated: Bool {
         return currentUser != nil
     }
+
+    /// Restore persisted session on app launch.
+    /// Call this before checking isAuthenticated on cold start.
+    func restoreSession() async {
+        do {
+            _ = try await client.auth.session
+            print("✅ Session restored: \(currentUser?.id.uuidString ?? "nil")")
+        } catch {
+            print("⚠️ No valid session to restore: \(error.localizedDescription)")
+        }
+    }
 }
 
 // MARK: - Authentication Methods
@@ -75,6 +101,27 @@ extension SupabaseService {
         // Use SignInWithAppleService to get Apple credentials
         let appleResult = try await SignInWithAppleService.shared.signIn(from: presentingViewController)
 
+        // Persist Apple-provided data IMMEDIATELY before any network calls.
+        // Apple only provides name/email on the FIRST sign-in ever — if we lose it, it's gone forever.
+        if let email = appleResult.email {
+            print("📧 Apple provided email: \(email)")
+            UserDefaults.standard.set(email, forKey: "appleProvidedEmail")
+            UserDefaults.standard.set(email, forKey: "email")
+        }
+
+        if let fullName = appleResult.fullName {
+            let firstName = fullName.givenName ?? ""
+            let lastName = fullName.familyName ?? ""
+            if !firstName.isEmpty {
+                print("👤 Apple provided name: \(firstName) \(lastName)")
+                UserDefaults.standard.set(firstName, forKey: "appleProvidedFirstName")
+                UserDefaults.standard.set(lastName, forKey: "appleProvidedLastName")
+                UserDefaults.standard.set(firstName, forKey: "firstName")
+                UserDefaults.standard.set(lastName, forKey: "lastName")
+            }
+        }
+        UserDefaults.standard.synchronize()
+
         // Sign in to Supabase using Apple ID token
         try await client.auth.signInWithIdToken(
             credentials: .init(
@@ -85,22 +132,6 @@ extension SupabaseService {
         )
 
         print("✅ Signed in with Apple via Supabase")
-
-        // If this is a new user and we have their name/email, update their profile
-        if let email = appleResult.email {
-            print("📧 Apple provided email: \(email)")
-            // You can save this to the profile if needed
-        }
-
-        if let fullName = appleResult.fullName {
-            let firstName = fullName.givenName ?? ""
-            let lastName = fullName.familyName ?? ""
-            if !firstName.isEmpty {
-                print("👤 Apple provided name: \(firstName) \(lastName)")
-                // Note: Apple only provides name on FIRST sign in
-                // You should save this to user profile immediately
-            }
-        }
     }
 
     /// Sign in with email/password
@@ -119,6 +150,130 @@ extension SupabaseService {
     func signOut() async throws {
         try await client.auth.signOut()
         print("✅ Signed out")
+    }
+
+    /// Delete the current user's account and all associated data
+    func deleteAccount() async throws {
+        guard let userId = currentUserId else {
+            throw NSError(domain: "SupabaseService", code: -1,
+                        userInfo: [NSLocalizedDescriptionKey: "No authenticated user found"])
+        }
+
+        let userIdString = userId.uuidString
+        print("🗑️ Starting account deletion for user: \(userIdString)")
+
+        // Delete user data from all tables (order matters for foreign key constraints)
+        // Messages first (references conversations and users)
+        try? await client
+            .from("messages")
+            .delete()
+            .or("sender_id.eq.\(userIdString),receiver_id.eq.\(userIdString)")
+            .execute()
+        print("  ✅ Messages deleted")
+
+        // Conversations
+        try? await client
+            .from("conversations")
+            .delete()
+            .or("user1_id.eq.\(userIdString),user2_id.eq.\(userIdString)")
+            .execute()
+        print("  ✅ Conversations deleted")
+
+        // Reported users (both reporter and reported)
+        try? await client
+            .from("reported_users")
+            .delete()
+            .or("reporter_id.eq.\(userIdString),reported_user_id.eq.\(userIdString)")
+            .execute()
+        print("  ✅ Reports deleted")
+
+        // Muse interactions
+        try? await client
+            .from("muse_interactions")
+            .delete()
+            .eq("user_id", value: userIdString)
+            .execute()
+        print("  ✅ Muse interactions deleted")
+
+        // Feedback
+        try? await client
+            .from("feedback")
+            .delete()
+            .eq("user_id", value: userIdString)
+            .execute()
+        print("  ✅ Feedback deleted")
+
+        // Matches
+        try? await client
+            .from("matches")
+            .delete()
+            .or("user1_id.eq.\(userIdString),user2_id.eq.\(userIdString)")
+            .execute()
+        print("  ✅ Matches deleted")
+
+        // Swipes
+        try? await client
+            .from("swipes")
+            .delete()
+            .or("swiper_id.eq.\(userIdString),swiped_id.eq.\(userIdString)")
+            .execute()
+        print("  ✅ Swipes deleted")
+
+        // User languages
+        try? await client
+            .from("user_languages")
+            .delete()
+            .eq("user_id", value: userIdString)
+            .execute()
+        print("  ✅ User languages deleted")
+
+        // User preferences
+        try? await client
+            .from("user_preferences")
+            .delete()
+            .eq("user_id", value: userIdString)
+            .execute()
+        print("  ✅ User preferences deleted")
+
+        // Invites
+        try? await client
+            .from("invites")
+            .delete()
+            .eq("inviter_id", value: userIdString)
+            .execute()
+        print("  ✅ Invites deleted")
+
+        // Delete profile (this is the main user record)
+        try? await client
+            .from("profiles")
+            .delete()
+            .eq("id", value: userIdString)
+            .execute()
+        print("  ✅ Profile deleted")
+
+        // Delete profile photos from storage
+        do {
+            let files = try await client.storage.from("profile-photos").list(path: userIdString)
+            if !files.isEmpty {
+                let filePaths = files.map { "\(userIdString)/\($0.name)" }
+                try await client.storage.from("profile-photos").remove(paths: filePaths)
+                print("  ✅ Profile photos deleted")
+            }
+        } catch {
+            print("  ⚠️ Could not delete photos: \(error.localizedDescription)")
+        }
+
+        // Delete the auth.users row via server-side function (must be called while still authenticated)
+        do {
+            try await client.rpc("delete_auth_user").execute()
+            print("  ✅ Auth user deleted")
+        } catch {
+            print("  ⚠️ Could not delete auth user: \(error.localizedDescription)")
+        }
+
+        // Sign out (clears local session tokens)
+        try await client.auth.signOut()
+        print("✅ Account deletion complete, signed out")
     }
 
     /// Send magic link to email
@@ -246,7 +401,7 @@ extension SupabaseService {
             throw NSError(domain: "SupabaseService", code: -1, userInfo: [NSLocalizedDescriptionKey: "Not authenticated"])
         }
 
-        try await client.database
+        try await client
             .from("profiles")
             .update(["profile_photos": photoURLs])
             .eq("id", value: userId.uuidString)
@@ -261,7 +416,7 @@ extension SupabaseService {
             throw NSError(domain: "SupabaseService", code: -1, userInfo: [NSLocalizedDescriptionKey: "Not authenticated"])
         }
 
-        try await client.database
+        try await client
             .from("profiles")
             .update(["photo_captions": captions])
             .eq("id", value: userId.uuidString)
@@ -275,7 +430,7 @@ extension SupabaseService {
             throw NSError(domain: "SupabaseService", code: -1, userInfo: [NSLocalizedDescriptionKey: "Not authenticated"])
         }
 
-        try await client.database
+        try await client
             .from("profiles")
             .update(["photo_blur_settings": blurSettings])
             .eq("id", value: userId.uuidString)
@@ -294,7 +449,9 @@ extension SupabaseService {
             throw NSError(domain: "SupabaseService", code: -1, userInfo: [NSLocalizedDescriptionKey: "Not authenticated"])
         }
 
-        let response: ProfileResponse = try await client.database
+        print("🔍 getCurrentProfile: Fetching profile for user \(userId)...")
+
+        let response: ProfileResponse = try await client
             .from("profiles")
             .select()
             .eq("id", value: userId.uuidString)
@@ -302,12 +459,17 @@ extension SupabaseService {
             .execute()
             .value
 
+        print("🔍 getCurrentProfile returned:")
+        print("   firstName: '\(response.firstName)'")
+        print("   bio: '\(response.bio?.prefix(30) ?? "nil")...'")
+        print("   learningLanguages: \(response.learningLanguages ?? [])")
+
         return response
     }
 
     /// Fetch a specific user's profile by ID
     func fetchUserProfile(userId: String) async throws -> User? {
-        let response: ProfileResponse = try await client.database
+        let response: ProfileResponse = try await client
             .from("profiles")
             .select()
             .eq("id", value: userId)
@@ -362,16 +524,25 @@ extension SupabaseService {
     /// Update current user's profile
     func updateProfile(_ profile: ProfileUpdate) async throws {
         guard let userId = currentUserId else {
+            print("❌ updateProfile: Not authenticated")
             throw NSError(domain: "SupabaseService", code: -1, userInfo: [NSLocalizedDescriptionKey: "Not authenticated"])
         }
 
-        try await client.database
+        print("📤 updateProfile: Updating profile for user \(userId)...")
+
+        // Encode to JSON to see what's being sent
+        if let jsonData = try? JSONEncoder().encode(profile),
+           let jsonString = String(data: jsonData, encoding: .utf8) {
+            print("📤 JSON payload: \(jsonString)")
+        }
+
+        try await client
             .from("profiles")
             .update(profile)
             .eq("id", value: userId.uuidString)
             .execute()
 
-        print("✅ Profile updated")
+        print("✅ Profile updated successfully for user \(userId)")
     }
 
     /// Update current user's last_active timestamp to mark them as online
@@ -380,7 +551,7 @@ extension SupabaseService {
 
         do {
             let now = ISO8601DateFormatter().string(from: Date())
-            try await client.database
+            try await client
                 .from("profiles")
                 .update(["last_active": now])
                 .eq("id", value: userId.uuidString)
@@ -466,13 +637,272 @@ extension SupabaseService {
         }
     }
 
+    /// Sync onboarding data from UserDefaults to Supabase
+    /// Call this after completing onboarding to save all collected data to the backend
+    func syncOnboardingDataToSupabase() async throws {
+        guard let userId = currentUserId else {
+            print("❌ syncOnboardingDataToSupabase: Not authenticated - no currentUserId")
+            throw NSError(domain: "SupabaseService", code: -1, userInfo: [NSLocalizedDescriptionKey: "Not authenticated"])
+        }
+
+        print("📤 Syncing onboarding data to Supabase for user: \(userId)")
+
+        // Basic info - with detailed logging
+        let firstName = UserDefaults.standard.string(forKey: "firstName")
+        let lastName = UserDefaults.standard.string(forKey: "lastName")
+        let bio = UserDefaults.standard.string(forKey: "bio")
+
+        print("📤 UserDefaults values:")
+        print("   firstName: '\(firstName ?? "nil")'")
+        print("   lastName: '\(lastName ?? "nil")'")
+        print("   bio: '\(bio?.prefix(30) ?? "nil")...'")
+
+        // Get language data
+        var nativeLanguage: String?
+        var learningLanguages: [String]?
+
+        if let data = UserDefaults.standard.data(forKey: "userLanguages"),
+           let userLanguageData = try? JSONDecoder().decode(UserLanguageData.self, from: data) {
+            nativeLanguage = userLanguageData.nativeLanguage.language.code
+            learningLanguages = userLanguageData.learningLanguages.map { $0.language.code }
+            print("   nativeLanguage: '\(nativeLanguage ?? "nil")'")
+            print("   learningLanguages: \(learningLanguages ?? [])")
+        } else {
+            print("   ⚠️ No userLanguages data found in UserDefaults")
+        }
+
+        // MINIMAL SYNC: Only send fields that definitely exist in Supabase
+        // This avoids "column not found" errors from missing schema columns
+        let location = UserDefaults.standard.string(forKey: "location")
+        let birthYear = UserDefaults.standard.integer(forKey: "birthYear")
+
+        // Build a minimal dictionary with only essential fields
+        var updateData: [String: AnyEncodable] = [:]
+
+        if let firstName = firstName {
+            updateData["first_name"] = AnyEncodable(firstName)
+        }
+        if let lastName = lastName {
+            updateData["last_name"] = AnyEncodable(lastName)
+        }
+        if let bio = bio {
+            updateData["bio"] = AnyEncodable(bio)
+        }
+        if let nativeLanguage = nativeLanguage {
+            updateData["native_language"] = AnyEncodable(nativeLanguage)
+        }
+        if let learningLanguages = learningLanguages {
+            updateData["learning_languages"] = AnyEncodable(learningLanguages)
+        }
+        if let location = location {
+            updateData["location"] = AnyEncodable(location)
+        }
+        if birthYear > 0 {
+            updateData["birth_year"] = AnyEncodable(birthYear)
+        }
+        updateData["onboarding_completed"] = AnyEncodable(true)
+
+        print("📤 Minimal sync - updating \(updateData.count) fields")
+
+        do {
+            try await client
+                .from("profiles")
+                .update(updateData)
+                .eq("id", value: userId.uuidString)
+                .execute()
+            print("✅ Onboarding data synced to Supabase for user \(userId)")
+        } catch {
+            print("❌ Failed to update profile in Supabase: \(error)")
+            throw error
+        }
+    }
+
+    /// Sync ALL onboarding data from UserDefaults to Supabase (extended version)
+    /// NOTE: This requires all columns to exist in the database.
+    /// If you get "column not found" errors, add the missing columns or use syncOnboardingDataToSupabase() instead.
+    func syncAllOnboardingDataToSupabase() async throws {
+        guard let userId = currentUserId else {
+            throw NSError(domain: "SupabaseService", code: -1, userInfo: [NSLocalizedDescriptionKey: "Not authenticated"])
+        }
+
+        print("📤 Full sync of onboarding data to Supabase for user: \(userId)")
+
+        var profileUpdate = ProfileUpdate()
+
+        // Basic info
+        profileUpdate.firstName = UserDefaults.standard.string(forKey: "firstName")
+        profileUpdate.lastName = UserDefaults.standard.string(forKey: "lastName")
+        profileUpdate.bio = UserDefaults.standard.string(forKey: "bio")
+
+        let birthYear = UserDefaults.standard.integer(forKey: "birthYear")
+        if birthYear > 0 {
+            profileUpdate.birthYear = birthYear
+        }
+
+        // Location
+        profileUpdate.location = UserDefaults.standard.string(forKey: "location")
+        profileUpdate.city = UserDefaults.standard.string(forKey: "city")
+        profileUpdate.country = UserDefaults.standard.string(forKey: "country")
+        if UserDefaults.standard.object(forKey: "latitude") != nil {
+            profileUpdate.latitude = UserDefaults.standard.double(forKey: "latitude")
+        }
+        if UserDefaults.standard.object(forKey: "longitude") != nil {
+            profileUpdate.longitude = UserDefaults.standard.double(forKey: "longitude")
+        }
+
+        // Language data
+        if let data = UserDefaults.standard.data(forKey: "userLanguages"),
+           let userLanguageData = try? JSONDecoder().decode(UserLanguageData.self, from: data) {
+            profileUpdate.nativeLanguage = userLanguageData.nativeLanguage.language.code
+            profileUpdate.learningLanguages = userLanguageData.learningLanguages.map { $0.language.code }
+            var proficiencyLevels: [String: String] = [:]
+            for userLang in userLanguageData.learningLanguages {
+                proficiencyLevels[userLang.language.code] = userLang.proficiency.rawValue
+            }
+            profileUpdate.proficiencyLevels = proficiencyLevels
+        }
+
+        // Matching preferences
+        if let gender = UserDefaults.standard.string(forKey: "gender") {
+            profileUpdate.gender = gender
+        }
+        if let genderPref = UserDefaults.standard.string(forKey: "genderPreference") {
+            profileUpdate.genderPreference = genderPref
+        }
+        let minAge = UserDefaults.standard.integer(forKey: "minAge")
+        let maxAge = UserDefaults.standard.integer(forKey: "maxAge")
+        if minAge > 0 { profileUpdate.minAge = minAge }
+        if maxAge > 0 { profileUpdate.maxAge = maxAge }
+
+        if let minProf = UserDefaults.standard.string(forKey: "minProficiencyLevel") {
+            profileUpdate.minProficiencyLevel = minProf
+        }
+        if let maxProf = UserDefaults.standard.string(forKey: "maxProficiencyLevel") {
+            profileUpdate.maxProficiencyLevel = maxProf
+        }
+
+        // Location preference
+        if let locationPref = UserDefaults.standard.string(forKey: "locationPreference") {
+            profileUpdate.locationPreference = locationPref
+        }
+        if let preferredCountries = UserDefaults.standard.stringArray(forKey: "preferredCountries") {
+            profileUpdate.preferredCountries = preferredCountries
+        }
+        if let excludedCountries = UserDefaults.standard.stringArray(forKey: "excludedCountries") {
+            profileUpdate.excludedCountries = excludedCountries
+        }
+
+        // Travel destination
+        if let travelData = UserDefaults.standard.data(forKey: "travelDestination"),
+           let travelDestination = try? JSONDecoder().decode(TravelDestination.self, from: travelData) {
+            profileUpdate.travelDestination = TravelDestinationDB(
+                city: travelDestination.city,
+                country: travelDestination.country,
+                countryName: travelDestination.countryName,
+                startDate: travelDestination.startDate.map { ISO8601DateFormatter().string(from: $0) },
+                endDate: travelDestination.endDate.map { ISO8601DateFormatter().string(from: $0) }
+            )
+        }
+
+        // Privacy preferences
+        profileUpdate.strictlyPlatonic = UserDefaults.standard.bool(forKey: "strictlyPlatonic")
+        profileUpdate.blurPhotosUntilMatch = UserDefaults.standard.bool(forKey: "blurPhotosUntilMatch")
+
+        // Relationship intent
+        if let intentString = UserDefaults.standard.string(forKey: "relationshipIntent") {
+            profileUpdate.relationshipIntents = [intentString]
+        }
+
+        // Learning contexts
+        if let learningContexts = UserDefaults.standard.stringArray(forKey: "learningContexts") {
+            profileUpdate.learningContexts = learningContexts
+        }
+
+        // Muse languages
+        if let museLanguages = UserDefaults.standard.stringArray(forKey: "museLanguages") {
+            profileUpdate.museLanguages = museLanguages
+        }
+
+        profileUpdate.onboardingCompleted = true
+
+        try await updateProfile(profileUpdate)
+        print("✅ Full onboarding data synced to Supabase for user \(userId)")
+    }
+
+    /// Upload onboarding photos to Supabase storage and update profile
+    /// Call this after completing onboarding if photos were selected
+    func uploadOnboardingPhotos(_ photos: [UIImage]) async throws {
+        guard let userId = currentUserId?.uuidString else {
+            throw NSError(domain: "SupabaseService", code: -1, userInfo: [NSLocalizedDescriptionKey: "Not authenticated"])
+        }
+
+        guard !photos.isEmpty else {
+            print("ℹ️ No photos to upload")
+            return
+        }
+
+        print("📤 Uploading \(photos.count) onboarding photos...")
+
+        var uploadedPaths: [String] = Array(repeating: "", count: 7) // 6 grid + 1 profile photo
+
+        for (index, image) in photos.enumerated() {
+            // Resize image to max 1200px
+            let resizedImage = resizeImage(image, maxDimension: 1200)
+
+            guard let imageData = resizedImage.jpegData(compressionQuality: 0.7) else {
+                print("⚠️ Could not compress image at index \(index)")
+                continue
+            }
+
+            do {
+                let storagePath = try await uploadPhoto(imageData, userId: userId, photoIndex: index)
+                uploadedPaths[index] = storagePath
+                print("✅ Uploaded photo \(index + 1)/\(photos.count)")
+            } catch {
+                print("❌ Failed to upload photo \(index): \(error)")
+            }
+        }
+
+        // Also set the first photo as the profile photo (index 6)
+        if !uploadedPaths[0].isEmpty {
+            uploadedPaths[6] = uploadedPaths[0]
+        }
+
+        // Update profile with photo paths
+        try await updateUserPhotos(photoURLs: uploadedPaths)
+
+        print("✅ All onboarding photos uploaded and profile updated")
+    }
+
+    /// Resize image to fit within maxDimension while maintaining aspect ratio
+    private func resizeImage(_ image: UIImage, maxDimension: CGFloat) -> UIImage {
+        let size = image.size
+
+        // If image is already small enough, return it
+        if size.width <= maxDimension && size.height <= maxDimension {
+            return image
+        }
+
+        // Calculate new size maintaining aspect ratio
+        let ratio = min(maxDimension / size.width, maxDimension / size.height)
+        let newSize = CGSize(width: size.width * ratio, height: size.height * ratio)
+
+        // Use UIGraphicsImageRenderer for efficient memory handling
+        let renderer = UIGraphicsImageRenderer(size: newSize)
+        let resizedImage = renderer.image { _ in
+            image.draw(in: CGRect(origin: .zero, size: newSize))
+        }
+
+        return resizedImage
+    }
+
     /// Update current user's bio
     func updateUserBio(bio: String) async throws {
         guard let userId = currentUserId else {
             throw NSError(domain: "SupabaseService", code: -1, userInfo: [NSLocalizedDescriptionKey: "Not authenticated"])
         }
 
-        try await client.database
+        try await client
             .from("profiles")
             .update(["bio": bio])
             .eq("id", value: userId.uuidString)
@@ -494,7 +924,7 @@ extension SupabaseService {
             nativeLanguage: nativeLanguage
         )
 
-        try await client.database
+        try await client
             .from("profiles")
             .insert(profile)
             .execute()
@@ -504,7 +934,7 @@ extension SupabaseService {
 
     /// Get a specific profile by user ID
     func getProfile(userId: String) async throws -> ProfileResponse {
-        let response: ProfileResponse = try await client.database
+        let response: ProfileResponse = try await client
             .from("profiles")
             .select()
             .eq("id", value: userId)
@@ -522,7 +952,7 @@ extension SupabaseService {
         }
 
         // Get profiles excluding current user and already swiped
-        let response: [ProfileResponse] = try await client.database
+        let response: [ProfileResponse] = try await client
             .from("profiles")
             .select()
             .neq("id", value: userId.uuidString)
@@ -551,7 +981,7 @@ extension SupabaseService {
             direction: direction
         )
 
-        try await client.database
+        try await client
             .from("swipes")
             .insert(swipe)
             .execute()
@@ -573,7 +1003,7 @@ extension SupabaseService {
         guard let userId = currentUserId else { return false }
 
         // Check if other user swiped right on current user
-        let response: [SwipeResponse] = try await client.database
+        let response: [SwipeResponse] = try await client
             .from("swipes")
             .select()
             .eq("swiper_id", value: otherUserId)
@@ -602,7 +1032,7 @@ extension SupabaseService {
             user2Liked: true
         )
 
-        try await client.database
+        try await client
             .from("matches")
             .insert(match)
             .execute()
@@ -622,7 +1052,7 @@ extension SupabaseService {
             throw NSError(domain: "SupabaseService", code: -1, userInfo: [NSLocalizedDescriptionKey: "Not authenticated"])
         }
 
-        let response: [MatchResponse] = try await client.database
+        let response: [MatchResponse] = try await client
             .from("matches")
             .select("""
                 *,
@@ -644,7 +1074,7 @@ extension SupabaseService {
         }
 
         // Delete the match record
-        try await client.database
+        try await client
             .from("matches")
             .delete()
             .eq("id", value: matchId)
@@ -659,7 +1089,7 @@ extension SupabaseService {
             throw NSError(domain: "SupabaseService", code: -1, userInfo: [NSLocalizedDescriptionKey: "Not authenticated"])
         }
 
-        let response: [SwipeResponse] = try await client.database
+        let response: [SwipeResponse] = try await client
             .from("swipes")
             .select()
             .eq("swiper_id", value: userId.uuidString)
@@ -686,7 +1116,7 @@ extension SupabaseService {
             }
         }
 
-        let response: [MatchUserIds] = try await client.database
+        let response: [MatchUserIds] = try await client
             .from("matches")
             .select("user1_id, user2_id")
             .or("user1_id.eq.\(userId.uuidString),user2_id.eq.\(userId.uuidString)")
@@ -789,7 +1219,7 @@ extension SupabaseService {
             status: "pending"
         )
 
-        try await client.database
+        try await client
             .from("feedback")
             .insert(feedback)
             .execute()
@@ -815,7 +1245,7 @@ extension SupabaseService {
         }
 
         print("🔍 Fetching match: \(matchId)")
-        let matches: [MatchWithConversation] = try await client.database
+        let matches: [MatchWithConversation] = try await client
             .from("matches")
             .select("id,conversation_id")  // Remove space in select
             .eq("id", value: matchId)
@@ -831,7 +1261,7 @@ extension SupabaseService {
 
         // If match has a conversation, fetch and return it
         if let conversationId = match.conversationId, !conversationId.isEmpty {
-            let conversations: [ConversationResponse] = try await client.database
+            let conversations: [ConversationResponse] = try await client
                 .from("conversations")
                 .select()
                 .eq("id", value: conversationId)
@@ -851,7 +1281,7 @@ extension SupabaseService {
         // Create new conversation for this match
         let newConversation = ConversationCreate(matchId: matchId)
 
-        let response: ConversationResponse = try await client.database
+        let response: ConversationResponse = try await client
             .from("conversations")
             .insert(newConversation)
             .select()
@@ -860,7 +1290,7 @@ extension SupabaseService {
             .value
 
         // Update the match with the conversation ID
-        try await client.database
+        try await client
             .from("matches")
             .update(["conversation_id": response.id])
             .eq("id", value: matchId)
@@ -877,13 +1307,6 @@ extension SupabaseService {
         }
 
         // First, find the match between these two users
-        let matchQuery = """
-            id,
-            conversation_id,
-            user1_id,
-            user2_id
-        """
-
         struct MatchWithConversation: Codable {
             let id: String
             let conversationId: String?
@@ -899,7 +1322,7 @@ extension SupabaseService {
         }
 
         // Find match where current user is either user1 or user2, and other user is the opposite
-        let matches: [MatchWithConversation] = try await client.database
+        let matches: [MatchWithConversation] = try await client
             .from("matches")
             .select()
             .or("and(user1_id.eq.\(userId.uuidString),user2_id.eq.\(otherUserId)),and(user1_id.eq.\(otherUserId),user2_id.eq.\(userId.uuidString))")
@@ -916,7 +1339,7 @@ extension SupabaseService {
         // Check if match already has a conversation
         if let conversationId = match.conversationId, !conversationId.isEmpty {
             // Fetch the conversation
-            let conversations: [ConversationResponse] = try await client.database
+            let conversations: [ConversationResponse] = try await client
                 .from("conversations")
                 .select()
                 .eq("id", value: conversationId)
@@ -936,7 +1359,7 @@ extension SupabaseService {
         // Create new conversation for this match
         let newConversation = ConversationCreate(matchId: matchId)
 
-        let response: ConversationResponse = try await client.database
+        let response: ConversationResponse = try await client
             .from("conversations")
             .insert(newConversation)
             .select()
@@ -945,7 +1368,7 @@ extension SupabaseService {
             .value
 
         // Update the match with the conversation ID
-        try await client.database
+        try await client
             .from("matches")
             .update(["conversation_id": response.id])
             .eq("id", value: matchId)
@@ -968,7 +1391,7 @@ extension SupabaseService {
             originalLanguage: language
         )
 
-        try await client.database
+        try await client
             .from("messages")
             .insert(message)
             .execute()
@@ -989,7 +1412,7 @@ extension SupabaseService {
             originalLanguage: language
         )
 
-        try await client.database
+        try await client
             .from("messages")
             .insert(message)
             .execute()
@@ -999,7 +1422,7 @@ extension SupabaseService {
 
     /// Get messages for a conversation
     func getMessages(conversationId: String, limit: Int = 50) async throws -> [MessageResponse] {
-        let response: [MessageResponse] = try await client.database
+        let response: [MessageResponse] = try await client
             .from("messages")
             .select()
             .eq("conversation_id", value: conversationId)
@@ -1276,6 +1699,13 @@ struct ProfileUpdate: Codable {
     var openToLanguages: [String]?
     var profilePhotos: [String]?
     var relationshipIntents: [String]?
+    var onboardingCompleted: Bool?
+    var locationPreference: String?
+    var preferredCountries: [String]?
+    var excludedCountries: [String]?
+    var travelDestination: TravelDestinationDB?
+    var learningContexts: [String]?
+    var museLanguages: [String]?
 
     enum CodingKeys: String, CodingKey {
         case bio, location, city, country, latitude, longitude, gender
@@ -1298,6 +1728,13 @@ struct ProfileUpdate: Codable {
         case openToLanguages = "open_to_languages"
         case profilePhotos = "profile_photos"
         case relationshipIntents = "relationship_intents"
+        case onboardingCompleted = "onboarding_completed"
+        case locationPreference = "location_preference"
+        case preferredCountries = "preferred_countries"
+        case excludedCountries = "excluded_countries"
+        case travelDestination = "travel_destination"
+        case learningContexts = "learning_contexts"
+        case museLanguages = "muse_languages"
     }
 }
 
@@ -1447,7 +1884,7 @@ extension SupabaseService {
 
     /// Get all model evaluations for a specific category
     func getModelEvaluations(category: String) async throws -> [ModelEvaluationResponse] {
-        let response: [ModelEvaluationResponse] = try await client.database
+        let response: [ModelEvaluationResponse] = try await client
             .from("model_evaluations")
             .select()
             .eq("category", value: category)
@@ -1568,7 +2005,7 @@ extension SupabaseService {
             photoUrl: photoURL
         )
 
-        try await client.database
+        try await client
             .from("reported_users")
             .insert(report)
             .execute()
@@ -1583,7 +2020,7 @@ extension SupabaseService {
                          userInfo: [NSLocalizedDescriptionKey: "Not authenticated"])
         }
 
-        let reports: [ReportResponse] = try await client.database
+        let reports: [ReportResponse] = try await client
             .from("reported_users")
             .select()
             .eq("reporter_id", value: currentUserId)
@@ -1613,7 +2050,7 @@ extension SupabaseService {
             photoUrl: nil  // No photo URL for profile reports
         )
 
-        try await client.database
+        try await client
             .from("reported_users")
             .insert(report)
             .execute()
@@ -1630,7 +2067,7 @@ extension SupabaseService {
 
         // Call the database function to handle blocking
         // This adds to blocked_users array and removes any existing matches
-        try await client.database
+        try await client
             .rpc("block_user", params: ["blocker_id": currentUserId, "blocked_id": userId])
             .execute()
 
@@ -1645,7 +2082,7 @@ extension SupabaseService {
         }
 
         // Call the database function to handle unblocking
-        try await client.database
+        try await client
             .rpc("unblock_user", params: ["unblocker_id": currentUserId, "unblocked_id": userId])
             .execute()
 
@@ -1666,7 +2103,7 @@ extension SupabaseService {
             }
         }
 
-        let response: [BlockedUsersResponse] = try await client.database
+        let response: [BlockedUsersResponse] = try await client
             .from("user_preferences")
             .select("blocked_users")
             .eq("user_id", value: currentUserId)
@@ -1746,7 +2183,7 @@ extension SupabaseService {
             }
         }
 
-        let response: [TTSUsageResponse] = try await client.database
+        let response: [TTSUsageResponse] = try await client
             .from("profiles")
             .select("tts_plays_used_this_month, tts_billing_cycle_start, subscription_tier")
             .eq("id", value: userId.uuidString)
@@ -1794,7 +2231,7 @@ extension SupabaseService {
             }
         }
 
-        let response: [TierResponse] = try await client.database
+        let response: [TierResponse] = try await client
             .from("profiles")
             .select("subscription_tier")
             .eq("id", value: userId.uuidString)
@@ -1828,7 +2265,7 @@ extension SupabaseService {
             }
         }
 
-        let current: [CurrentUsage] = try await client.database
+        let current: [CurrentUsage] = try await client
             .from("profiles")
             .select("tts_plays_used_this_month")
             .eq("id", value: userId.uuidString)
@@ -1841,7 +2278,7 @@ extension SupabaseService {
             let tts_plays_used_this_month: Int
         }
 
-        try await client.database
+        try await client
             .from("profiles")
             .update(TTSUpdate(tts_plays_used_this_month: currentCount + 1))
             .eq("id", value: userId.uuidString)
@@ -1862,7 +2299,7 @@ extension SupabaseService {
             }
         }
 
-        let response: [BillingInfo] = try await client.database
+        let response: [BillingInfo] = try await client
             .from("profiles")
             .select("tts_billing_cycle_start")
             .eq("id", value: userId.uuidString)
@@ -1902,7 +2339,7 @@ extension SupabaseService {
 
         let formatter = ISO8601DateFormatter()
 
-        try await client.database
+        try await client
             .from("profiles")
             .update(TTSReset(
                 tts_plays_used_this_month: 0,
@@ -1920,7 +2357,7 @@ extension SupabaseService {
 
     /// Fetch pricing configuration from Supabase
     func fetchPricingConfig() async throws -> PricingConfig {
-        let response: [PricingConfig] = try await client.database
+        let response: [PricingConfig] = try await client
             .from("pricing_config")
             .select("*")
             .eq("id", value: "00000000-0000-0000-0000-000000000001")
@@ -2003,7 +2440,7 @@ extension SupabaseService {
 
     /// Fetch all TTS voice configurations
     func fetchTTSVoiceConfigs() async throws -> [TTSVoiceConfig] {
-        let response: [TTSVoiceConfig] = try await client.database
+        let response: [TTSVoiceConfig] = try await client
             .from("tts_voices")
             .select("*")
             .eq("enabled", value: true)
@@ -2019,7 +2456,7 @@ extension SupabaseService {
         let languageLower = language.lowercased()
 
         // Try exact match first
-        let exactMatch: [TTSVoiceConfig] = try await client.database
+        let exactMatch: [TTSVoiceConfig] = try await client
             .from("tts_voices")
             .select("*")
             .eq("language_code", value: languageLower)
@@ -2032,7 +2469,7 @@ extension SupabaseService {
         }
 
         // Try matching by language name
-        let nameMatch: [TTSVoiceConfig] = try await client.database
+        let nameMatch: [TTSVoiceConfig] = try await client
             .from("tts_voices")
             .select("*")
             .ilike("language_name", value: "%\(languageLower)%")
@@ -2046,7 +2483,7 @@ extension SupabaseService {
     /// Alias for fetchTTSVoiceConfigs - used by AIBotFactory for Muse configuration
     func getTTSVoices() async throws -> [TTSVoiceConfig] {
         // Include all voices (not just enabled) so we can get Muse configurations
-        let response: [TTSVoiceConfig] = try await client.database
+        let response: [TTSVoiceConfig] = try await client
             .from("tts_voices")
             .select("*")
             .execute()
@@ -2084,7 +2521,7 @@ extension SupabaseService {
         )
 
         do {
-            try await client.database
+            try await client
                 .from("muse_interactions")
                 .insert(interaction)
                 .execute()
