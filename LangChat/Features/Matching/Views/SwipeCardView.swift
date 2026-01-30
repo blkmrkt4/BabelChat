@@ -42,7 +42,7 @@ class SwipeCardView: UIView {
     }()
     private let platonicBadgeLabel: UILabel = {
         let label = UILabel()
-        label.text = "Platonic"
+        label.text = "profile_platonic".localized
         label.font = .systemFont(ofSize: 10, weight: .semibold)
         label.textColor = .white
         return label
@@ -59,7 +59,7 @@ class SwipeCardView: UIView {
     }()
     private let blurLabel: UILabel = {
         let label = UILabel()
-        label.text = "Photos blurred"
+        label.text = "profile_photos_blurred".localized
         label.font = .systemFont(ofSize: 14, weight: .medium)
         label.textColor = .white
         label.textAlignment = .center
@@ -199,7 +199,7 @@ class SwipeCardView: UIView {
     }
 
     private func setupSwipeLabels() {
-        likeLabel.text = "LIKE"
+        likeLabel.text = "swipe_like".localized
         likeLabel.font = .systemFont(ofSize: 40, weight: .bold)
         likeLabel.textColor = .systemGreen
         likeLabel.layer.borderColor = UIColor.systemGreen.cgColor
@@ -210,7 +210,7 @@ class SwipeCardView: UIView {
         addSubview(likeLabel)
         likeLabel.translatesAutoresizingMaskIntoConstraints = false
 
-        nopeLabel.text = "NOPE"
+        nopeLabel.text = "swipe_nope".localized
         nopeLabel.font = .systemFont(ofSize: 40, weight: .bold)
         nopeLabel.textColor = .systemRed
         nopeLabel.layer.borderColor = UIColor.systemRed.cgColor
@@ -221,7 +221,7 @@ class SwipeCardView: UIView {
         addSubview(nopeLabel)
         nopeLabel.translatesAutoresizingMaskIntoConstraints = false
 
-        superLikeLabel.text = "SUPER\nLIKE"
+        superLikeLabel.text = "swipe_super_like".localized
         superLikeLabel.numberOfLines = 2
         superLikeLabel.font = .systemFont(ofSize: 30, weight: .bold)
         superLikeLabel.textColor = .systemBlue

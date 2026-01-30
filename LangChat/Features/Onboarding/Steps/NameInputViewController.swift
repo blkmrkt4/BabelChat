@@ -9,19 +9,25 @@ class NameInputViewController: BaseOnboardingViewController {
     // MARK: - Lifecycle
     override func configure() {
         step = .name
-        setTitle("Your name?")
+        setTitle("onboarding_name_title".localized)
         setupNameInputs()
     }
 
     // MARK: - Setup
     private func setupNameInputs() {
         // First name
-        setupTextField(firstNameTextField, placeholder: "First name")
+        setupTextField(firstNameTextField, placeholder: "common_first_name".localized, isFirstName: true)
         contentView.addSubview(firstNameTextField)
 
         // Last name
-        setupTextField(lastNameTextField, placeholder: "Last name")
+        setupTextField(lastNameTextField, placeholder: "common_last_name".localized, isFirstName: false)
         contentView.addSubview(lastNameTextField)
+
+        // Pre-fill with Apple-provided name if available (fallback in case skip logic didn't trigger)
+        if let appleFirstName = UserDefaults.standard.string(forKey: "appleProvidedFirstName"), !appleFirstName.isEmpty {
+            firstNameTextField.text = appleFirstName
+            lastNameTextField.text = UserDefaults.standard.string(forKey: "appleProvidedLastName") ?? ""
+        }
 
         // Layout
         firstNameTextField.translatesAutoresizingMaskIntoConstraints = false
@@ -46,14 +52,14 @@ class NameInputViewController: BaseOnboardingViewController {
         firstNameTextField.becomeFirstResponder()
     }
 
-    private func setupTextField(_ textField: UITextField, placeholder: String) {
+    private func setupTextField(_ textField: UITextField, placeholder: String, isFirstName: Bool) {
         textField.placeholder = placeholder
         textField.font = .systemFont(ofSize: 18, weight: .regular)
         textField.textColor = .label
-        textField.textContentType = placeholder == "First name" ? .givenName : .familyName
+        textField.textContentType = isFirstName ? .givenName : .familyName
         textField.autocapitalizationType = .words
         textField.autocorrectionType = .no
-        textField.returnKeyType = placeholder == "First name" ? .next : .done
+        textField.returnKeyType = isFirstName ? .next : .done
         textField.layer.borderWidth = 1
         textField.layer.borderColor = UIColor.systemGray4.cgColor
         textField.layer.cornerRadius = 12

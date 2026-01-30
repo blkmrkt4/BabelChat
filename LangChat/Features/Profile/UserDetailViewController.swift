@@ -79,7 +79,7 @@ class UserDetailViewController: UIViewController, PhotoGridViewDelegate {
 
     private let blurLabel: UILabel = {
         let label = UILabel()
-        label.text = "Photos blurred"
+        label.text = "profile_photos_blurred".localized
         label.font = .systemFont(ofSize: 12, weight: .medium)
         label.textColor = .white
         label.textAlignment = .center
@@ -117,7 +117,7 @@ class UserDetailViewController: UIViewController, PhotoGridViewDelegate {
     }()
     private let platonicBadgeLabel: UILabel = {
         let label = UILabel()
-        label.text = "Platonic"
+        label.text = "profile_platonic".localized
         label.font = .systemFont(ofSize: 10, weight: .semibold)
         label.textColor = .white
         return label
@@ -196,6 +196,17 @@ class UserDetailViewController: UIViewController, PhotoGridViewDelegate {
         // Right bar button items
         var rightItems: [UIBarButtonItem] = []
 
+        // Add more options menu (ellipsis) for reporting/blocking - only for non-AI users
+        if !user.isAI {
+            let moreButton = UIBarButtonItem(
+                image: UIImage(systemName: "ellipsis"),
+                style: .plain,
+                target: self,
+                action: #selector(showMoreOptions)
+            )
+            rightItems.append(moreButton)
+        }
+
         if isMatched {
             // Add chat button if matched
             let chatButton = UIBarButtonItem(
@@ -259,7 +270,7 @@ class UserDetailViewController: UIViewController, PhotoGridViewDelegate {
                 ])
 
                 let label = UILabel()
-                label.text = "Platonic"
+                label.text = "profile_platonic".localized
                 label.font = .systemFont(ofSize: 9, weight: .semibold)
                 label.textColor = .white
 
@@ -377,7 +388,7 @@ class UserDetailViewController: UIViewController, PhotoGridViewDelegate {
         contentView.addSubview(openToMatchLabel)
 
         // About section
-        aboutLabel.text = "About"
+        aboutLabel.text = "settings_section_about".localized
         aboutLabel.font = .systemFont(ofSize: 20, weight: .bold)
         aboutLabel.textColor = .label
         contentView.addSubview(aboutLabel)
@@ -774,7 +785,7 @@ class UserDetailViewController: UIViewController, PhotoGridViewDelegate {
         openToMatchLabel.text = openToMatchText
 
         // Bio
-        bioLabel.text = user.bio ?? "This person hasn't added a bio yet"
+        bioLabel.text = user.bio ?? "profile_no_bio_other".localized
 
         // Load photos with signed URLs if needed
         Task {
@@ -917,8 +928,8 @@ class UserDetailViewController: UIViewController, PhotoGridViewDelegate {
             preferredStyle: .alert
         )
 
-        alert.addAction(UIAlertAction(title: "Cancel", style: .cancel))
-        alert.addAction(UIAlertAction(title: "Unmatch", style: .destructive) { [weak self] _ in
+        alert.addAction(UIAlertAction(title: "common_cancel".localized, style: .cancel))
+        alert.addAction(UIAlertAction(title: "common_unmatch".localized, style: .destructive) { [weak self] _ in
             self?.performUnmatch(matchId: match.id, user: user)
         })
 
@@ -1151,20 +1162,20 @@ class UserDetailViewController: UIViewController, PhotoGridViewDelegate {
         overlayView.alpha = 0
 
         let matchLabel = UILabel()
-        matchLabel.text = "It's a Match! 🎉"
+        matchLabel.text = "match_celebration_title".localized
         matchLabel.font = .systemFont(ofSize: 42, weight: .bold)
         matchLabel.textColor = .white
         matchLabel.textAlignment = .center
 
         let messageLabel = UILabel()
-        messageLabel.text = "You and \(user?.firstName ?? "they") liked each other!"
+        messageLabel.text = String(format: "match_celebration_message".localized, user?.firstName ?? "they")
         messageLabel.font = .systemFont(ofSize: 20, weight: .medium)
         messageLabel.textColor = .white
         messageLabel.textAlignment = .center
         messageLabel.alpha = 0
 
         let sendMessageButton = UIButton(type: .system)
-        sendMessageButton.setTitle("Send Message", for: .normal)
+        sendMessageButton.setTitle("match_send_message".localized, for: .normal)
         sendMessageButton.titleLabel?.font = .systemFont(ofSize: 18, weight: .semibold)
         sendMessageButton.setTitleColor(.white, for: .normal)
         sendMessageButton.backgroundColor = .systemGreen
@@ -1173,7 +1184,7 @@ class UserDetailViewController: UIViewController, PhotoGridViewDelegate {
         sendMessageButton.addTarget(self, action: #selector(sendMessageTapped), for: .touchUpInside)
 
         let keepSwipingButton = UIButton(type: .system)
-        keepSwipingButton.setTitle("Keep Browsing", for: .normal)
+        keepSwipingButton.setTitle("match_keep_browsing".localized, for: .normal)
         keepSwipingButton.titleLabel?.font = .systemFont(ofSize: 16, weight: .regular)
         keepSwipingButton.setTitleColor(.white, for: .normal)
         keepSwipingButton.alpha = 0
@@ -1386,7 +1397,7 @@ class UserDetailViewController: UIViewController, PhotoGridViewDelegate {
             })
         }
 
-        alertController.addAction(UIAlertAction(title: "Cancel", style: .cancel))
+        alertController.addAction(UIAlertAction(title: "common_cancel".localized, style: .cancel))
 
         // For iPad support - anchor to center of screen
         if let popoverController = alertController.popoverPresentationController {
@@ -1405,11 +1416,11 @@ class UserDetailViewController: UIViewController, PhotoGridViewDelegate {
             preferredStyle: .alert
         )
 
-        confirmAlert.addAction(UIAlertAction(title: "Report", style: .destructive) { [weak self] _ in
+        confirmAlert.addAction(UIAlertAction(title: "common_report".localized, style: .destructive) { [weak self] _ in
             self?.submitReport(userId: user.id, photoURL: photoURL, reason: reason)
         })
 
-        confirmAlert.addAction(UIAlertAction(title: "Cancel", style: .cancel))
+        confirmAlert.addAction(UIAlertAction(title: "common_cancel".localized, style: .cancel))
 
         present(confirmAlert, animated: true)
     }
@@ -1430,7 +1441,7 @@ class UserDetailViewController: UIViewController, PhotoGridViewDelegate {
                         message: "Thank you for helping keep our community safe. We'll review this report shortly.",
                         preferredStyle: .alert
                     )
-                    successAlert.addAction(UIAlertAction(title: "OK", style: .default))
+                    successAlert.addAction(UIAlertAction(title: "common_ok".localized, style: .default))
                     self.present(successAlert, animated: true)
                 }
             } catch {
@@ -1440,7 +1451,193 @@ class UserDetailViewController: UIViewController, PhotoGridViewDelegate {
                         message: "Failed to submit report: \(error.localizedDescription). Please try again.",
                         preferredStyle: .alert
                     )
-                    errorAlert.addAction(UIAlertAction(title: "OK", style: .default))
+                    errorAlert.addAction(UIAlertAction(title: "common_ok".localized, style: .default))
+                    self.present(errorAlert, animated: true)
+                }
+            }
+        }
+    }
+
+    // MARK: - Block & Report User
+
+    @objc private func showMoreOptions() {
+        guard let user = user else { return }
+
+        let alertController = UIAlertController(
+            title: nil,
+            message: nil,
+            preferredStyle: .actionSheet
+        )
+
+        // Report User option
+        alertController.addAction(UIAlertAction(
+            title: "report_user".localized,
+            style: .default
+        ) { [weak self] _ in
+            self?.showReportUserOptions(for: user)
+        })
+
+        // Block User option
+        alertController.addAction(UIAlertAction(
+            title: "block_user".localized,
+            style: .destructive
+        ) { [weak self] _ in
+            self?.confirmBlockUser(user)
+        })
+
+        alertController.addAction(UIAlertAction(title: "cancel".localized, style: .cancel))
+
+        // For iPad support
+        if let popoverController = alertController.popoverPresentationController {
+            popoverController.barButtonItem = navigationItem.rightBarButtonItems?.first
+        }
+
+        present(alertController, animated: true)
+    }
+
+    private func showReportUserOptions(for user: User) {
+        let alertController = UIAlertController(
+            title: "report_user_title".localized,
+            message: "report_user_message".localized,
+            preferredStyle: .actionSheet
+        )
+
+        let reportReasons = [
+            "report_reason_inappropriate".localized,
+            "report_reason_spam".localized,
+            "report_reason_fake_profile".localized,
+            "report_reason_harassment".localized,
+            "report_reason_scam".localized,
+            "report_reason_other".localized
+        ]
+
+        for reason in reportReasons {
+            alertController.addAction(UIAlertAction(title: reason, style: .default) { [weak self] _ in
+                self?.confirmReportUser(user: user, reason: reason)
+            })
+        }
+
+        alertController.addAction(UIAlertAction(title: "cancel".localized, style: .cancel))
+
+        // For iPad support
+        if let popoverController = alertController.popoverPresentationController {
+            popoverController.sourceView = view
+            popoverController.sourceRect = CGRect(x: view.bounds.midX, y: view.bounds.midY, width: 0, height: 0)
+            popoverController.permittedArrowDirections = []
+        }
+
+        present(alertController, animated: true)
+    }
+
+    private func confirmReportUser(user: User, reason: String) {
+        let confirmAlert = UIAlertController(
+            title: "confirm_report_title".localized,
+            message: String(format: "confirm_report_user_message".localized, user.firstName, reason.lowercased()),
+            preferredStyle: .alert
+        )
+
+        confirmAlert.addAction(UIAlertAction(title: "report".localized, style: .destructive) { [weak self] _ in
+            self?.submitUserReport(userId: user.id, reason: reason)
+        })
+
+        confirmAlert.addAction(UIAlertAction(title: "cancel".localized, style: .cancel))
+
+        present(confirmAlert, animated: true)
+    }
+
+    private func submitUserReport(userId: String, reason: String) {
+        Task {
+            do {
+                try await SupabaseService.shared.reportUser(
+                    reportedUserId: userId,
+                    reason: reason,
+                    description: nil
+                )
+
+                await MainActor.run {
+                    let successAlert = UIAlertController(
+                        title: "report_submitted_title".localized,
+                        message: "report_submitted_message".localized,
+                        preferredStyle: .alert
+                    )
+                    successAlert.addAction(UIAlertAction(title: "ok".localized, style: .default))
+                    self.present(successAlert, animated: true)
+                }
+            } catch {
+                await MainActor.run {
+                    let errorAlert = UIAlertController(
+                        title: "report_failed_title".localized,
+                        message: String(format: "report_failed_message".localized, error.localizedDescription),
+                        preferredStyle: .alert
+                    )
+                    errorAlert.addAction(UIAlertAction(title: "ok".localized, style: .default))
+                    self.present(errorAlert, animated: true)
+                }
+            }
+        }
+    }
+
+    private func confirmBlockUser(_ user: User) {
+        let confirmAlert = UIAlertController(
+            title: String(format: "block_user_title".localized, user.firstName),
+            message: "block_user_message".localized,
+            preferredStyle: .alert
+        )
+
+        confirmAlert.addAction(UIAlertAction(title: "block".localized, style: .destructive) { [weak self] _ in
+            self?.performBlockUser(user)
+        })
+
+        confirmAlert.addAction(UIAlertAction(title: "cancel".localized, style: .cancel))
+
+        present(confirmAlert, animated: true)
+    }
+
+    private func performBlockUser(_ user: User) {
+        Task {
+            do {
+                try await SupabaseService.shared.blockUser(userId: user.id)
+
+                await MainActor.run {
+                    self.showActionFeedback("user_blocked_feedback".localized, color: .systemRed)
+
+                    // Remove from current user list
+                    self.allUsers.removeAll { $0.id == user.id }
+                    self.allMatches.removeAll { $0.user.id == user.id }
+
+                    // Navigate after showing feedback
+                    DispatchQueue.main.asyncAfter(deadline: .now() + 0.8) {
+                        if self.allUsers.isEmpty {
+                            // No more users, go back
+                            self.navigationController?.popViewController(animated: true)
+                        } else if self.currentUserIndex >= self.allUsers.count {
+                            // Was at the end, go to previous
+                            self.currentUserIndex = self.allUsers.count - 1
+                            self.user = self.allUsers[self.currentUserIndex]
+                            if self.isMatched && self.currentUserIndex < self.allMatches.count {
+                                self.match = self.allMatches[self.currentUserIndex]
+                            }
+                            self.updateUI()
+                            UIView.transition(with: self.view, duration: 0.3, options: .transitionCrossDissolve, animations: nil)
+                        } else {
+                            // Show the next user
+                            self.user = self.allUsers[self.currentUserIndex]
+                            if self.isMatched && self.currentUserIndex < self.allMatches.count {
+                                self.match = self.allMatches[self.currentUserIndex]
+                            }
+                            self.updateUI()
+                            UIView.transition(with: self.view, duration: 0.3, options: .transitionCrossDissolve, animations: nil)
+                        }
+                    }
+                }
+            } catch {
+                await MainActor.run {
+                    let errorAlert = UIAlertController(
+                        title: "block_failed_title".localized,
+                        message: String(format: "block_failed_message".localized, error.localizedDescription),
+                        preferredStyle: .alert
+                    )
+                    errorAlert.addAction(UIAlertAction(title: "ok".localized, style: .default))
                     self.present(errorAlert, animated: true)
                 }
             }

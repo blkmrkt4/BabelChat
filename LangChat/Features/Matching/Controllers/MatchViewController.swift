@@ -38,13 +38,13 @@ class MatchViewController: UIViewController {
         aiSetupButton.addTarget(self, action: #selector(aiSetupButtonTapped), for: .touchUpInside)
         headerView.addSubview(aiSetupButton)
 
-        titleLabel.text = "Your Matches"
+        titleLabel.text = "matches_your_matches".localized
         titleLabel.font = .systemFont(ofSize: 24, weight: .bold)
         titleLabel.textColor = .label
         titleLabel.textAlignment = .center
         headerView.addSubview(titleLabel)
 
-        subtitleLabel.text = "1 connections"
+        subtitleLabel.text = "auto_1_connections".localized
         subtitleLabel.font = .systemFont(ofSize: 16, weight: .regular)
         subtitleLabel.textColor = .secondaryLabel
         subtitleLabel.textAlignment = .center

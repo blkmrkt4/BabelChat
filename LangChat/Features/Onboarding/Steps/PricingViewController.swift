@@ -47,6 +47,11 @@ class PricingViewController: UIViewController {
     private let proFeatureStack = UIStackView()
     private let proButton = UIButton(type: .system)
 
+    // Paywall footer buttons (restore + sign out)
+    private let paywallFooterStack = UIStackView()
+    private let restorePurchasesButton = UIButton(type: .system)
+    private let signOutButton = UIButton(type: .system)
+
     // MARK: - Properties
     weak var delegate: PricingViewControllerDelegate?
     private let subscriptionService = SubscriptionService.shared
@@ -77,19 +82,22 @@ class PricingViewController: UIViewController {
             freeCard.isHidden = true
 
             // Update title for expired trial
-            titleLabel.text = "Your Trial Has Ended"
-            subtitleLabel.text = "Subscribe to continue learning with Fluenca"
+            titleLabel.text = "pricing_trial_ended".localized
+            subtitleLabel.text = "pricing_subscribe_continue".localized
 
-            // Hide navigation items (no way to dismiss)
+            // Hide navigation items
             navigationItem.hidesBackButton = true
             navigationItem.leftBarButtonItem = nil
+
+            // Add footer with Restore Purchases and Sign Out
+            setupPaywallFooter()
         } else {
             // Normal onboarding - show free trial info
             let daysRemaining = subscriptionService.daysRemainingInFreeTrial
             if daysRemaining < 7 && daysRemaining > 0 {
                 freeTierLabel.text = "Trial (\(daysRemaining) days left)"
             } else {
-                freeTierLabel.text = "7-Day Trial"
+                freeTierLabel.text = "tier_trial_name".localized
             }
         }
     }
@@ -118,7 +126,7 @@ class PricingViewController: UIViewController {
         scrollView.addSubview(contentStack)
 
         // Title
-        titleLabel.text = "Choose Your Plan"
+        titleLabel.text = "pricing_title".localized
         titleLabel.font = .systemFont(ofSize: 26, weight: .bold)
         titleLabel.textColor = .white
         titleLabel.textAlignment = .center
@@ -126,7 +134,7 @@ class PricingViewController: UIViewController {
         contentStack.addArrangedSubview(titleLabel)
 
         // Subtitle
-        subtitleLabel.text = "Practice with AI free, upgrade for real connections & natural voices"
+        subtitleLabel.text = "auto_practice_with_ai_free_upgrade_for_real_c".localized
         subtitleLabel.font = .systemFont(ofSize: 14, weight: .regular)
         subtitleLabel.textColor = .white.withAlphaComponent(0.8)
         subtitleLabel.textAlignment = .center
@@ -173,12 +181,12 @@ class PricingViewController: UIViewController {
         headerStack.alignment = .firstBaseline
         cardStack.addArrangedSubview(headerStack)
 
-        freeTierLabel.text = "7-Day Trial"
+        freeTierLabel.text = "tier_trial_name".localized
         freeTierLabel.font = .systemFont(ofSize: 20, weight: .bold)
         freeTierLabel.textColor = .white
         headerStack.addArrangedSubview(freeTierLabel)
 
-        freePriceLabel.text = "Free"
+        freePriceLabel.text = "tier_trial_price".localized
         freePriceLabel.font = .systemFont(ofSize: 20, weight: .heavy)
         freePriceLabel.textColor = .systemGreen
         headerStack.addArrangedSubview(freePriceLabel)
@@ -190,7 +198,7 @@ class PricingViewController: UIViewController {
         cardStack.addArrangedSubview(freeFeatureStack)
 
         // Start Trial button
-        freeButton.setTitle("Start 7-Day Trial", for: .normal)
+        freeButton.setTitle("pricing_start_trial".localized, for: .normal)
         freeButton.titleLabel?.font = .systemFont(ofSize: 16, weight: .bold)
         freeButton.setTitleColor(.white, for: .normal)
         freeButton.backgroundColor = .white.withAlphaComponent(0.2)
@@ -239,18 +247,18 @@ class PricingViewController: UIViewController {
         headerStack.alignment = .firstBaseline
         cardStack.addArrangedSubview(headerStack)
 
-        premiumTierLabel.text = "Premium"
+        premiumTierLabel.text = "tier_premium_name".localized
         premiumTierLabel.font = .systemFont(ofSize: 20, weight: .bold)
         premiumTierLabel.textColor = .white
         headerStack.addArrangedSubview(premiumTierLabel)
 
-        premiumPriceLabel.text = "$9.99/mo"
+        premiumPriceLabel.text = "auto_999mo".localized
         premiumPriceLabel.font = .systemFont(ofSize: 20, weight: .heavy)
         premiumPriceLabel.textColor = .systemBlue
         headerStack.addArrangedSubview(premiumPriceLabel)
 
         // Trial info
-        premiumTrialLabel.text = "7-day free trial • Cancel anytime"
+        premiumTrialLabel.text = "pricing_trial_terms".localized
         premiumTrialLabel.font = .systemFont(ofSize: 12, weight: .medium)
         premiumTrialLabel.textColor = .white.withAlphaComponent(0.9)
         premiumTrialLabel.backgroundColor = .white.withAlphaComponent(0.15)
@@ -267,7 +275,7 @@ class PricingViewController: UIViewController {
         cardStack.addArrangedSubview(premiumFeatureStack)
 
         // Start trial button
-        premiumButton.setTitle("Start Free Trial", for: .normal)
+        premiumButton.setTitle("tier_trial_button".localized, for: .normal)
         premiumButton.titleLabel?.font = .systemFont(ofSize: 16, weight: .bold)
         premiumButton.setTitleColor(.white, for: .normal)
         premiumButton.backgroundColor = .systemBlue
@@ -318,12 +326,12 @@ class PricingViewController: UIViewController {
         headerStack.alignment = .firstBaseline
         cardStack.addArrangedSubview(headerStack)
 
-        proTierLabel.text = "Pro"
+        proTierLabel.text = "tier_pro_name".localized
         proTierLabel.font = .systemFont(ofSize: 20, weight: .bold)
         proTierLabel.textColor = .systemYellow
         headerStack.addArrangedSubview(proTierLabel)
 
-        proPriceLabel.text = "$19.99/mo"
+        proPriceLabel.text = "auto_1999mo".localized
         proPriceLabel.font = .systemFont(ofSize: 20, weight: .heavy)
         proPriceLabel.textColor = .systemYellow
         headerStack.addArrangedSubview(proPriceLabel)
@@ -335,7 +343,7 @@ class PricingViewController: UIViewController {
         cardStack.addArrangedSubview(proFeatureStack)
 
         // Button
-        proButton.setTitle("Start Pro", for: .normal)
+        proButton.setTitle("pricing_start_pro".localized, for: .normal)
         proButton.titleLabel?.font = .systemFont(ofSize: 16, weight: .bold)
         proButton.setTitleColor(.black, for: .normal)
         proButton.backgroundColor = .systemYellow
@@ -386,11 +394,100 @@ class PricingViewController: UIViewController {
         ])
     }
 
+    // MARK: - Paywall Footer
+    private func setupPaywallFooter() {
+        paywallFooterStack.axis = .vertical
+        paywallFooterStack.spacing = 12
+        paywallFooterStack.alignment = .center
+        contentStack.addArrangedSubview(paywallFooterStack)
+
+        // Spacer
+        let spacer = UIView()
+        spacer.heightAnchor.constraint(equalToConstant: 8).isActive = true
+        paywallFooterStack.addArrangedSubview(spacer)
+
+        // Restore Purchases button
+        restorePurchasesButton.setTitle("pricing_restore_purchases".localized, for: .normal)
+        restorePurchasesButton.titleLabel?.font = .systemFont(ofSize: 15, weight: .medium)
+        restorePurchasesButton.setTitleColor(.systemBlue, for: .normal)
+        restorePurchasesButton.addTarget(self, action: #selector(restorePurchasesTapped), for: .touchUpInside)
+        paywallFooterStack.addArrangedSubview(restorePurchasesButton)
+
+        // Sign Out button
+        signOutButton.setTitle("pricing_sign_out".localized, for: .normal)
+        signOutButton.titleLabel?.font = .systemFont(ofSize: 15, weight: .medium)
+        signOutButton.setTitleColor(.white.withAlphaComponent(0.6), for: .normal)
+        signOutButton.addTarget(self, action: #selector(signOutTapped), for: .touchUpInside)
+        paywallFooterStack.addArrangedSubview(signOutButton)
+    }
+
+    @objc private func restorePurchasesTapped() {
+        restorePurchasesButton.setTitle("common_loading".localized, for: .normal)
+        restorePurchasesButton.isEnabled = false
+
+        subscriptionService.restorePurchases { [weak self] result in
+            DispatchQueue.main.async {
+                self?.restorePurchasesButton.setTitle("pricing_restore_purchases".localized, for: .normal)
+                self?.restorePurchasesButton.isEnabled = true
+
+                switch result {
+                case .success(let status):
+                    if status.tier != .free && status.isActive {
+                        // Subscription restored, dismiss paywall
+                        self?.dismiss(animated: true)
+                    } else {
+                        let alert = UIAlertController(
+                            title: "pricing_no_subscription_found".localized,
+                            message: "pricing_no_subscription_message".localized,
+                            preferredStyle: .alert
+                        )
+                        alert.addAction(UIAlertAction(title: "common_ok".localized, style: .default))
+                        self?.present(alert, animated: true)
+                    }
+                case .failure(let error):
+                    self?.showError(error)
+                }
+            }
+        }
+    }
+
+    @objc private func signOutTapped() {
+        let alert = UIAlertController(
+            title: "settings_sign_out".localized,
+            message: "pricing_sign_out_confirm".localized,
+            preferredStyle: .alert
+        )
+        alert.addAction(UIAlertAction(title: "common_cancel".localized, style: .cancel))
+        alert.addAction(UIAlertAction(title: "settings_sign_out".localized, style: .destructive) { [weak self] _ in
+            Task {
+                try? await SupabaseService.shared.signOut()
+
+                await MainActor.run {
+                    // Navigate to landing screen
+                    if let windowScene = UIApplication.shared.connectedScenes.first as? UIWindowScene,
+                       let window = windowScene.windows.first {
+                        let landingVC = LandingViewController()
+                        let navController = UINavigationController(rootViewController: landingVC)
+                        navController.setNavigationBarHidden(true, animated: false)
+                        window.rootViewController = navController
+
+                        UIView.transition(with: window,
+                                        duration: 0.5,
+                                        options: .transitionCrossDissolve,
+                                        animations: nil,
+                                        completion: nil)
+                    }
+                }
+            }
+        })
+        present(alert, animated: true)
+    }
+
     // MARK: - Data Loading
     private func loadPricingConfig() {
         // Show loading state for prices
-        premiumPriceLabel.text = "Loading..."
-        proPriceLabel.text = "Loading..."
+        premiumPriceLabel.text = "common_loading".localized
+        proPriceLabel.text = "common_loading".localized
 
         // Show default config for features immediately
         updateUIWithConfig(pricingConfig)
@@ -512,13 +609,13 @@ class PricingViewController: UIViewController {
     // MARK: - Actions
     @objc private func premiumTapped() {
         // Show loading state
-        premiumButton.setTitle("Loading...", for: .normal)
+        premiumButton.setTitle("common_loading".localized, for: .normal)
         premiumButton.isEnabled = false
 
         // Purchase premium
         subscriptionService.purchase(tier: .premium) { [weak self] result in
             DispatchQueue.main.async {
-                self?.premiumButton.setTitle("Start Free Trial", for: .normal)
+                self?.premiumButton.setTitle("tier_trial_button".localized, for: .normal)
                 self?.premiumButton.isEnabled = true
 
                 switch result {
@@ -535,13 +632,13 @@ class PricingViewController: UIViewController {
 
     @objc private func proTapped() {
         // Show loading state
-        proButton.setTitle("Loading...", for: .normal)
+        proButton.setTitle("common_loading".localized, for: .normal)
         proButton.isEnabled = false
 
         // Purchase pro
         subscriptionService.purchase(tier: .pro) { [weak self] result in
             DispatchQueue.main.async {
-                self?.proButton.setTitle("Start Pro", for: .normal)
+                self?.proButton.setTitle("pricing_start_pro".localized, for: .normal)
                 self?.proButton.isEnabled = true
 
                 switch result {
@@ -576,7 +673,7 @@ class PricingViewController: UIViewController {
             message: error.localizedDescription,
             preferredStyle: .alert
         )
-        alert.addAction(UIAlertAction(title: "OK", style: .default))
+        alert.addAction(UIAlertAction(title: "common_ok".localized, style: .default))
         present(alert, animated: true)
     }
 }

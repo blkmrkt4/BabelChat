@@ -208,7 +208,7 @@ class ProfileViewController: UIViewController, PhotoGridViewDelegate {
         contentView.addSubview(nativeLanguageBadge)
 
         // Aspiring languages
-        aspiringLabel.text = "Learning:"
+        aspiringLabel.text = "profile_learning".localized
         aspiringLabel.font = .systemFont(ofSize: 16, weight: .regular)
         aspiringLabel.textColor = .secondaryLabel
         contentView.addSubview(aspiringLabel)
@@ -233,7 +233,7 @@ class ProfileViewController: UIViewController, PhotoGridViewDelegate {
         contentView.addSubview(openToMatchLabel)
 
         // About section
-        aboutLabel.text = "About"
+        aboutLabel.text = "profile_about".localized
         aboutLabel.font = .systemFont(ofSize: 20, weight: .bold)
         aboutLabel.textColor = .label
         contentView.addSubview(aboutLabel)
@@ -270,7 +270,7 @@ class ProfileViewController: UIViewController, PhotoGridViewDelegate {
         contentView.addSubview(bioTextView)
 
         // Edit hint label
-        bioEditHintLabel.text = "Tap to edit"
+        bioEditHintLabel.text = "profile_tap_to_edit".localized
         bioEditHintLabel.font = .systemFont(ofSize: 12, weight: .regular)
         bioEditHintLabel.textColor = .tertiaryLabel
         bioEditHintLabel.textAlignment = .right
@@ -431,14 +431,15 @@ class ProfileViewController: UIViewController, PhotoGridViewDelegate {
         nameLabel.text = lastName.isEmpty ? firstName : "\(firstName) \(lastName)"
 
         // Bio
-        bioLabel.text = profile.bio ?? "Tap to add your bio"
+        bioLabel.text = profile.bio ?? "profile_tap_to_add_bio".localized
 
         // Location
-        let location = profile.location ?? "Add location"
-        if location != "Add location" {
+        let addLocationText = "profile_add_location".localized
+        let location = profile.location ?? addLocationText
+        if location != addLocationText {
             locationLabel.text = "📍 \(location)"
         } else {
-            locationLabel.text = "📍 Add location"
+            locationLabel.text = "📍 \(addLocationText)"
         }
 
         // Native language badge
@@ -551,7 +552,7 @@ class ProfileViewController: UIViewController, PhotoGridViewDelegate {
         let lastName = UserDefaults.standard.string(forKey: "lastName") ?? ""
 
         if firstName.isEmpty {
-            nameLabel.text = "Complete Your Profile"
+            nameLabel.text = "profile_complete_your_profile".localized
         } else if lastName.isEmpty {
             nameLabel.text = firstName
         } else {
@@ -569,13 +570,14 @@ class ProfileViewController: UIViewController, PhotoGridViewDelegate {
         }
 
         // Load bio
-        bioLabel.text = UserDefaults.standard.string(forKey: "bio") ?? "Tap to add your bio"
+        bioLabel.text = UserDefaults.standard.string(forKey: "bio") ?? "profile_tap_to_add_bio".localized
 
         // Load location and privacy setting
-        let location = UserDefaults.standard.string(forKey: "location") ?? "Add location"
+        let addLocationText = "profile_add_location".localized
+        let location = UserDefaults.standard.string(forKey: "location") ?? addLocationText
         let showCity = UserDefaults.standard.bool(forKey: "showCityInProfile")
 
-        if location != "Add location" {
+        if location != addLocationText {
             if showCity {
                 locationLabel.text = "📍 \(location)"
             } else {
@@ -588,7 +590,7 @@ class ProfileViewController: UIViewController, PhotoGridViewDelegate {
                 }
             }
         } else {
-            locationLabel.text = "📍 Add location"
+            locationLabel.text = "📍 \(addLocationText)"
         }
 
         // Load language data
@@ -609,10 +611,10 @@ class ProfileViewController: UIViewController, PhotoGridViewDelegate {
             // Open to languages
             if !decoded.openToLanguages.isEmpty {
                 let languages = decoded.openToLanguages.map { $0.name }.joined(separator: ", ")
-                openToMatchLabel.text = "⭐ Open to Match: \(languages)"
+                openToMatchLabel.text = "⭐ \("profile_open_to_match".localized): \(languages)"
             } else if let practiceLanguages = decoded.practiceLanguages, !practiceLanguages.isEmpty {
                 let languages = practiceLanguages.map { $0.language.name }.joined(separator: ", ")
-                openToMatchLabel.text = "🗨️ Want to Match In: \(languages)"
+                openToMatchLabel.text = "🗨️ \("profile_want_to_match_in".localized): \(languages)"
             } else {
                 openToMatchLabel.text = ""
             }
@@ -648,12 +650,12 @@ class ProfileViewController: UIViewController, PhotoGridViewDelegate {
     @objc private func profileImageTapped() {
         // Show options for the circular profile photo (stored at index 6)
         let alertController = UIAlertController(
-            title: "Profile Photo",
-            message: "This is your main profile photo that appears in matches",
+            title: "profile_photo_title".localized,
+            message: "profile_photo_message".localized,
             preferredStyle: .actionSheet
         )
 
-        alertController.addAction(UIAlertAction(title: "Change Photo", style: .default) { [weak self] _ in
+        alertController.addAction(UIAlertAction(title: "profile_change_photo".localized, style: .default) { [weak self] _ in
             self?.changeProfilePhoto()
         })
 
@@ -665,18 +667,18 @@ class ProfileViewController: UIViewController, PhotoGridViewDelegate {
 
             // Blur Until Match option for profile photo (index 6)
             let isBlurred = currentPhotoBlurSettings.count > 6 ? currentPhotoBlurSettings[6] : false
-            let blurTitle = isBlurred ? "✓ Blur Until Match" : "Blur Until Match"
+            let blurTitle = isBlurred ? "✓ " + "profile_blur_until_match".localized : "profile_blur_until_match".localized
 
             alertController.addAction(UIAlertAction(title: blurTitle, style: .default) { [weak self] _ in
                 self?.togglePhotoBlur(at: 6)
             })
 
-            alertController.addAction(UIAlertAction(title: "Remove Photo", style: .destructive) { [weak self] _ in
+            alertController.addAction(UIAlertAction(title: "profile_remove_photo".localized, style: .destructive) { [weak self] _ in
                 self?.removeProfilePhoto()
             })
         }
 
-        alertController.addAction(UIAlertAction(title: "Cancel", style: .cancel))
+        alertController.addAction(UIAlertAction(title: "common_cancel".localized, style: .cancel))
 
         // For iPad support
         if let popoverController = alertController.popoverPresentationController {
@@ -737,11 +739,11 @@ class ProfileViewController: UIViewController, PhotoGridViewDelegate {
                 print("❌ Error removing profile photo: \(error)")
                 await MainActor.run {
                     let alert = UIAlertController(
-                        title: "Error",
-                        message: "Failed to remove profile photo. Please try again.",
+                        title: "common_error".localized,
+                        message: "profile_remove_photo_error".localized,
                         preferredStyle: .alert
                     )
-                    alert.addAction(UIAlertAction(title: "OK", style: .default))
+                    alert.addAction(UIAlertAction(title: "common_ok".localized, style: .default))
                     self.present(alert, animated: true)
                 }
             }
@@ -775,7 +777,7 @@ class ProfileViewController: UIViewController, PhotoGridViewDelegate {
         isEditingBio = true
 
         let currentBio = currentProfile?.bio ?? ""
-        let placeholderText = "Tap to add your bio"
+        let placeholderText = "profile_tap_to_add_bio".localized
 
         // Set text view content (don't show placeholder as actual text)
         bioTextView.text = currentBio == placeholderText ? "" : currentBio
@@ -785,7 +787,7 @@ class ProfileViewController: UIViewController, PhotoGridViewDelegate {
             self.bioLabel.alpha = 0
             self.bioTextView.alpha = 1
             self.bioTextView.isHidden = false
-            self.bioEditHintLabel.text = "Tap outside to save"
+            self.bioEditHintLabel.text = "profile_tap_outside_to_save".localized
             self.bioEditHintLabel.textColor = .systemBlue
         } completion: { _ in
             self.bioLabel.isHidden = true
@@ -802,7 +804,7 @@ class ProfileViewController: UIViewController, PhotoGridViewDelegate {
         bioTextViewBottomConstraint?.isActive = true
 
         // Add Done button to navigation bar
-        let doneButton = UIBarButtonItem(title: "Done", style: .done, target: self, action: #selector(doneEditingBioTapped))
+        let doneButton = UIBarButtonItem(title: "common_done".localized, style: .done, target: self, action: #selector(doneEditingBioTapped))
         navigationItem.rightBarButtonItems?.insert(doneButton, at: 0)
 
         // Focus text view - keyboard handler will scroll to About section
@@ -829,7 +831,7 @@ class ProfileViewController: UIViewController, PhotoGridViewDelegate {
             self.bioLabel.alpha = 1
             self.bioTextView.alpha = 0
             self.bioLabel.isHidden = false
-            self.bioEditHintLabel.text = "Tap to edit"
+            self.bioEditHintLabel.text = "profile_tap_to_edit".localized
             self.bioEditHintLabel.textColor = .tertiaryLabel
         } completion: { _ in
             self.bioTextView.isHidden = true
@@ -841,7 +843,7 @@ class ProfileViewController: UIViewController, PhotoGridViewDelegate {
 
         // Remove Done button from navigation bar
         if let rightItems = navigationItem.rightBarButtonItems,
-           let doneIndex = rightItems.firstIndex(where: { $0.title == "Done" }) {
+           let doneIndex = rightItems.firstIndex(where: { $0.title == "common_done".localized }) {
             var items = rightItems
             items.remove(at: doneIndex)
             navigationItem.rightBarButtonItems = items
@@ -895,7 +897,7 @@ class ProfileViewController: UIViewController, PhotoGridViewDelegate {
                 try await SupabaseService.shared.updateUserBio(bio: bio)
                 await MainActor.run {
                     // Update local state
-                    self.bioLabel.text = bio.isEmpty ? "Tap to add your bio" : bio
+                    self.bioLabel.text = bio.isEmpty ? "profile_tap_to_add_bio".localized : bio
 
                     // Update UserDefaults as fallback
                     UserDefaults.standard.set(bio, forKey: "bio")
@@ -911,11 +913,11 @@ class ProfileViewController: UIViewController, PhotoGridViewDelegate {
                 print("❌ Error saving bio: \(error)")
                 await MainActor.run {
                     let alert = UIAlertController(
-                        title: "Error",
-                        message: "Failed to save your bio. Please try again.",
+                        title: "common_error".localized,
+                        message: "profile_save_bio_error".localized,
                         preferredStyle: .alert
                     )
-                    alert.addAction(UIAlertAction(title: "OK", style: .default))
+                    alert.addAction(UIAlertAction(title: "common_ok".localized, style: .default))
                     self.present(alert, animated: true)
                 }
             }
@@ -971,14 +973,14 @@ class ProfileViewController: UIViewController, PhotoGridViewDelegate {
             preferredStyle: .actionSheet
         )
 
-        alertController.addAction(UIAlertAction(title: "Change Photo", style: .default) { [weak self] _ in
+        alertController.addAction(UIAlertAction(title: "profile_change_photo".localized, style: .default) { [weak self] _ in
             self?.changePhoto(at: index)
         })
 
         // Only show additional options if there's a photo
         if !photoURL.isEmpty {
             let currentCaption = index < currentPhotoCaptions.count ? currentPhotoCaptions[index] : nil
-            let captionTitle = currentCaption?.isEmpty == false ? "Edit Caption" : "Add Caption"
+            let captionTitle = currentCaption?.isEmpty == false ? "profile_edit_caption".localized : "profile_add_caption".localized
 
             alertController.addAction(UIAlertAction(title: captionTitle, style: .default) { [weak self] _ in
                 self?.editCaption(at: index, currentCaption: currentCaption)
@@ -986,18 +988,18 @@ class ProfileViewController: UIViewController, PhotoGridViewDelegate {
 
             // Blur Until Match option
             let isBlurred = index < currentPhotoBlurSettings.count ? currentPhotoBlurSettings[index] : false
-            let blurTitle = isBlurred ? "✓ Blur Until Match" : "Blur Until Match"
+            let blurTitle = isBlurred ? "✓ " + "profile_blur_until_match".localized : "profile_blur_until_match".localized
 
             alertController.addAction(UIAlertAction(title: blurTitle, style: .default) { [weak self] _ in
                 self?.togglePhotoBlur(at: index)
             })
 
-            alertController.addAction(UIAlertAction(title: "Remove Photo", style: .destructive) { [weak self] _ in
+            alertController.addAction(UIAlertAction(title: "profile_remove_photo".localized, style: .destructive) { [weak self] _ in
                 self?.removePhoto(at: index)
             })
         }
 
-        alertController.addAction(UIAlertAction(title: "Cancel", style: .cancel))
+        alertController.addAction(UIAlertAction(title: "common_cancel".localized, style: .cancel))
 
         // For iPad support
         if let popoverController = alertController.popoverPresentationController {
@@ -1024,19 +1026,19 @@ class ProfileViewController: UIViewController, PhotoGridViewDelegate {
 
     private func editCaption(at index: Int, currentCaption: String?) {
         let alertController = UIAlertController(
-            title: "Photo Caption",
-            message: "Add a caption for this photo",
+            title: "profile_photo_caption_title".localized,
+            message: "profile_photo_caption_message".localized,
             preferredStyle: .alert
         )
 
         alertController.addTextField { textField in
             textField.text = currentCaption
-            textField.placeholder = "Enter caption..."
+            textField.placeholder = "profile_enter_caption_placeholder".localized
             textField.autocapitalizationType = .sentences
         }
 
-        alertController.addAction(UIAlertAction(title: "Cancel", style: .cancel))
-        alertController.addAction(UIAlertAction(title: "Save", style: .default) { [weak self] _ in
+        alertController.addAction(UIAlertAction(title: "common_cancel".localized, style: .cancel))
+        alertController.addAction(UIAlertAction(title: "common_save".localized, style: .default) { [weak self] _ in
             guard let caption = alertController.textFields?.first?.text else { return }
             self?.saveCaption(caption, at: index)
         })
@@ -1066,11 +1068,11 @@ class ProfileViewController: UIViewController, PhotoGridViewDelegate {
                 print("❌ Error saving caption: \(error)")
                 await MainActor.run {
                     let alert = UIAlertController(
-                        title: "Error",
-                        message: "Failed to save caption. Please try again.",
+                        title: "common_error".localized,
+                        message: "profile_save_caption_error".localized,
                         preferredStyle: .alert
                     )
-                    alert.addAction(UIAlertAction(title: "OK", style: .default))
+                    alert.addAction(UIAlertAction(title: "common_ok".localized, style: .default))
                     self.present(alert, animated: true)
                 }
             }
@@ -1079,13 +1081,13 @@ class ProfileViewController: UIViewController, PhotoGridViewDelegate {
 
     private func removePhoto(at index: Int) {
         let confirmAlert = UIAlertController(
-            title: "Remove Photo",
-            message: "Are you sure you want to remove this photo?",
+            title: "profile_remove_photo".localized,
+            message: "profile_remove_photo_confirm".localized,
             preferredStyle: .alert
         )
 
-        confirmAlert.addAction(UIAlertAction(title: "Cancel", style: .cancel))
-        confirmAlert.addAction(UIAlertAction(title: "Remove", style: .destructive) { [weak self] _ in
+        confirmAlert.addAction(UIAlertAction(title: "common_cancel".localized, style: .cancel))
+        confirmAlert.addAction(UIAlertAction(title: "profile_remove".localized, style: .destructive) { [weak self] _ in
             self?.performRemovePhoto(at: index)
         })
 
@@ -1132,11 +1134,11 @@ class ProfileViewController: UIViewController, PhotoGridViewDelegate {
                 print("❌ Error removing photo: \(error)")
                 await MainActor.run {
                     let alert = UIAlertController(
-                        title: "Error",
-                        message: "Failed to remove photo. Please try again.",
+                        title: "common_error".localized,
+                        message: "profile_remove_photo_error".localized,
                         preferredStyle: .alert
                     )
-                    alert.addAction(UIAlertAction(title: "OK", style: .default))
+                    alert.addAction(UIAlertAction(title: "common_ok".localized, style: .default))
                     self.present(alert, animated: true)
                 }
             }
@@ -1173,19 +1175,19 @@ class ProfileViewController: UIViewController, PhotoGridViewDelegate {
 
                     // Show confirmation
                     let message = blurSettings[index]
-                        ? "Photo will be blurred until you match"
-                        : "Photo will be visible to everyone"
+                        ? "profile_photo_blurred_message".localized
+                        : "profile_photo_visible_message".localized
                     self.showToast(message: message)
                 }
             } catch {
                 print("❌ Error updating blur setting: \(error)")
                 await MainActor.run {
                     let alert = UIAlertController(
-                        title: "Error",
-                        message: "Failed to update blur setting. Please try again.",
+                        title: "common_error".localized,
+                        message: "profile_blur_setting_error".localized,
                         preferredStyle: .alert
                     )
-                    alert.addAction(UIAlertAction(title: "OK", style: .default))
+                    alert.addAction(UIAlertAction(title: "common_ok".localized, style: .default))
                     self.present(alert, animated: true)
                 }
             }
@@ -1278,79 +1280,176 @@ extension ProfileViewController: PHPickerViewControllerDelegate {
 
         guard let result = results.first else { return }
 
-        // Show loading indicator
-        let loadingAlert = UIAlertController(title: "Uploading Photo", message: "Please wait...", preferredStyle: .alert)
+        // Show loading indicator with cancel option
+        let loadingAlert = UIAlertController(title: "profile_uploading_photo".localized, message: "common_please_wait".localized, preferredStyle: .alert)
+        var isCancelled = false
+        loadingAlert.addAction(UIAlertAction(title: "common_cancel".localized, style: .cancel) { _ in
+            isCancelled = true
+        })
         present(loadingAlert, animated: true)
 
-        result.itemProvider.loadObject(ofClass: UIImage.self) { [weak self] object, error in
-            guard let self = self,
-                  let originalImage = object as? UIImage else {
-                DispatchQueue.main.async {
-                    loadingAlert.dismiss(animated: true)
-                }
-                return
-            }
-
-            Task {
-                do {
-                    // Resize image to max 1200px to reduce memory usage and upload size
-                    // This prevents crashes on devices with high-resolution camera photos
-                    let resizedImage = self.resizeImage(originalImage, maxDimension: 1200)
-
-                    // Compress image to JPEG with moderate quality
-                    guard let imageData = resizedImage.jpegData(compressionQuality: 0.7) else {
-                        throw NSError(domain: "PhotoUpload", code: -1, userInfo: [NSLocalizedDescriptionKey: "Could not compress image"])
-                    }
-
-                    // Get user ID
-                    guard let userId = SupabaseService.shared.currentUserId?.uuidString else {
-                        throw NSError(domain: "PhotoUpload", code: -1, userInfo: [NSLocalizedDescriptionKey: "Not logged in"])
-                    }
-
-                    // Upload to Supabase storage
-                    let storagePath = try await SupabaseService.shared.uploadPhoto(
-                        imageData,
-                        userId: userId,
-                        photoIndex: self.selectedPhotoIndex
-                    )
-
-                    // Update the photo array using storage paths (not signed URLs)
-                    var photos = self.currentProfile?.profilePhotos ?? []
-                    while photos.count <= self.selectedPhotoIndex {
-                        photos.append("")
-                    }
-                    photos[self.selectedPhotoIndex] = storagePath
-
-                    // Save to Supabase
-                    try await SupabaseService.shared.updateUserPhotos(photoURLs: photos)
-
-                    await MainActor.run {
-                        loadingAlert.dismiss(animated: true) {
-                            // Reload profile to show the new photo
-                            self.loadProfileData()
-
-                            let feedback = UINotificationFeedbackGenerator()
-                            feedback.notificationOccurred(.success)
-                        }
-                    }
-
-                    print("✅ Photo uploaded to slot \(self.selectedPhotoIndex): \(storagePath)")
-
-                } catch {
-                    print("❌ Failed to upload photo: \(error)")
-                    await MainActor.run {
-                        loadingAlert.dismiss(animated: true) {
-                            let alert = UIAlertController(
-                                title: "Upload Failed",
-                                message: "Could not upload photo. Please try again.",
-                                preferredStyle: .alert
-                            )
-                            alert.addAction(UIAlertAction(title: "OK", style: .default))
-                            self.present(alert, animated: true)
-                        }
+        // Safety timeout task - dismisses alert after 90 seconds no matter what
+        let timeoutTask = Task { [weak self] in
+            try? await Task.sleep(nanoseconds: 90_000_000_000) // 90 seconds
+            if !Task.isCancelled {
+                await MainActor.run {
+                    guard let self = self, self.presentedViewController is UIAlertController else { return }
+                    print("⚠️ Photo upload safety timeout triggered")
+                    self.dismiss(animated: true) {
+                        let alert = UIAlertController(
+                            title: "profile_upload_failed".localized,
+                            message: "profile_upload_failed_message".localized,
+                            preferredStyle: .alert
+                        )
+                        alert.addAction(UIAlertAction(title: "common_ok".localized, style: .default))
+                        self.present(alert, animated: true)
                     }
                 }
             }
+        }
+
+        Task { [weak self] in
+            guard let self = self else { return }
+
+            do {
+                // Check if cancelled
+                if isCancelled { throw NSError(domain: "PhotoUpload", code: -3, userInfo: [NSLocalizedDescriptionKey: "Cancelled"]) }
+
+                // Load image with timeout
+                let originalImage = try await self.loadImageWithTimeout(from: result, timeout: 30)
+
+                // Check if cancelled
+                if isCancelled { throw NSError(domain: "PhotoUpload", code: -3, userInfo: [NSLocalizedDescriptionKey: "Cancelled"]) }
+
+                // Resize image to max 1200px to reduce memory usage and upload size
+                let resizedImage = self.resizeImage(originalImage, maxDimension: 1200)
+
+                // Compress image to JPEG with moderate quality
+                guard let imageData = resizedImage.jpegData(compressionQuality: 0.7) else {
+                    throw NSError(domain: "PhotoUpload", code: -1, userInfo: [NSLocalizedDescriptionKey: "Could not compress image"])
+                }
+
+                // Get user ID
+                guard let userId = SupabaseService.shared.currentUserId?.uuidString else {
+                    throw NSError(domain: "PhotoUpload", code: -2, userInfo: [NSLocalizedDescriptionKey: "Not logged in"])
+                }
+
+                // Upload to Supabase storage with timeout
+                let storagePath = try await withThrowingTaskGroup(of: String.self) { group in
+                    group.addTask {
+                        try await SupabaseService.shared.uploadPhoto(
+                            imageData,
+                            userId: userId,
+                            photoIndex: self.selectedPhotoIndex
+                        )
+                    }
+                    group.addTask {
+                        try await Task.sleep(nanoseconds: 60_000_000_000) // 60 second upload timeout
+                        throw NSError(domain: "PhotoUpload", code: -4, userInfo: [NSLocalizedDescriptionKey: "Upload timed out"])
+                    }
+                    let result = try await group.next()!
+                    group.cancelAll()
+                    return result
+                }
+
+                // Update the photo array using storage paths (not signed URLs)
+                var photos = self.currentProfile?.profilePhotos ?? []
+                while photos.count <= self.selectedPhotoIndex {
+                    photos.append("")
+                }
+                photos[self.selectedPhotoIndex] = storagePath
+
+                // Save to Supabase
+                try await SupabaseService.shared.updateUserPhotos(photoURLs: photos)
+
+                // Cancel safety timeout
+                timeoutTask.cancel()
+
+                await MainActor.run {
+                    guard self.presentedViewController is UIAlertController else { return }
+                    loadingAlert.dismiss(animated: true) {
+                        // Reload profile to show the new photo
+                        self.loadProfileData()
+
+                        let feedback = UINotificationFeedbackGenerator()
+                        feedback.notificationOccurred(.success)
+                    }
+                }
+
+                print("✅ Photo uploaded to slot \(self.selectedPhotoIndex): \(storagePath)")
+
+            } catch {
+                // Cancel safety timeout
+                timeoutTask.cancel()
+
+                print("❌ Failed to upload photo: \(error)")
+                await MainActor.run {
+                    guard self.presentedViewController is UIAlertController else { return }
+                    loadingAlert.dismiss(animated: true) {
+                        // Don't show error if user cancelled
+                        if isCancelled { return }
+
+                        let alert = UIAlertController(
+                            title: "profile_upload_failed".localized,
+                            message: "profile_upload_failed_message".localized,
+                            preferredStyle: .alert
+                        )
+                        alert.addAction(UIAlertAction(title: "common_ok".localized, style: .default))
+                        self.present(alert, animated: true)
+                    }
+                }
+            }
+        }
+    }
+
+    /// Load image from PHPickerResult with timeout
+    private func loadImageWithTimeout(from result: PHPickerResult, timeout: TimeInterval) async throws -> UIImage {
+        print("📸 Starting image load with \(timeout)s timeout...")
+
+        return try await withThrowingTaskGroup(of: UIImage.self) { group in
+            // Image loading task
+            group.addTask {
+                print("📸 Image loading task started")
+                return try await withCheckedThrowingContinuation { continuation in
+                    var hasResumed = false
+                    print("📸 Calling loadObject...")
+                    result.itemProvider.loadObject(ofClass: UIImage.self) { object, error in
+                        print("📸 loadObject callback fired - hasResumed: \(hasResumed), error: \(String(describing: error))")
+                        guard !hasResumed else {
+                            print("📸 Already resumed, ignoring callback")
+                            return
+                        }
+                        hasResumed = true
+
+                        if let error = error {
+                            print("📸 Image loading error: \(error)")
+                            continuation.resume(throwing: error)
+                        } else if let image = object as? UIImage {
+                            print("📸 Image loaded successfully: \(image.size)")
+                            continuation.resume(returning: image)
+                        } else {
+                            print("📸 No image in callback")
+                            continuation.resume(throwing: NSError(domain: "PhotoPicker", code: -1,
+                                userInfo: [NSLocalizedDescriptionKey: "Could not load image"]))
+                        }
+                    }
+                }
+            }
+
+            // Timeout task
+            group.addTask {
+                print("📸 Timeout task started, waiting \(timeout)s...")
+                try await Task.sleep(nanoseconds: UInt64(timeout * 1_000_000_000))
+                print("📸 Timeout task completed - throwing timeout error")
+                throw NSError(domain: "PhotoPicker", code: -2,
+                    userInfo: [NSLocalizedDescriptionKey: "Image loading timed out"])
+            }
+
+            print("📸 Waiting for first task to complete...")
+            let result = try await group.next()!
+            print("📸 Got result, cancelling remaining tasks")
+            group.cancelAll()
+            return result
         }
     }
 

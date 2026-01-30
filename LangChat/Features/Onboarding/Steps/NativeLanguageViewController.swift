@@ -14,7 +14,7 @@ class NativeLanguageViewController: BaseOnboardingViewController {
     // MARK: - Lifecycle
     override func configure() {
         step = .nativeLanguage
-        setTitle("Native language?")
+        setTitle("onboarding_native_title".localized)
         setupViews()
         filteredLanguages = allLanguages
     }
@@ -22,7 +22,7 @@ class NativeLanguageViewController: BaseOnboardingViewController {
     // MARK: - Setup
     private func setupViews() {
         // Search bar
-        searchBar.placeholder = "Search languages"
+        searchBar.placeholder = "onboarding_native_search".localized
         searchBar.searchBarStyle = .minimal
         searchBar.delegate = self
         contentView.addSubview(searchBar)

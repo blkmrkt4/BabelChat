@@ -1,7 +1,9 @@
 import UIKit
 
 enum OnboardingStep: Int, CaseIterable {
-    case name = 0
+    case interfaceLanguage = 0  // Choose app interface language first
+    case termsAcceptance        // Accept Terms of Service and Privacy Policy
+    case name
     case birthYear
     case hometown
     case nativeLanguage
@@ -22,6 +24,8 @@ enum OnboardingStep: Int, CaseIterable {
 
     var title: String {
         switch self {
+        case .interfaceLanguage: return "Choose Language"
+        case .termsAcceptance: return "Terms & Privacy"
         case .name: return "Your Name"
         case .birthYear: return "Birth Year"
         case .hometown: return "Hometown"
@@ -59,7 +63,7 @@ class OnboardingCoordinator {
 
     func start() {
         print("OnboardingCoordinator: Starting onboarding")
-        showStep(.name)
+        showStep(.interfaceLanguage)
     }
 
     func showStep(_ step: OnboardingStep) {
@@ -70,6 +74,16 @@ class OnboardingCoordinator {
         let viewController: UIViewController
 
         switch step {
+        case .interfaceLanguage:
+            let vc = InterfaceLanguageViewController()
+            vc.delegate = self
+            viewController = vc
+
+        case .termsAcceptance:
+            let vc = TermsAcceptanceViewController()
+            vc.delegate = self
+            viewController = vc
+
         case .name:
             let vc = NameInputViewController()
             vc.delegate = self
@@ -178,6 +192,56 @@ class OnboardingCoordinator {
             return
         }
 
+        // Skip name step if user signed in with Apple.
+        // Apple provides name only on the FIRST sign-in ever. On reinstalls or new devices,
+        // the cached name may be gone. We must skip the name step regardless, using either
+        // the cached Apple name, the Supabase profile name, or a fallback.
+        // Showing the name input after Apple Sign In violates Guideline 4.0.
+        if nextStep == .name {
+            let isAppleUser = SupabaseService.shared.isAppleSignInUser
+            let appleFirstName = UserDefaults.standard.string(forKey: "appleProvidedFirstName") ?? ""
+            let profileFirstName = UserDefaults.standard.string(forKey: "firstName") ?? ""
+
+            if isAppleUser {
+                // Use Apple-cached name first, then profile name, then fallback
+                let firstName: String
+                let lastName: String
+                if !appleFirstName.isEmpty {
+                    firstName = appleFirstName
+                    lastName = UserDefaults.standard.string(forKey: "appleProvidedLastName") ?? ""
+                } else if !profileFirstName.isEmpty {
+                    firstName = profileFirstName
+                    lastName = UserDefaults.standard.string(forKey: "lastName") ?? ""
+                } else {
+                    // Edge case: Apple user with no cached name at all.
+                    // Use the email prefix or a placeholder — never show the name input.
+                    firstName = UserDefaults.standard.string(forKey: "email")?.components(separatedBy: "@").first ?? "User"
+                    lastName = ""
+                }
+                print("📍 OnboardingCoordinator: Skipping name step for Apple user (name: \(firstName) \(lastName))")
+                userData.firstName = firstName
+                userData.lastName = lastName
+                if let skipToStep = OnboardingStep(rawValue: nextStep.rawValue + 1) {
+                    nextStep = skipToStep
+                } else {
+                    completeOnboarding()
+                    return
+                }
+            } else if !appleFirstName.isEmpty {
+                // Non-Apple user but Apple name cached (shouldn't happen, but handle gracefully)
+                let appleLastName = UserDefaults.standard.string(forKey: "appleProvidedLastName") ?? ""
+                print("📍 OnboardingCoordinator: Skipping name step (Apple provided: \(appleFirstName) \(appleLastName))")
+                userData.firstName = appleFirstName
+                userData.lastName = appleLastName
+                if let skipToStep = OnboardingStep(rawValue: nextStep.rawValue + 1) {
+                    nextStep = skipToStep
+                } else {
+                    completeOnboarding()
+                    return
+                }
+            }
+        }
+
         // Skip datingPreferences if user didn't select "Open to dating"
         if nextStep == .datingPreferences {
             let isOpenToDating = userData.relationshipIntent == .openToDating
@@ -215,6 +279,17 @@ class OnboardingCoordinator {
         guard currentStep.rawValue > 0,
               var previousStep = OnboardingStep(rawValue: currentStep.rawValue - 1) else {
             return
+        }
+
+        // Skip name step when going back if user is an Apple Sign In user
+        if previousStep == .name {
+            let isAppleUser = SupabaseService.shared.isAppleSignInUser
+            let appleFirstName = UserDefaults.standard.string(forKey: "appleProvidedFirstName") ?? ""
+            if isAppleUser || !appleFirstName.isEmpty {
+                if let skipToStep = OnboardingStep(rawValue: previousStep.rawValue - 1) {
+                    previousStep = skipToStep
+                }
+            }
         }
 
         // Skip datingPreferences when going back if user didn't select "Open to dating"
@@ -306,6 +381,10 @@ class OnboardingCoordinator {
         let museLanguageCodes = userData.museLanguages.map { $0.rawValue }
         UserDefaults.standard.set(museLanguageCodes, forKey: "museLanguages")
 
+        // Save learning contexts (learning goals)
+        let learningContextCodes = userData.learningContexts.map { $0.rawValue }
+        UserDefaults.standard.set(learningContextCodes, forKey: "learningContexts")
+
         // Save matching preferences
         UserDefaults.standard.set(userData.gender.rawValue, forKey: "gender")
         UserDefaults.standard.set(userData.genderPreference.rawValue, forKey: "genderPreference")
@@ -356,6 +435,15 @@ extension OnboardingCoordinator: OnboardingStepDelegate {
         print("📍 OnboardingCoordinator: Navigation controller exists: \(navigationController != nil)")
         // Store data based on current step
         switch currentStep {
+        case .interfaceLanguage:
+            // Language is already set by InterfaceLanguageViewController
+            // No additional data storage needed
+            break
+        case .termsAcceptance:
+            // Terms acceptance is stored directly in UserDefaults by the VC
+            if let acceptedDate = data as? Date {
+                userData.termsAcceptedDate = acceptedDate
+            }
         case .name:
             if let name = data as? (String, String) {
                 userData.firstName = name.0
@@ -482,6 +570,7 @@ extension OnboardingCoordinator: OnboardingStepDelegate {
 
 // MARK: - OnboardingUserData
 struct OnboardingUserData {
+    var termsAcceptedDate: Date? // When user accepted Terms of Service
     var firstName: String?
     var lastName: String?
     var email: String? // Populated from authentication (Apple Sign In or email login)
@@ -547,29 +636,76 @@ extension OnboardingCoordinator: PricingViewControllerDelegate {
     func didSelectFreeTier() {
         print("✅ User selected Free tier")
         navigationController?.dismiss(animated: true) { [weak self] in
-            self?.transitionToMainApp()
+            self?.syncAndTransition()
         }
     }
 
     func didSelectPremiumTier() {
         print("✅ User purchased Premium tier")
         navigationController?.dismiss(animated: true) { [weak self] in
-            self?.transitionToMainApp()
+            self?.syncAndTransition()
         }
     }
 
     func didSelectProTier() {
         print("✅ User purchased Pro tier")
         navigationController?.dismiss(animated: true) { [weak self] in
-            self?.transitionToMainApp()
+            self?.syncAndTransition()
         }
     }
 
     func didSkipPricing() {
         print("✅ User skipped pricing (continuing with Free tier)")
         navigationController?.dismiss(animated: true) { [weak self] in
-            self?.transitionToMainApp()
+            self?.syncAndTransition()
         }
+    }
+
+    /// Sync onboarding data to Supabase then transition to main app
+    private func syncAndTransition() {
+        Task {
+            do {
+                // Sync profile data to Supabase
+                print("📤 Syncing onboarding data to Supabase...")
+                try await SupabaseService.shared.syncOnboardingDataToSupabase()
+
+                // Upload photos if any were selected
+                if !userData.profilePhotos.isEmpty {
+                    print("📤 Uploading \(userData.profilePhotos.count) photos...")
+                    try await SupabaseService.shared.uploadOnboardingPhotos(userData.profilePhotos)
+                }
+
+                print("✅ Onboarding data synced successfully")
+                await MainActor.run {
+                    self.transitionToMainApp()
+                }
+            } catch {
+                print("❌ Failed to sync onboarding data: \(error)")
+                await MainActor.run {
+                    self.showSyncFailureAlert()
+                }
+            }
+        }
+    }
+
+    private func showSyncFailureAlert() {
+        guard let nav = navigationController else {
+            transitionToMainApp()
+            return
+        }
+
+        let alert = UIAlertController(
+            title: "sync_issue_title".localized,
+            message: "sync_issue_message".localized,
+            preferredStyle: .alert
+        )
+        alert.addAction(UIAlertAction(title: "common_retry".localized, style: .default) { [weak self] _ in
+            self?.syncAndTransition()
+        })
+        alert.addAction(UIAlertAction(title: "common_continue".localized, style: .cancel) { [weak self] _ in
+            self?.transitionToMainApp()
+        })
+        nav.present(alert, animated: true)
     }
 }
 

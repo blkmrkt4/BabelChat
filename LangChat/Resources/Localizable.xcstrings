@@ -5797,6 +5797,54 @@
         }
       }
     },
+    "auth_enter_email_password": {
+      "comment": "Prompt to enter email and password",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Enter your email and password"
+          }
+        }
+      }
+    },
+    "auth_sign_in": {
+      "comment": "Sign in button",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Sign In"
+          }
+        }
+      }
+    },
+    "auth_signin_failed": {
+      "comment": "Sign in failed alert title",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Sign In Failed"
+          }
+        }
+      }
+    },
+    "auth_signup_failed": {
+      "comment": "Sign up failed alert title",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Account Creation Failed"
+          }
+        }
+      }
+    },
     "auth_create_account": {
       "comment": "Create account button",
       "extractionState": "manual",
@@ -71636,19 +71684,19 @@
         "ko": {
           "stringUnit": {
             "state": "needs_review",
-            "value": "13세 이상만 가입 가능합니다"
+            "value": "18세 이상만 가입 가능합니다"
           }
         },
         "zh": {
           "stringUnit": {
             "state": "needs_review",
-            "value": "您必须年满13岁"
+            "value": "您必须年满18岁"
           }
         },
         "ru": {
           "stringUnit": {
             "state": "needs_review",
-            "value": "Вам должно быть не менее 13 лет"
+            "value": "Вам должно быть не менее 18 лет"
           }
         },
         "id": {
@@ -71660,7 +71708,7 @@
         "ar": {
           "stringUnit": {
             "state": "needs_review",
-            "value": "يجب أن تكون على الأقل 13 سنة"
+            "value": "يجب أن تكون على الأقل 18 سنة"
           }
         },
         "tl": {
@@ -71684,79 +71732,79 @@
         "nl": {
           "stringUnit": {
             "state": "needs_review",
-            "value": "Je moet minimaal 13 jaar oud zijn"
+            "value": "Je moet minimaal 18 jaar oud zijn"
           }
         },
         "sv": {
           "stringUnit": {
             "state": "needs_review",
-            "value": "Du måste vara minst 13 år gammal"
+            "value": "Du måste vara minst 18 år gammal"
           }
         },
         "da": {
           "stringUnit": {
             "state": "needs_review",
-            "value": "Du skal være mindst 13 år gammel"
+            "value": "Du skal være mindst 18 år gammel"
           }
         },
         "fi": {
           "stringUnit": {
             "state": "needs_review",
-            "value": "Sinun täytyy olla vähintään 13-vuotias"
+            "value": "Sinun täytyy olla vähintään 18-vuotias"
           }
         },
         "en": {
           "stringUnit": {
             "state": "translated",
-            "value": "You must be at least 13 years old"
+            "value": "You must be at least 18 years old"
           }
         },
         "es": {
           "stringUnit": {
             "state": "needs_review",
-            "value": "Debes tener al menos 13 años"
+            "value": "Debes tener al menos 18 años"
           }
         },
         "fr": {
           "stringUnit": {
             "state": "needs_review",
-            "value": "Vous devez avoir au moins 13 ans"
+            "value": "Vous devez avoir au moins 18 ans"
           }
         },
         "de": {
           "stringUnit": {
             "state": "needs_review",
-            "value": "Du musst mindestens 13 Jahre alt sein"
+            "value": "Du musst mindestens 18 Jahre alt sein"
           }
         },
         "it": {
           "stringUnit": {
             "state": "needs_review",
-            "value": "Devi avere almeno 13 anni"
+            "value": "Devi avere almeno 18 anni"
           }
         },
         "pt-BR": {
           "stringUnit": {
             "state": "needs_review",
-            "value": "Você precisa ter pelo menos 13 anos"
+            "value": "Você precisa ter pelo menos 18 anos"
           }
         },
         "pt-PT": {
           "stringUnit": {
             "state": "needs_review",
-            "value": "Tem de ter pelo menos 13 anos"
+            "value": "Tem de ter pelo menos 18 anos"
           }
         },
         "no": {
           "stringUnit": {
             "state": "needs_review",
-            "value": "Du må være minst 13 år gammel"
+            "value": "Du må være minst 18 år gammel"
           }
         },
         "pl": {
           "stringUnit": {
             "state": "needs_review",
-            "value": "Musisz mieć co najmniej 13 lat"
+            "value": "Musisz mieć co najmniej 18 lat"
           }
         }
       }
@@ -85561,6 +85609,66 @@
         }
       }
     },
+    "pricing_restore_purchases": {
+      "comment": "Restore purchases button on paywall",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Restore Purchases"
+          }
+        }
+      }
+    },
+    "pricing_sign_out": {
+      "comment": "Sign out button on paywall",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Sign Out"
+          }
+        }
+      }
+    },
+    "pricing_sign_out_confirm": {
+      "comment": "Sign out confirmation message on paywall",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Are you sure you want to sign out?"
+          }
+        }
+      }
+    },
+    "pricing_no_subscription_found": {
+      "comment": "Title when no subscription found during restore",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "No Subscription Found"
+          }
+        }
+      }
+    },
+    "pricing_no_subscription_message": {
+      "comment": "Message when no subscription found during restore",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "No active subscription was found for this account. Please subscribe or try a different account."
+          }
+        }
+      }
+    },
     "pricing_trial_terms": {
       "comment": "Trial terms text",
       "extractionState": "manual",
@@ -89145,6 +89253,42 @@
           "stringUnit": {
             "state": "needs_review",
             "value": "Введите 'DELETE' для подтверждения удаления."
+          }
+        }
+      }
+    },
+    "privacy_deleting_account": {
+      "comment": "Loading message while account is being deleted",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Deleting your account..."
+          }
+        }
+      }
+    },
+    "privacy_delete_error_title": {
+      "comment": "Title for account deletion error alert",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Deletion Failed"
+          }
+        }
+      }
+    },
+    "privacy_delete_error_message": {
+      "comment": "Message for account deletion error alert",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "We could not delete your account at this time. Please check your internet connection and try again."
           }
         }
       }
@@ -123093,6 +123237,42 @@
           "stringUnit": {
             "state": "needs_review",
             "value": "I agree to the Terms of Service"
+          }
+        }
+      }
+    },
+    "terms_eula_checkbox_label": {
+      "comment": "Checkbox label for terms and EULA agreement",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "I agree to the Terms of Service and EULA"
+          }
+        }
+      }
+    },
+    "view_eula": {
+      "comment": "Link to view the End User License Agreement",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "View End User License Agreement"
+          }
+        }
+      }
+    },
+    "eula_title": {
+      "comment": "Title for EULA document viewer",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "End User License Agreement"
           }
         }
       }

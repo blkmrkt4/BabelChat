@@ -237,7 +237,7 @@ class AIModelBindingsViewController: UIViewController {
                     message: "Could not fetch updated configurations: \(error.localizedDescription)",
                     preferredStyle: .alert
                 )
-                alert.addAction(UIAlertAction(title: "OK", style: .default))
+                alert.addAction(UIAlertAction(title: "common_ok".localized, style: .default))
                 present(alert, animated: true)
 
                 // Restore refresh button

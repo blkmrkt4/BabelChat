@@ -74,7 +74,7 @@ class LandingViewController: UIViewController {
         view.addSubview(logoLabel)
 
         // Tagline
-        taglineLabel.text = "Science says your brain learns faster when it cares"
+        taglineLabel.text = "tagline_1".localized
         taglineLabel.font = .systemFont(ofSize: 18, weight: .medium)
         taglineLabel.textColor = .white.withAlphaComponent(0.9)
         taglineLabel.textAlignment = .center
@@ -89,7 +89,7 @@ class LandingViewController: UIViewController {
         view.addSubview(separatorLine)
 
         // Second tagline
-        taglineLabel2.text = "Speaking like a local is the fastest path to fluency"
+        taglineLabel2.text = "tagline_2".localized
         taglineLabel2.font = .systemFont(ofSize: 15, weight: .regular)
         taglineLabel2.textColor = .white.withAlphaComponent(0.7)
         taglineLabel2.textAlignment = .center
@@ -108,7 +108,7 @@ class LandingViewController: UIViewController {
 
         if isViewingFromProfile {
             // View-only mode: just show close button
-            closeButton.setTitle("Close", for: .normal)
+            closeButton.setTitle("common_close".localized, for: .normal)
             closeButton.titleLabel?.font = .systemFont(ofSize: 18, weight: .semibold)
             closeButton.backgroundColor = .white
             closeButton.setTitleColor(.black, for: .normal)
@@ -141,14 +141,14 @@ class LandingViewController: UIViewController {
             dividerView.backgroundColor = .clear
             buttonsStackView.addArrangedSubview(dividerView)
 
-            dividerLabel.text = "or"
+            dividerLabel.text = "auth_or_divider".localized
             dividerLabel.font = .systemFont(ofSize: 14, weight: .medium)
             dividerLabel.textColor = .white.withAlphaComponent(0.8)
             dividerLabel.textAlignment = .center
             dividerView.addSubview(dividerLabel)
 
             // Create Account button
-            createAccountButton.setTitle("Create Account", for: .normal)
+            createAccountButton.setTitle("auth_create_account".localized, for: .normal)
             createAccountButton.titleLabel?.font = .systemFont(ofSize: 18, weight: .semibold)
             createAccountButton.backgroundColor = .white
             createAccountButton.setTitleColor(.systemIndigo, for: .normal)
@@ -157,7 +157,7 @@ class LandingViewController: UIViewController {
             buttonsStackView.addArrangedSubview(createAccountButton)
 
             // Sign In button
-            signInButton.setTitle("Sign In", for: .normal)
+            signInButton.setTitle("auth_signin_button".localized, for: .normal)
             signInButton.titleLabel?.font = .systemFont(ofSize: 18, weight: .semibold)
             signInButton.backgroundColor = .clear
             signInButton.setTitleColor(.white, for: .normal)
@@ -366,7 +366,7 @@ class LandingViewController: UIViewController {
                 do {
                     let profile = try await SupabaseService.shared.getCurrentProfile()
                     print("✅ User profile found, navigating to main app")
-                    await navigateToMainApp()
+                    await MainActor.run { navigateToMainApp() }
                 } catch {
                     // Profile doesn't exist - user needs to complete onboarding
                     print("⚠️ No profile found, starting onboarding")
@@ -386,7 +386,7 @@ class LandingViewController: UIViewController {
                         message: error.localizedDescription,
                         preferredStyle: .alert
                     )
-                    alert.addAction(UIAlertAction(title: "OK", style: .default))
+                    alert.addAction(UIAlertAction(title: "common_ok".localized, style: .default))
                     present(alert, animated: true)
                 }
             }
@@ -395,105 +395,147 @@ class LandingViewController: UIViewController {
 
     @objc private func createAccountTapped() {
         print("Create Account tapped")
-        // Start onboarding flow
-        onboardingCoordinator = OnboardingCoordinator(navigationController: navigationController)
-        onboardingCoordinator?.start()
+
+        // Ask for email and password before starting onboarding
+        let alert = UIAlertController(
+            title: "auth_create_account".localized,
+            message: "auth_enter_email_password".localized,
+            preferredStyle: .alert
+        )
+
+        alert.addTextField { textField in
+            textField.placeholder = "auth_email_placeholder".localized
+            textField.keyboardType = .emailAddress
+            textField.autocapitalizationType = .none
+            textField.autocorrectionType = .no
+        }
+
+        alert.addTextField { textField in
+            textField.placeholder = "auth_password_placeholder".localized
+            textField.isSecureTextEntry = true
+        }
+
+        alert.addAction(UIAlertAction(title: "common_cancel".localized, style: .cancel))
+        alert.addAction(UIAlertAction(title: "auth_create_account".localized, style: .default) { [weak self, weak alert] _ in
+            guard let self = self,
+                  let email = alert?.textFields?[0].text, !email.isEmpty,
+                  let password = alert?.textFields?[1].text, !password.isEmpty else { return }
+
+            Task {
+                do {
+                    try await SupabaseService.shared.signUp(email: email, password: password)
+                    print("✅ Account created for: \(email)")
+
+                    await MainActor.run {
+                        // Now start onboarding with an authenticated session
+                        self.onboardingCoordinator = OnboardingCoordinator(navigationController: self.navigationController)
+                        self.onboardingCoordinator?.start()
+                    }
+                } catch {
+                    await MainActor.run {
+                        let errorAlert = UIAlertController(
+                            title: "auth_signup_failed".localized,
+                            message: error.localizedDescription,
+                            preferredStyle: .alert
+                        )
+                        errorAlert.addAction(UIAlertAction(title: "common_ok".localized, style: .default))
+                        self.present(errorAlert, animated: true)
+                    }
+                }
+            }
+        })
+
+        present(alert, animated: true)
     }
 
     @objc private func signInTapped() {
         print("Sign In tapped")
 
-        // Disable button to prevent double-tap
-        signInButton.isEnabled = false
-        signInButton.alpha = 0.6
+        // Show email/password login dialog
+        let alert = UIAlertController(
+            title: "auth_sign_in".localized,
+            message: "auth_enter_email_password".localized,
+            preferredStyle: .alert
+        )
 
-        // Authenticate first, then navigate
-        Task {
-            do {
-                // Auto-login disabled - use Sign in with Apple for proper testing
-                // To re-enable debug auto-login, set this to true:
-                let useDebugAutoLogin = false
+        alert.addTextField { textField in
+            textField.placeholder = "auth_email_placeholder".localized
+            textField.keyboardType = .emailAddress
+            textField.autocapitalizationType = .none
+            textField.autocorrectionType = .no
+        }
 
-                if useDebugAutoLogin {
-                    #if DEBUG
-                    // DEVELOPMENT ONLY: Auto-login with test credentials
-                    print("🔐 [DEBUG] Attempting to sign in with: \(DebugConfig.testEmail)")
-                    try await SupabaseService.shared.signIn(email: DebugConfig.testEmail, password: DebugConfig.testPassword)
-                    print("✅ [DEBUG] Signed in successfully!")
-                    #endif
-                } else {
-                    // Show Sign in with Apple - user must authenticate properly
-                    print("⚠️ Debug auto-login disabled - use Sign in with Apple")
+        alert.addTextField { textField in
+            textField.placeholder = "auth_password_placeholder".localized
+            textField.isSecureTextEntry = true
+        }
+
+        alert.addAction(UIAlertAction(title: "common_cancel".localized, style: .cancel))
+        alert.addAction(UIAlertAction(title: "auth_sign_in".localized, style: .default) { [weak self, weak alert] _ in
+            guard let self = self,
+                  let email = alert?.textFields?[0].text, !email.isEmpty,
+                  let password = alert?.textFields?[1].text, !password.isEmpty else { return }
+
+            self.signInButton.isEnabled = false
+            self.signInButton.alpha = 0.6
+
+            Task {
+                do {
+                    try await SupabaseService.shared.signIn(email: email, password: password)
+                    print("✅ Signed in: \(email)")
+
+                    // Check if profile is complete
+                    let hasProfile = try await SupabaseService.shared.hasCompletedProfile()
+
                     await MainActor.run {
                         self.signInButton.isEnabled = true
                         self.signInButton.alpha = 1.0
+
+                        if hasProfile {
+                            self.navigateToMainApp()
+                        } else {
+                            // Profile incomplete - go through onboarding
+                            self.onboardingCoordinator = OnboardingCoordinator(navigationController: self.navigationController)
+                            self.onboardingCoordinator?.start()
+                        }
                     }
-                    return
-                }
+                } catch {
+                    await MainActor.run {
+                        self.signInButton.isEnabled = true
+                        self.signInButton.alpha = 1.0
 
-                // Get the authenticated user's ID from Supabase
-                guard let userId = SupabaseService.shared.currentUserId else {
-                    throw NSError(domain: "LandingViewController", code: -1,
-                                userInfo: [NSLocalizedDescriptionKey: "Failed to get user ID after sign in"])
-                }
-
-                // Save user ID and mark as signed in
-                UserDefaults.standard.set(userId.uuidString, forKey: "userId")
-                UserDefaults.standard.set(true, forKey: "isUserSignedIn")
-
-                print("✅ User ID saved: \(userId.uuidString)")
-
-                // Navigate to main app on main thread
-                await MainActor.run {
-                    if let windowScene = UIApplication.shared.connectedScenes.first as? UIWindowScene,
-                       let window = windowScene.windows.first {
-                        let tabBarController = MainTabBarController()
-                        window.rootViewController = tabBarController
-
-                        UIView.transition(with: window,
-                                        duration: 0.5,
-                                        options: .transitionCrossDissolve,
-                                        animations: nil,
-                                        completion: nil)
+                        let errorAlert = UIAlertController(
+                            title: "auth_signin_failed".localized,
+                            message: error.localizedDescription,
+                            preferredStyle: .alert
+                        )
+                        errorAlert.addAction(UIAlertAction(title: "common_ok".localized, style: .default))
+                        self.present(errorAlert, animated: true)
                     }
-                }
-            } catch {
-                // Show error alert on main thread
-                await MainActor.run {
-                    signInButton.isEnabled = true
-                    signInButton.alpha = 1.0
-
-                    let alert = UIAlertController(
-                        title: "Sign In Failed",
-                        message: "Could not authenticate: \(error.localizedDescription)",
-                        preferredStyle: .alert
-                    )
-                    alert.addAction(UIAlertAction(title: "OK", style: .default))
-                    present(alert, animated: true)
                 }
             }
-        }
+        })
+
+        present(alert, animated: true)
     }
 
     // MARK: - Helper Methods
 
     /// Navigate to the main app after successful sign in
-    private func navigateToMainApp() async {
-        await MainActor.run {
-            guard let windowScene = UIApplication.shared.connectedScenes.first as? UIWindowScene,
-                  let window = windowScene.windows.first else {
-                print("❌ Could not find window for navigation")
-                return
-            }
-
-            let tabBarController = MainTabBarController()
-            window.rootViewController = tabBarController
-
-            UIView.transition(with: window,
-                            duration: 0.5,
-                            options: .transitionCrossDissolve,
-                            animations: nil,
-                            completion: nil)
+    private func navigateToMainApp() {
+        guard let windowScene = UIApplication.shared.connectedScenes.first as? UIWindowScene,
+              let window = windowScene.windows.first else {
+            print("❌ Could not find window for navigation")
+            return
         }
+
+        let tabBarController = MainTabBarController()
+        window.rootViewController = tabBarController
+
+        UIView.transition(with: window,
+                        duration: 0.5,
+                        options: .transitionCrossDissolve,
+                        animations: nil,
+                        completion: nil)
     }
 }

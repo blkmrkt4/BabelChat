@@ -24,7 +24,7 @@ class BirthdayLocationViewController: BaseOnboardingViewController {
     // MARK: - Lifecycle
     override func configure() {
         step = .birthYear  // Note: This combined screen is deprecated, use separate screens instead
-        setTitle("About you?")
+        setTitle("auto_about_you".localized)
         setupScrollableContent()
     }
 
@@ -69,7 +69,7 @@ class BirthdayLocationViewController: BaseOnboardingViewController {
         let birthdayContainer = UIView()
 
         // Section label
-        birthdayLabel.text = "Birthday"
+        birthdayLabel.text = "onboarding_birthday".localized
         birthdayLabel.font = .systemFont(ofSize: 14, weight: .semibold)
         birthdayLabel.textColor = .secondaryLabel
         birthdayContainer.addSubview(birthdayLabel)
@@ -92,8 +92,8 @@ class BirthdayLocationViewController: BaseOnboardingViewController {
         let minDate = Calendar.current.date(from: dateComponents)
         datePicker.minimumDate = minDate
 
-        // Maximum date: Must be at least 13 years old
-        let maxDate = Calendar.current.date(byAdding: .year, value: -13, to: Date())
+        // Maximum date: Must be at least 18 years old
+        let maxDate = Calendar.current.date(byAdding: .year, value: -18, to: Date())
         datePicker.maximumDate = maxDate
 
         // Set default date to 25 years ago
@@ -105,7 +105,7 @@ class BirthdayLocationViewController: BaseOnboardingViewController {
         birthdayContainer.addSubview(datePicker)
 
         // Age restriction label
-        ageRestrictionLabel.text = "You must be at least 13 years old"
+        ageRestrictionLabel.text = "onboarding_age_restriction".localized
         ageRestrictionLabel.font = .systemFont(ofSize: 13, weight: .regular)
         ageRestrictionLabel.textColor = .tertiaryLabel
         ageRestrictionLabel.textAlignment = .center
@@ -145,7 +145,7 @@ class BirthdayLocationViewController: BaseOnboardingViewController {
         let locationContainer = UIView()
 
         // Section label
-        locationLabel.text = "Location"
+        locationLabel.text = "common_location".localized
         locationLabel.font = .systemFont(ofSize: 14, weight: .semibold)
         locationLabel.textColor = .secondaryLabel
         locationContainer.addSubview(locationLabel)
@@ -163,7 +163,7 @@ class BirthdayLocationViewController: BaseOnboardingViewController {
         locationContainer.addSubview(countryTextField)
 
         // Timezone label
-        timezoneLabel.text = "🌍 We'll use this to match you with partners in compatible timezones"
+        timezoneLabel.text = "auto_well_use_this_to_match_you_with_partners".localized
         timezoneLabel.font = .systemFont(ofSize: 13, weight: .regular)
         timezoneLabel.textColor = .tertiaryLabel
         timezoneLabel.numberOfLines = 0

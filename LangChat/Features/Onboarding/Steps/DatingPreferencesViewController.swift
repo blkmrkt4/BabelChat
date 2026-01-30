@@ -27,7 +27,7 @@ class DatingPreferencesViewController: BaseOnboardingViewController {
     // MARK: - Lifecycle
     override func configure() {
         step = .datingPreferences
-        setTitle("Dating?")
+        setTitle("onboarding_dating_title".localized)
         setupViews()
 
         // Default to "Everyone" for preference
@@ -69,7 +69,7 @@ class DatingPreferencesViewController: BaseOnboardingViewController {
 
     private func setupGenderSection() {
         // Section label
-        genderSectionLabel.text = "I identify as..."
+        genderSectionLabel.text = "onboarding_dating_identify".localized
         genderSectionLabel.font = .systemFont(ofSize: 18, weight: .semibold)
         genderSectionLabel.textColor = .label
         contentStack.addArrangedSubview(genderSectionLabel)
@@ -82,10 +82,10 @@ class DatingPreferencesViewController: BaseOnboardingViewController {
 
         // Create buttons for each gender - using friendlier display names for dating context
         let genderOptions: [(Gender, String, String)] = [
-            (.male, "Man", "👨"),
-            (.female, "Woman", "👩"),
-            (.nonBinary, "Non-binary", "🧑"),
-            (.preferNotToSay, "Prefer not to say", "🤐")
+            (.male, "dating_gender_man".localized, "👨"),
+            (.female, "dating_gender_woman".localized, "👩"),
+            (.nonBinary, "dating_gender_nonbinary".localized, "🧑"),
+            (.preferNotToSay, "dating_gender_prefer_not".localized, "🤐")
         ]
 
         for (index, option) in genderOptions.enumerated() {
@@ -102,7 +102,7 @@ class DatingPreferencesViewController: BaseOnboardingViewController {
 
     private func setupPreferenceSection() {
         // Section label
-        preferenceSectionLabel.text = "I'm interested in..."
+        preferenceSectionLabel.text = "onboarding_dating_interested".localized
         preferenceSectionLabel.font = .systemFont(ofSize: 18, weight: .semibold)
         preferenceSectionLabel.textColor = .label
         contentStack.addArrangedSubview(preferenceSectionLabel)
@@ -115,9 +115,9 @@ class DatingPreferencesViewController: BaseOnboardingViewController {
 
         // Preference options - inclusive and non-labeling
         let preferenceOptions: [(GenderPreference, String, String, String)] = [
-            (.all, "Everyone", "🌈", "Open to matching with anyone"),
-            (.sameOnly, "Same gender", "🪞", "Match with people of my gender"),
-            (.differentOnly, "Different gender", "🔄", "Match with people of other genders")
+            (.all, "dating_pref_everyone".localized, "🌈", "dating_pref_everyone_desc".localized),
+            (.sameOnly, "dating_pref_same".localized, "🪞", "dating_pref_same_desc".localized),
+            (.differentOnly, "dating_pref_different".localized, "🔄", "dating_pref_different_desc".localized)
         ]
 
         for (index, option) in preferenceOptions.enumerated() {
@@ -134,7 +134,7 @@ class DatingPreferencesViewController: BaseOnboardingViewController {
     }
 
     private func setupNoteLabel() {
-        noteLabel.text = "Your identity and preferences are private and only used for matching. You can change these anytime in Settings."
+        noteLabel.text = "onboarding_dating_privacy_note".localized
         noteLabel.font = .systemFont(ofSize: 13, weight: .regular)
         noteLabel.textColor = .tertiaryLabel
         noteLabel.numberOfLines = 0

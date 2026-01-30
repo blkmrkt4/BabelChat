@@ -11,9 +11,9 @@ class DataPrivacyViewController: UIViewController {
 
         var title: String {
             switch self {
-            case .dataCollected: return "Data We Collect"
-            case .dataUsage: return "How We Use Your Data"
-            case .yourRights: return "Your Privacy Rights"
+            case .dataCollected: return "privacy_data_collect_header".localized
+            case .dataUsage: return "privacy_data_usage_header".localized
+            case .yourRights: return "privacy_rights_header".localized
             }
         }
 
@@ -21,25 +21,25 @@ class DataPrivacyViewController: UIViewController {
             switch self {
             case .dataCollected:
                 return [
-                    "Profile information (name, photo, languages)",
-                    "Messages and chat history",
-                    "Learning preferences and progress",
-                    "Device information",
-                    "Usage analytics"
+                    "privacy_data_collect_profile".localized,
+                    "privacy_data_collect_messages".localized,
+                    "privacy_data_collect_learning".localized,
+                    "privacy_data_collect_device".localized,
+                    "privacy_data_collect_analytics".localized
                 ]
             case .dataUsage:
                 return [
-                    "Provide language matching services",
-                    "Improve translation accuracy",
-                    "Personalize your experience",
-                    "Send notifications about matches",
-                    "Prevent fraud and abuse"
+                    "privacy_data_usage_matching".localized,
+                    "privacy_data_usage_translation".localized,
+                    "privacy_data_usage_personalize".localized,
+                    "privacy_data_usage_notifications".localized,
+                    "privacy_data_usage_fraud".localized
                 ]
             case .yourRights:
                 return [
-                    "Delete your account and data",
-                    "Control notification preferences",
-                    "Manage blocked users"
+                    "privacy_rights_delete".localized,
+                    "privacy_rights_notifications".localized,
+                    "privacy_rights_blocked".localized
                 ]
             }
         }
@@ -51,7 +51,7 @@ class DataPrivacyViewController: UIViewController {
     }
 
     private func setupViews() {
-        title = "Data & Privacy"
+        title = "privacy_data_title".localized
         view.backgroundColor = .systemGroupedBackground
 
         tableView.delegate = self
@@ -71,7 +71,7 @@ class DataPrivacyViewController: UIViewController {
         // Add footer with delete account button
         let footerView = UIView(frame: CGRect(x: 0, y: 0, width: view.frame.width, height: 100))
 
-        let deleteButton = createButton(title: "Delete My Account", action: #selector(deleteAccount))
+        let deleteButton = createButton(title: "privacy_delete_my_account".localized, action: #selector(deleteAccount))
         deleteButton.backgroundColor = .systemRed
 
         footerView.addSubview(deleteButton)
@@ -100,13 +100,13 @@ class DataPrivacyViewController: UIViewController {
 
     @objc private func deleteAccount() {
         let alert = UIAlertController(
-            title: "Delete Account",
-            message: "This will permanently delete your account and all associated data. This action cannot be undone.",
+            title: "privacy_delete_account_title".localized,
+            message: "privacy_delete_account_message".localized,
             preferredStyle: .alert
         )
 
-        alert.addAction(UIAlertAction(title: "Cancel", style: .cancel))
-        alert.addAction(UIAlertAction(title: "Delete", style: .destructive) { _ in
+        alert.addAction(UIAlertAction(title: "common_cancel".localized, style: .cancel))
+        alert.addAction(UIAlertAction(title: "common_delete".localized, style: .destructive) { _ in
             self.confirmDeleteAccount()
         })
 
@@ -115,51 +115,98 @@ class DataPrivacyViewController: UIViewController {
 
     private func confirmDeleteAccount() {
         let confirmAlert = UIAlertController(
-            title: "Are You Sure?",
-            message: "Type 'DELETE' to confirm",
+            title: "privacy_delete_confirm_title".localized,
+            message: "privacy_delete_confirm_message".localized,
             preferredStyle: .alert
         )
 
         confirmAlert.addTextField { textField in
-            textField.placeholder = "Type DELETE"
+            textField.placeholder = "delete_account_confirm_placeholder".localized
             textField.autocapitalizationType = .allCharacters
         }
 
-        confirmAlert.addAction(UIAlertAction(title: "Cancel", style: .cancel))
-        confirmAlert.addAction(UIAlertAction(title: "Confirm", style: .destructive) { [weak confirmAlert] _ in
+        confirmAlert.addAction(UIAlertAction(title: "common_cancel".localized, style: .cancel))
+        confirmAlert.addAction(UIAlertAction(title: "common_confirm".localized, style: .destructive) { [weak confirmAlert, weak self] _ in
+            guard let self = self else { return }
             guard let text = confirmAlert?.textFields?.first?.text, text == "DELETE" else {
                 let errorAlert = UIAlertController(
-                    title: "Incorrect",
-                    message: "Please type 'DELETE' to confirm account deletion.",
+                    title: "privacy_delete_incorrect".localized,
+                    message: "privacy_delete_incorrect_message".localized,
                     preferredStyle: .alert
                 )
-                errorAlert.addAction(UIAlertAction(title: "OK", style: .default))
+                errorAlert.addAction(UIAlertAction(title: "common_ok".localized, style: .default))
                 self.present(errorAlert, animated: true)
                 return
             }
 
-            // Clear all user data
-            let domain = Bundle.main.bundleIdentifier!
-            UserDefaults.standard.removePersistentDomain(forName: domain)
-            UserDefaults.standard.synchronize()
-
-            // Navigate back to landing screen
-            if let windowScene = UIApplication.shared.connectedScenes.first as? UIWindowScene,
-               let window = windowScene.windows.first {
-                let landingVC = LandingViewController()
-                let navController = UINavigationController(rootViewController: landingVC)
-                navController.setNavigationBarHidden(true, animated: false)
-                window.rootViewController = navController
-
-                UIView.transition(with: window,
-                                duration: 0.5,
-                                options: .transitionCrossDissolve,
-                                animations: nil,
-                                completion: nil)
-            }
+            self.performAccountDeletion()
         })
 
         present(confirmAlert, animated: true)
+    }
+
+    private func performAccountDeletion() {
+        // Show loading indicator
+        let loadingAlert = UIAlertController(
+            title: nil,
+            message: "privacy_deleting_account".localized,
+            preferredStyle: .alert
+        )
+        let spinner = UIActivityIndicatorView(style: .medium)
+        spinner.startAnimating()
+        spinner.translatesAutoresizingMaskIntoConstraints = false
+        loadingAlert.view.addSubview(spinner)
+        NSLayoutConstraint.activate([
+            spinner.centerXAnchor.constraint(equalTo: loadingAlert.view.centerXAnchor),
+            spinner.bottomAnchor.constraint(equalTo: loadingAlert.view.bottomAnchor, constant: -20)
+        ])
+        // Add height constraint so spinner is visible
+        loadingAlert.view.heightAnchor.constraint(greaterThanOrEqualToConstant: 100).isActive = true
+
+        present(loadingAlert, animated: true)
+
+        Task {
+            do {
+                // Delete account from server
+                try await SupabaseService.shared.deleteAccount()
+
+                await MainActor.run {
+                    // Clear all local user data
+                    let domain = Bundle.main.bundleIdentifier!
+                    UserDefaults.standard.removePersistentDomain(forName: domain)
+                    UserDefaults.standard.synchronize()
+
+                    // Dismiss loading and navigate to landing screen
+                    loadingAlert.dismiss(animated: false) {
+                        if let windowScene = UIApplication.shared.connectedScenes.first as? UIWindowScene,
+                           let window = windowScene.windows.first {
+                            let landingVC = LandingViewController()
+                            let navController = UINavigationController(rootViewController: landingVC)
+                            navController.setNavigationBarHidden(true, animated: false)
+                            window.rootViewController = navController
+
+                            UIView.transition(with: window,
+                                            duration: 0.5,
+                                            options: .transitionCrossDissolve,
+                                            animations: nil,
+                                            completion: nil)
+                        }
+                    }
+                }
+            } catch {
+                await MainActor.run {
+                    loadingAlert.dismiss(animated: true) {
+                        let errorAlert = UIAlertController(
+                            title: "privacy_delete_error_title".localized,
+                            message: "privacy_delete_error_message".localized,
+                            preferredStyle: .alert
+                        )
+                        errorAlert.addAction(UIAlertAction(title: "common_ok".localized, style: .default))
+                        self.present(errorAlert, animated: true)
+                    }
+                }
+            }
+        }
     }
 }
 

@@ -281,7 +281,7 @@ class PhotoDetailViewController: UIViewController {
             })
         }
 
-        alertController.addAction(UIAlertAction(title: "Cancel", style: .cancel))
+        alertController.addAction(UIAlertAction(title: "common_cancel".localized, style: .cancel))
 
         // For iPad support - anchor to center of screen
         if let popoverController = alertController.popoverPresentationController {
@@ -300,11 +300,11 @@ class PhotoDetailViewController: UIViewController {
             preferredStyle: .alert
         )
 
-        confirmAlert.addAction(UIAlertAction(title: "Report", style: .destructive) { [weak self] _ in
+        confirmAlert.addAction(UIAlertAction(title: "common_report".localized, style: .destructive) { [weak self] _ in
             self?.submitReport(userId: userId, photoURL: photoURL, reason: reason)
         })
 
-        confirmAlert.addAction(UIAlertAction(title: "Cancel", style: .cancel))
+        confirmAlert.addAction(UIAlertAction(title: "common_cancel".localized, style: .cancel))
 
         present(confirmAlert, animated: true)
     }
@@ -325,7 +325,7 @@ class PhotoDetailViewController: UIViewController {
                         message: "Thank you for helping keep our community safe. We'll review this report shortly.",
                         preferredStyle: .alert
                     )
-                    successAlert.addAction(UIAlertAction(title: "OK", style: .default))
+                    successAlert.addAction(UIAlertAction(title: "common_ok".localized, style: .default))
                     self.present(successAlert, animated: true)
                 }
             } catch {
@@ -335,7 +335,7 @@ class PhotoDetailViewController: UIViewController {
                         message: "Failed to submit report: \(error.localizedDescription). Please try again.",
                         preferredStyle: .alert
                     )
-                    errorAlert.addAction(UIAlertAction(title: "OK", style: .default))
+                    errorAlert.addAction(UIAlertAction(title: "common_ok".localized, style: .default))
                     self.present(errorAlert, animated: true)
                 }
             }
@@ -351,7 +351,7 @@ class PhotoDetailViewController: UIViewController {
             preferredStyle: .actionSheet
         )
 
-        alertController.addAction(UIAlertAction(title: "Change Photo", style: .default) { [weak self] _ in
+        alertController.addAction(UIAlertAction(title: "common_change_photo".localized, style: .default) { [weak self] _ in
             self?.changePhoto()
         })
 
@@ -362,11 +362,11 @@ class PhotoDetailViewController: UIViewController {
             self?.editCaption(currentCaption: currentCaption)
         })
 
-        alertController.addAction(UIAlertAction(title: "Remove Photo", style: .destructive) { [weak self] _ in
+        alertController.addAction(UIAlertAction(title: "common_remove_photo".localized, style: .destructive) { [weak self] _ in
             self?.removePhoto()
         })
 
-        alertController.addAction(UIAlertAction(title: "Cancel", style: .cancel))
+        alertController.addAction(UIAlertAction(title: "common_cancel".localized, style: .cancel))
 
         // For iPad support
         if let popoverController = alertController.popoverPresentationController {
@@ -395,12 +395,12 @@ class PhotoDetailViewController: UIViewController {
 
         alertController.addTextField { textField in
             textField.text = currentCaption
-            textField.placeholder = "Enter caption..."
+            textField.placeholder = "profile_enter_caption_placeholder".localized
             textField.autocapitalizationType = .sentences
         }
 
-        alertController.addAction(UIAlertAction(title: "Cancel", style: .cancel))
-        alertController.addAction(UIAlertAction(title: "Save", style: .default) { [weak self] _ in
+        alertController.addAction(UIAlertAction(title: "common_cancel".localized, style: .cancel))
+        alertController.addAction(UIAlertAction(title: "common_save".localized, style: .default) { [weak self] _ in
             guard let self = self,
                   let caption = alertController.textFields?.first?.text else { return }
             self.saveCaption(caption)
@@ -444,7 +444,7 @@ class PhotoDetailViewController: UIViewController {
                         message: "Failed to save caption. Please try again.",
                         preferredStyle: .alert
                     )
-                    alert.addAction(UIAlertAction(title: "OK", style: .default))
+                    alert.addAction(UIAlertAction(title: "common_ok".localized, style: .default))
                     self.present(alert, animated: true)
                 }
             }
@@ -458,8 +458,8 @@ class PhotoDetailViewController: UIViewController {
             preferredStyle: .alert
         )
 
-        confirmAlert.addAction(UIAlertAction(title: "Cancel", style: .cancel))
-        confirmAlert.addAction(UIAlertAction(title: "Remove", style: .destructive) { [weak self] _ in
+        confirmAlert.addAction(UIAlertAction(title: "common_cancel".localized, style: .cancel))
+        confirmAlert.addAction(UIAlertAction(title: "common_remove".localized, style: .destructive) { [weak self] _ in
             self?.performRemovePhoto()
         })
 

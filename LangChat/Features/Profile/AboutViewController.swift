@@ -101,7 +101,7 @@ class AboutViewController: UIViewController {
 
         // Copyright
         let copyrightLabel = UILabel()
-        copyrightLabel.text = "© 2025 Fluenca. All rights reserved."
+        copyrightLabel.text = "auto_2025_fluenca_all_rights_reserved".localized
         copyrightLabel.font = .systemFont(ofSize: 14)
         copyrightLabel.textColor = .tertiaryLabel
         copyrightLabel.textAlignment = .center
@@ -145,15 +145,15 @@ class AboutViewController: UIViewController {
     }
 
     @objc private func showTerms() {
-        if let url = URL(string: "https://ByZyB.ai/terms") {
-            UIApplication.shared.open(url)
-        }
+        let documentVC = DocumentViewerViewController(title: "terms_of_service_title".localized, markdownFileName: "TermsOfService")
+        let navController = UINavigationController(rootViewController: documentVC)
+        present(navController, animated: true)
     }
 
     @objc private func showPrivacy() {
-        if let url = URL(string: "https://ByZyB.ai/privacy") {
-            UIApplication.shared.open(url)
-        }
+        let documentVC = DocumentViewerViewController(title: "privacy_policy_title".localized, markdownFileName: "PrivacyPolicy")
+        let navController = UINavigationController(rootViewController: documentVC)
+        present(navController, animated: true)
     }
 
     @objc private func showAcknowledgments() {
@@ -162,7 +162,7 @@ class AboutViewController: UIViewController {
             message: "Fluenca uses the following open source libraries:\n\n• Supabase Swift SDK\n• RevenueCat Purchases SDK",
             preferredStyle: .alert
         )
-        alert.addAction(UIAlertAction(title: "OK", style: .default))
+        alert.addAction(UIAlertAction(title: "common_ok".localized, style: .default))
         present(alert, animated: true)
     }
 
@@ -175,7 +175,7 @@ class AboutViewController: UIViewController {
                 message: "Rating will be available once the app is live on the App Store.",
                 preferredStyle: .alert
             )
-            alert.addAction(UIAlertAction(title: "OK", style: .default))
+            alert.addAction(UIAlertAction(title: "common_ok".localized, style: .default))
             present(alert, animated: true)
         }
     }

@@ -33,6 +33,7 @@ protocol SwipeableMessageCellDelegate: AnyObject {
     func cell(_ cell: SwipeableMessageCell, didSwipeToPaneIndex paneIndex: Int)
     func cell(_ cell: SwipeableMessageCell, didRequestDeleteMessage message: Message)
     func cell(_ cell: SwipeableMessageCell, didRequestReplyToMessage message: Message)
+    func cell(_ cell: SwipeableMessageCell, didRequestReportMessage message: Message)
 }
 
 class SwipeableMessageCell: UITableViewCell {
@@ -219,7 +220,7 @@ class SwipeableMessageCell: UITableViewCell {
         translationBubbleView.layer.cornerRadius = 16
         translationScrollView.addSubview(translationBubbleView)
 
-        translationTitleLabel.text = "Translation"
+        translationTitleLabel.text = "chat_translation_title".localized
         translationTitleLabel.font = .systemFont(ofSize: 12, weight: .semibold)
         translationTitleLabel.textColor = .systemIndigo
         translationBubbleView.addSubview(translationTitleLabel)
@@ -240,7 +241,7 @@ class SwipeableMessageCell: UITableViewCell {
         grammarBubbleView.layer.cornerRadius = 16
         grammarScrollView.addSubview(grammarBubbleView)
 
-        grammarTitleLabel.text = "Grammar & Alternatives"
+        grammarTitleLabel.text = "chat_grammar_title".localized
         grammarTitleLabel.font = .systemFont(ofSize: 12, weight: .semibold)
         grammarTitleLabel.textColor = .systemGreen
         grammarBubbleView.addSubview(grammarTitleLabel)
@@ -260,7 +261,7 @@ class SwipeableMessageCell: UITableViewCell {
         grammarStackView.distribution = .equalSpacing
         grammarBubbleView.addSubview(grammarStackView)
 
-        alternativesLabel.text = "Alternative phrases:"
+        alternativesLabel.text = "chat_alternatives".localized
         alternativesLabel.font = .systemFont(ofSize: 14, weight: .medium)
         alternativesLabel.textColor = .secondaryLabel
         grammarBubbleView.addSubview(alternativesLabel)
@@ -510,7 +511,7 @@ class SwipeableMessageCell: UITableViewCell {
             self?.toggleGrammarExplanationLanguage(for: message)
         })
 
-        alert.addAction(UIAlertAction(title: "Cancel", style: .cancel))
+        alert.addAction(UIAlertAction(title: "common_cancel".localized, style: .cancel))
 
         // Find the view controller to present from
         if let viewController = findViewController() {
@@ -761,13 +762,13 @@ class SwipeableMessageCell: UITableViewCell {
         let alert = UIAlertController(title: title, message: message, preferredStyle: .alert)
 
         if showUpgrade {
-            alert.addAction(UIAlertAction(title: "Upgrade", style: .default) { _ in
+            alert.addAction(UIAlertAction(title: "common_upgrade".localized, style: .default) { _ in
                 // Post notification to show upgrade screen
                 NotificationCenter.default.post(name: NSNotification.Name("ShowUpgradePrompt"), object: nil)
             })
-            alert.addAction(UIAlertAction(title: "Dismiss", style: .cancel))
+            alert.addAction(UIAlertAction(title: "common_dismiss".localized, style: .cancel))
         } else {
-            alert.addAction(UIAlertAction(title: "Got it", style: .default))
+            alert.addAction(UIAlertAction(title: "common_got_it".localized, style: .default))
         }
 
         viewController.present(alert, animated: true)
@@ -826,7 +827,7 @@ class SwipeableMessageCell: UITableViewCell {
             translationLabel.text = translation
             Self.translationCache.setObject(translation as NSString, forKey: message.id as NSString)
         } else {
-            translationLabel.text = "Swipe to translate..."
+            translationLabel.text = "chat_swipe_translate".localized
         }
 
         // Configure grammar pane (initially show loading or cached)
@@ -1060,7 +1061,7 @@ class SwipeableMessageCell: UITableViewCell {
 
     private func performTranslation(for message: Message) {
         // Show loading state
-        translationLabel.text = "Translating..."
+        translationLabel.text = "chat_translating".localized
 
         // Detect message language
         let detectedLang = Language.detect(from: message.text)
@@ -1288,7 +1289,7 @@ extension SwipeableMessageCell: UIContextMenuInteractionDelegate {
                 self.delegate?.cell(self, didRequestReplyToMessage: message)
             }
 
-            // Delete action
+            // Delete action (only for own messages)
             let deleteAction = UIAction(
                 title: "Delete",
                 image: UIImage(systemName: "trash"),
@@ -1298,7 +1299,28 @@ extension SwipeableMessageCell: UIContextMenuInteractionDelegate {
                 self.delegate?.cell(self, didRequestDeleteMessage: message)
             }
 
-            return UIMenu(title: "", children: [replyAction, copyAction, deleteAction])
+            // Report action (only for messages from others)
+            let reportAction = UIAction(
+                title: "report_message".localized,
+                image: UIImage(systemName: "exclamationmark.triangle"),
+                attributes: .destructive
+            ) { [weak self] _ in
+                guard let self = self else { return }
+                self.delegate?.cell(self, didRequestReportMessage: message)
+            }
+
+            // Build menu based on message ownership
+            var menuItems: [UIAction] = [replyAction, copyAction]
+
+            if message.isSentByCurrentUser {
+                // Own messages: can delete
+                menuItems.append(deleteAction)
+            } else {
+                // Others' messages: can report
+                menuItems.append(reportAction)
+            }
+
+            return UIMenu(title: "", children: menuItems)
         }
     }
 }

@@ -11,10 +11,10 @@ enum Gender: String, CaseIterable, Codable {
 
     var displayName: String {
         switch self {
-        case .male: return "Male"
-        case .female: return "Female"
-        case .nonBinary: return "Non-binary"
-        case .preferNotToSay: return "Prefer not to say"
+        case .male: return "gender_male".localized
+        case .female: return "gender_female".localized
+        case .nonBinary: return "gender_nonbinary".localized
+        case .preferNotToSay: return "gender_prefer_not_to_say".localized
         }
     }
 
@@ -35,17 +35,17 @@ enum GenderPreference: String, CaseIterable, Codable {
 
     var displayName: String {
         switch self {
-        case .all: return "Everyone"
-        case .sameOnly: return "Same gender only"
-        case .differentOnly: return "Different gender only"
+        case .all: return "gender_pref_all".localized
+        case .sameOnly: return "gender_pref_same".localized
+        case .differentOnly: return "gender_pref_different".localized
         }
     }
 
     var subtitle: String {
         switch self {
-        case .all: return "Match with people of any gender"
-        case .sameOnly: return "Match with people of the same gender"
-        case .differentOnly: return "Match with people of different genders"
+        case .all: return "gender_pref_all_desc".localized
+        case .sameOnly: return "gender_pref_same_desc".localized
+        case .differentOnly: return "gender_pref_different_desc".localized
         }
     }
 }
@@ -57,15 +57,15 @@ enum MuseGenderPreference: String, CaseIterable, Codable {
 
     var displayName: String {
         switch self {
-        case .male: return "Male Muse"
-        case .female: return "Female Muse"
+        case .male: return "muse_gender_male".localized
+        case .female: return "muse_gender_female".localized
         }
     }
 
     var subtitle: String {
         switch self {
-        case .male: return "Your Muse will have a male name and voice"
-        case .female: return "Your Muse will have a female name and voice"
+        case .male: return "muse_gender_male_desc".localized
+        case .female: return "muse_gender_female_desc".localized
         }
     }
 
@@ -88,21 +88,21 @@ enum LocationPreference: String, CaseIterable, Codable {
 
     var displayName: String {
         switch self {
-        case .localRegional: return "Local / Regional"
-        case .country: return "My country"
-        case .specificCountries: return "Specific countries"
-        case .excludeCountries: return "Anywhere except specific countries"
-        case .anywhere: return "Anywhere in the world"
+        case .localRegional: return "location_pref_local".localized
+        case .country: return "location_pref_country".localized
+        case .specificCountries: return "location_pref_specific".localized
+        case .excludeCountries: return "location_pref_exclude".localized
+        case .anywhere: return "location_pref_anywhere".localized
         }
     }
 
     var subtitle: String {
         switch self {
-        case .localRegional: return "Find partners within a specific distance"
-        case .country: return "Match with people from your country"
-        case .specificCountries: return "Choose which countries to include"
-        case .excludeCountries: return "Exclude certain countries from matching"
-        case .anywhere: return "Connect with language learners globally"
+        case .localRegional: return "location_pref_local_desc".localized
+        case .country: return "location_pref_country_desc".localized
+        case .specificCountries: return "location_pref_specific_desc".localized
+        case .excludeCountries: return "location_pref_exclude_desc".localized
+        case .anywhere: return "location_pref_anywhere_desc".localized
         }
     }
 
@@ -126,17 +126,17 @@ enum RelationshipIntent: String, CaseIterable, Codable {
 
     var displayName: String {
         switch self {
-        case .languagePracticeOnly: return "Language practice only"
-        case .friendship: return "Friendship"
-        case .openToDating: return "Open to dating"
+        case .languagePracticeOnly: return "intent_practice_only".localized
+        case .friendship: return "intent_friendship".localized
+        case .openToDating: return "intent_dating".localized
         }
     }
 
     var subtitle: String {
         switch self {
-        case .languagePracticeOnly: return "Focused language exchange, no socializing beyond the app"
-        case .friendship: return "Willing to connect outside the app as friends"
-        case .openToDating: return "Language practice with possibility of romance"
+        case .languagePracticeOnly: return "intent_practice_only_desc".localized
+        case .friendship: return "intent_friendship_desc".localized
+        case .openToDating: return "intent_dating_desc".localized
         }
     }
 
@@ -161,12 +161,12 @@ enum LearningContext: String, CaseIterable, Codable {
 
     var displayName: String {
         switch self {
-        case .formal: return "Formal / Professional"
-        case .casual: return "Casual / Conversational"
-        case .academic: return "Academic / Literary"
-        case .slang: return "Slang / Street Talk"
-        case .travel: return "Travel / Survival"
-        case .technical: return "Technical / Specialized"
+        case .formal: return "goal_formal_title".localized
+        case .casual: return "goal_casual_title".localized
+        case .academic: return "goal_academic_title".localized
+        case .slang: return "goal_slang_title".localized
+        case .travel: return "goal_travel_title".localized
+        case .technical: return "goal_technical_title".localized
         }
     }
 

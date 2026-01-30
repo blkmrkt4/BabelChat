@@ -15,7 +15,7 @@ class ProfilePhotoViewController: BaseOnboardingViewController {
     // MARK: - Lifecycle
     override func configure() {
         step = .profilePhoto
-        setTitle("Photos?")
+        setTitle("onboarding_photos_title".localized)
         setupViews()
     }
 
@@ -56,7 +56,7 @@ class ProfilePhotoViewController: BaseOnboardingViewController {
         photoGridView.addSubview(stackView)
 
         // Tips label
-        tipsLabel.text = "💡 Tips: Show your personality • Include clear face photos • Smile, you're here to make friends!"
+        tipsLabel.text = "onboarding_photos_tips".localized
         tipsLabel.font = .systemFont(ofSize: 14, weight: .regular)
         tipsLabel.textColor = .white.withAlphaComponent(0.7)
         tipsLabel.numberOfLines = 0
@@ -87,7 +87,7 @@ class ProfilePhotoViewController: BaseOnboardingViewController {
 
         // Always enable continue button (can skip)
         updateContinueButton(enabled: true)
-        continueButton.setTitle("Skip for Now", for: .normal)
+        continueButton.setTitle("common_skip_for_now".localized, for: .normal)
     }
 
     // MARK: - Actions
@@ -106,15 +106,15 @@ class ProfilePhotoViewController: BaseOnboardingViewController {
     private func showPhotoOptions(for index: Int) {
         let alert = UIAlertController(title: nil, message: nil, preferredStyle: .actionSheet)
 
-        alert.addAction(UIAlertAction(title: "Replace Photo", style: .default) { [weak self] _ in
+        alert.addAction(UIAlertAction(title: "onboarding_photos_replace".localized, style: .default) { [weak self] _ in
             self?.showPhotoPicker(for: index)
         })
 
-        alert.addAction(UIAlertAction(title: "Remove Photo", style: .destructive) { [weak self] _ in
+        alert.addAction(UIAlertAction(title: "onboarding_photos_remove".localized, style: .destructive) { [weak self] _ in
             self?.removePhoto(at: index)
         })
 
-        alert.addAction(UIAlertAction(title: "Cancel", style: .cancel))
+        alert.addAction(UIAlertAction(title: "common_cancel".localized, style: .cancel))
 
         if let popover = alert.popoverPresentationController {
             popover.sourceView = photoSlots[index]
@@ -147,11 +147,11 @@ class ProfilePhotoViewController: BaseOnboardingViewController {
 
         // Update button text based on photo count
         if photoCount == 0 {
-            continueButton.setTitle("Skip for Now", for: .normal)
-            subtitleLabel.text = "Optional: You can add photos now or do it later from your profile"
+            continueButton.setTitle("common_skip_for_now".localized, for: .normal)
+            subtitleLabel.text = "onboarding_photos_optional".localized
         } else {
-            continueButton.setTitle("Continue", for: .normal)
-            subtitleLabel.text = "Looking good! You can add more photos or continue to the next step"
+            continueButton.setTitle("common_continue".localized, for: .normal)
+            subtitleLabel.text = "onboarding_photos_looking_good".localized
         }
     }
 
@@ -248,7 +248,7 @@ private class PhotoSlotView: UIButton {
         addSubview(placeholderIconView)
 
         // Primary badge - use gold color
-        primaryBadge.text = "Main"
+        primaryBadge.text = "onboarding_photos_main".localized
         primaryBadge.font = .systemFont(ofSize: 11, weight: .bold)
         primaryBadge.textColor = .black
         primaryBadge.backgroundColor = UIColor(red: 0.83, green: 0.69, blue: 0.22, alpha: 1.0) // Gold color

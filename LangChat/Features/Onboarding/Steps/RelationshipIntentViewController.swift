@@ -21,7 +21,7 @@ class RelationshipIntentViewController: BaseOnboardingViewController {
     // MARK: - Lifecycle
     override func configure() {
         step = .relationshipIntent
-        setTitle("Looking for?")
+        setTitle("onboarding_intent_title".localized)
         setupIntentButtons()
         setupPrivacyOptions()
         updateContinueButton(enabled: true)
@@ -87,15 +87,15 @@ class RelationshipIntentViewController: BaseOnboardingViewController {
 
         // Header
         let headerLabel = UILabel()
-        headerLabel.text = "Privacy Options"
+        headerLabel.text = "intent_privacy_header".localized
         headerLabel.font = .systemFont(ofSize: 15, weight: .semibold)
         headerLabel.textColor = .white.withAlphaComponent(0.8)
         privacyStack.addArrangedSubview(headerLabel)
 
         // Strictly Platonic Toggle
         let platonicCard = createPrivacyToggle(
-            title: "Strictly Platonic",
-            subtitle: "Only match with others who also want platonic exchange",
+            title: "intent_strictly_platonic".localized,
+            subtitle: "intent_strictly_platonic_desc".localized,
             icon: "person.2.fill",
             isOn: isStrictlyPlatonic
         ) { [weak self] isOn in
@@ -107,8 +107,8 @@ class RelationshipIntentViewController: BaseOnboardingViewController {
 
         // Blur Photos Toggle
         let blurCard = createPrivacyToggle(
-            title: "Blur Photos Until Matched",
-            subtitle: "Focus on language skills first",
+            title: "intent_blur_photos".localized,
+            subtitle: "intent_blur_photos_desc".localized,
             icon: "eye.slash.fill",
             isOn: blurPhotosUntilMatch
         ) { [weak self] isOn in

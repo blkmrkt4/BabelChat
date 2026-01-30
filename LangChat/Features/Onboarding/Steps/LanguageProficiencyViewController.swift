@@ -14,7 +14,7 @@ class LanguageProficiencyViewController: BaseOnboardingViewController {
     // MARK: - Lifecycle
     override func configure() {
         step = .languageProficiency
-        setTitle("Proficiency?")
+        setTitle("onboarding_proficiency_title".localized)
         setupViews()
         createProficiencyCards()
     }
@@ -133,11 +133,11 @@ private class LanguageProficiencyCard: UIView {
         proficiencyStackView.distribution = .fillEqually
         containerView.addSubview(proficiencyStackView)
 
-        // Create proficiency buttons
+        // Create proficiency buttons with localized descriptions
         let proficiencies: [(LanguageProficiency, String)] = [
-            (.beginner, "I know basic phrases"),
-            (.intermediate, "I can have simple conversations"),
-            (.advanced, "I'm comfortable with complex topics")
+            (.beginner, "proficiency_beginner_desc".localized),
+            (.intermediate, "proficiency_intermediate_desc".localized),
+            (.advanced, "proficiency_advanced_desc".localized)
         ]
 
         for (proficiency, description) in proficiencies {

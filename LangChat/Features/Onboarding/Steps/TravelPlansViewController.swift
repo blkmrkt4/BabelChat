@@ -52,12 +52,12 @@ class TravelPlansViewController: BaseOnboardingViewController {
     // MARK: - Lifecycle
     override func configure() {
         step = .travelPlans
-        setTitle("Traveling?")
+        setTitle("onboarding_travel_title".localized)
         setupSearchCompleter()
         setupScrollableContent()
 
         // Can skip this step
-        continueButton.setTitle(isEditMode ? "Save" : "Skip for Now", for: .normal)
+        continueButton.setTitle(isEditMode ? "common_save".localized : "common_skip_for_now".localized, for: .normal)
         updateContinueButton(enabled: true)
 
         // Load existing travel destination in edit mode
@@ -92,7 +92,7 @@ class TravelPlansViewController: BaseOnboardingViewController {
             endDatePicker.date = endDate
         }
 
-        continueButton.setTitle("Save", for: .normal)
+        continueButton.setTitle("common_save".localized, for: .normal)
     }
 
     // MARK: - Setup
@@ -145,7 +145,7 @@ class TravelPlansViewController: BaseOnboardingViewController {
         iconContainer.addSubview(iconView)
 
         // Info label
-        infoLabel.text = "Traveling soon? Get matched with locals at your destination who can help you practice the language before and during your trip."
+        infoLabel.text = "onboarding_travel_info".localized
         infoLabel.font = .systemFont(ofSize: 15, weight: .regular)
         infoLabel.textColor = .white.withAlphaComponent(0.7)
         infoLabel.numberOfLines = 0
@@ -173,17 +173,18 @@ class TravelPlansViewController: BaseOnboardingViewController {
 
     private func setupDestinationSection() {
         // Section label
-        destinationLabel.text = "Where are you going?"
+        destinationLabel.text = "onboarding_travel_where".localized
         destinationLabel.font = .systemFont(ofSize: 16, weight: .semibold)
         destinationLabel.textColor = .white
         destinationContainer.addSubview(destinationLabel)
 
         // Search text field
-        searchTextField.placeholder = "Search for a city or country..."
+        let searchPlaceholder = "onboarding_travel_search".localized
+        searchTextField.placeholder = searchPlaceholder
         searchTextField.font = .systemFont(ofSize: 17, weight: .regular)
         searchTextField.textColor = .white
         searchTextField.attributedPlaceholder = NSAttributedString(
-            string: "Search for a city or country...",
+            string: searchPlaceholder,
             attributes: [.foregroundColor: UIColor.white.withAlphaComponent(0.4)]
         )
         searchTextField.autocapitalizationType = .words
@@ -311,24 +312,24 @@ class TravelPlansViewController: BaseOnboardingViewController {
         datesContainer.isHidden = true
 
         // Section label
-        datesLabel.text = "When are you going?"
+        datesLabel.text = "onboarding_travel_when".localized
         datesLabel.font = .systemFont(ofSize: 16, weight: .semibold)
         datesLabel.textColor = .white
         datesContainer.addSubview(datesLabel)
 
         // Dates info
-        datesInfoLabel.text = "Optional: Add travel dates to match with locals during your visit"
+        datesInfoLabel.text = "onboarding_travel_dates_info".localized
         datesInfoLabel.font = .systemFont(ofSize: 14, weight: .regular)
         datesInfoLabel.textColor = .white.withAlphaComponent(0.6)
         datesInfoLabel.numberOfLines = 0
         datesContainer.addSubview(datesInfoLabel)
 
         // Start date row
-        let startRow = createDateRow(label: "Arriving", datePicker: startDatePicker)
+        let startRow = createDateRow(label: "onboarding_travel_arriving".localized, datePicker: startDatePicker)
         datesContainer.addSubview(startRow)
 
         // End date row
-        let endRow = createDateRow(label: "Departing", datePicker: endDatePicker)
+        let endRow = createDateRow(label: "onboarding_travel_departing".localized, datePicker: endDatePicker)
         datesContainer.addSubview(endRow)
 
         // Configure date pickers
@@ -434,7 +435,7 @@ class TravelPlansViewController: BaseOnboardingViewController {
         searchTextField.text = ""
         datesContainer.isHidden = true
 
-        continueButton.setTitle("Skip for Now", for: .normal)
+        continueButton.setTitle("common_skip_for_now".localized, for: .normal)
 
         UIView.animate(withDuration: 0.3) {
             self.view.layoutIfNeeded()
@@ -456,7 +457,7 @@ class TravelPlansViewController: BaseOnboardingViewController {
         showSuggestionsAnimated(false)
 
         // Show loading state
-        selectedLocationLabel.text = "Finding location..."
+        selectedLocationLabel.text = "onboarding_travel_finding".localized
         selectedLocationView.isHidden = false
         searchTextField.isHidden = true
 
@@ -508,7 +509,7 @@ class TravelPlansViewController: BaseOnboardingViewController {
 
                 // Update UI
                 self.selectedLocationLabel.text = displayName
-                self.continueButton.setTitle("Continue", for: .normal)
+                self.continueButton.setTitle("common_continue".localized, for: .normal)
 
                 // Show dates section with animation
                 UIView.animate(withDuration: 0.3) {
@@ -526,11 +527,11 @@ class TravelPlansViewController: BaseOnboardingViewController {
         searchTextField.isHidden = false
 
         let alert = UIAlertController(
-            title: "Location Not Found",
-            message: "We couldn't find that location. Please try a different search.",
+            title: "onboarding_travel_not_found_title".localized,
+            message: "onboarding_travel_not_found_message".localized,
             preferredStyle: .alert
         )
-        alert.addAction(UIAlertAction(title: "OK", style: .default))
+        alert.addAction(UIAlertAction(title: "common_ok".localized, style: .default))
         present(alert, animated: true)
     }
 
@@ -704,7 +705,7 @@ class TravelLocationSuggestionCell: UITableViewCell {
 
     func configure(with result: MKLocalSearchCompletion) {
         titleLabel.text = result.title
-        subtitleLabel.text = result.subtitle.isEmpty ? "Location" : result.subtitle
+        subtitleLabel.text = result.subtitle.isEmpty ? "common_location".localized : result.subtitle
     }
 }
 

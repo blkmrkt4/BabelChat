@@ -80,6 +80,12 @@ class SupabaseService {
         return currentUser != nil
     }
 
+    /// Returns true if the current user signed in via Apple Sign In
+    var isAppleSignInUser: Bool {
+        guard let provider = currentUser?.appMetadata["provider"]?.stringValue else { return false }
+        return provider == "apple"
+    }
+
     /// Restore persisted session on app launch.
     /// Call this before checking isAuthenticated on cold start.
     func restoreSession() async {

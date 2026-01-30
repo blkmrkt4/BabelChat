@@ -17,7 +17,7 @@ class AgeRangeViewController: BaseOnboardingViewController {
     // MARK: - Lifecycle
     override func configure() {
         step = .ageRange
-        setTitle("Age range?")
+        setTitle("onboarding_age_range_title".localized)
         setupSliders()
         updateContinueButton(enabled: true)
     }
@@ -38,7 +38,7 @@ class AgeRangeViewController: BaseOnboardingViewController {
 
         // Min age section
         let minSection = createSliderSection(
-            title: "Minimum Age",
+            title: "onboarding_age_minimum".localized,
             valueLabel: minAgeLabel,
             slider: minAgeSlider,
             minValue: 18,
@@ -50,7 +50,7 @@ class AgeRangeViewController: BaseOnboardingViewController {
 
         // Max age section
         let maxSection = createSliderSection(
-            title: "Maximum Age",
+            title: "onboarding_age_maximum".localized,
             valueLabel: maxAgeLabel,
             slider: maxAgeSlider,
             minValue: 18,

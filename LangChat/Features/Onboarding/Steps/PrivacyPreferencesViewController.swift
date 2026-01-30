@@ -14,7 +14,7 @@ class PrivacyPreferencesViewController: BaseOnboardingViewController {
     // MARK: - Lifecycle
     override func configure() {
         step = .privacyPreferences
-        setTitle("Privacy?")
+        setTitle("onboarding_privacy_title".localized)
         setupPreferenceToggles()
         updateContinueButton(enabled: true)
     }
@@ -63,7 +63,7 @@ class PrivacyPreferencesViewController: BaseOnboardingViewController {
 
         // Info label
         let infoLabel = UILabel()
-        infoLabel.text = "These settings can be changed later in your profile settings."
+        infoLabel.text = "onboarding_privacy_info".localized
         infoLabel.font = .systemFont(ofSize: 13, weight: .regular)
         infoLabel.textColor = .white.withAlphaComponent(0.6)
         infoLabel.numberOfLines = 0

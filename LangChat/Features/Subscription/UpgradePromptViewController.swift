@@ -98,7 +98,7 @@ class UpgradePromptViewController: UIViewController {
         containerView.addSubview(featureStack)
 
         // Upgrade button
-        upgradeButton.setTitle("Upgrade to Premium", for: .normal)
+        upgradeButton.setTitle("button_upgrade_premium".localized, for: .normal)
         upgradeButton.titleLabel?.font = .systemFont(ofSize: 18, weight: .bold)
         upgradeButton.setTitleColor(.white, for: .normal)
         upgradeButton.backgroundColor = .systemBlue
@@ -107,7 +107,7 @@ class UpgradePromptViewController: UIViewController {
         containerView.addSubview(upgradeButton)
 
         // Maybe later button
-        maybeLaterButton.setTitle("Maybe Later", for: .normal)
+        maybeLaterButton.setTitle("button_maybe_later".localized, for: .normal)
         maybeLaterButton.titleLabel?.font = .systemFont(ofSize: 16, weight: .medium)
         maybeLaterButton.setTitleColor(.secondaryLabel, for: .normal)
         maybeLaterButton.addTarget(self, action: #selector(maybeLaterTapped), for: .touchUpInside)
@@ -160,13 +160,13 @@ class UpgradePromptViewController: UIViewController {
         switch limitType {
         case .aiMessages:
             iconLabel.text = "💬"
-            titleLabel.text = "Daily AI Message Limit Reached"
-            messageLabel.text = "You've used your 5 daily AI messages. Upgrade to Premium for unlimited AI-powered conversations!"
+            titleLabel.text = "upgrade_ai_limit_title".localized
+            messageLabel.text = "upgrade_ai_limit_message".localized
 
         case .profileViews:
             iconLabel.text = "👤"
-            titleLabel.text = "Daily Profile View Limit Reached"
-            messageLabel.text = "You've viewed 10 profiles today. Upgrade to Premium to browse unlimited profiles and find your perfect language partner!"
+            titleLabel.text = "upgrade_profile_limit_title".localized
+            messageLabel.text = "upgrade_profile_limit_message".localized
         }
 
         // Add premium features with TTS benefits
@@ -220,13 +220,13 @@ class UpgradePromptViewController: UIViewController {
     // MARK: - Actions
     @objc private func upgradeTapped() {
         // Show loading
-        upgradeButton.setTitle("Loading...", for: .normal)
+        upgradeButton.setTitle("common_loading".localized, for: .normal)
         upgradeButton.isEnabled = false
 
         // Navigate to pricing page
         subscriptionService.purchase(tier: .premium) { [weak self] result in
             DispatchQueue.main.async {
-                self?.upgradeButton.setTitle("Upgrade to Premium", for: .normal)
+                self?.upgradeButton.setTitle("button_upgrade_premium".localized, for: .normal)
                 self?.upgradeButton.isEnabled = true
 
                 switch result {
@@ -260,7 +260,7 @@ class UpgradePromptViewController: UIViewController {
             message: error.localizedDescription,
             preferredStyle: .alert
         )
-        alert.addAction(UIAlertAction(title: "OK", style: .default))
+        alert.addAction(UIAlertAction(title: "common_ok".localized, style: .default))
         present(alert, animated: true)
     }
 }

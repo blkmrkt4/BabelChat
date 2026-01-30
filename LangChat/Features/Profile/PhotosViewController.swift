@@ -112,12 +112,12 @@ extension PhotosViewController: UICollectionViewDelegate {
         if indexPath.item < photos.count {
             // Show delete option
             let alert = UIAlertController(title: nil, message: nil, preferredStyle: .actionSheet)
-            alert.addAction(UIAlertAction(title: "Delete Photo", style: .destructive) { [weak self] _ in
+            alert.addAction(UIAlertAction(title: "common_delete_photo".localized, style: .destructive) { [weak self] _ in
                 self?.photos.remove(at: indexPath.item)
                 self?.savePhotos()
                 self?.collectionView.reloadData()
             })
-            alert.addAction(UIAlertAction(title: "Cancel", style: .cancel))
+            alert.addAction(UIAlertAction(title: "common_cancel".localized, style: .cancel))
 
             if let popover = alert.popoverPresentationController,
                let cell = collectionView.cellForItem(at: indexPath) {
@@ -143,7 +143,7 @@ extension PhotosViewController: PHPickerViewControllerDelegate {
         // Show loading indicator with cancel option
         let loadingAlert = UIAlertController(title: "Uploading Photos", message: "Please wait...", preferredStyle: .alert)
         var isCancelled = false
-        loadingAlert.addAction(UIAlertAction(title: "Cancel", style: .cancel) { _ in
+        loadingAlert.addAction(UIAlertAction(title: "common_cancel".localized, style: .cancel) { _ in
             isCancelled = true
         })
         present(loadingAlert, animated: true)
@@ -221,7 +221,7 @@ extension PhotosViewController: PHPickerViewControllerDelegate {
                 message: uploaded > 0 ? "\(uploaded) photo(s) were uploaded before cancellation." : nil,
                 preferredStyle: .alert
             )
-            alert.addAction(UIAlertAction(title: "OK", style: .default))
+            alert.addAction(UIAlertAction(title: "common_ok".localized, style: .default))
             present(alert, animated: true)
         } else if failed > 0 {
             let alert = UIAlertController(
@@ -229,7 +229,7 @@ extension PhotosViewController: PHPickerViewControllerDelegate {
                 message: "\(uploaded) photo(s) uploaded. \(failed) failed.",
                 preferredStyle: .alert
             )
-            alert.addAction(UIAlertAction(title: "OK", style: .default))
+            alert.addAction(UIAlertAction(title: "common_ok".localized, style: .default))
             present(alert, animated: true)
         }
     }

@@ -20,7 +20,7 @@ class MuseLanguageSelectionViewController: BaseOnboardingViewController {
     // MARK: - Lifecycle
     override func configure() {
         step = .museLanguages
-        setTitle("Muse languages?")
+        setTitle("onboarding_muse_title".localized)
         setupViews()
         loadAvailableLanguages()
     }
@@ -37,7 +37,7 @@ class MuseLanguageSelectionViewController: BaseOnboardingViewController {
     // MARK: - Setup
     private func setupViews() {
         // Info label explaining what this is for
-        infoLabel.text = "Your Muse already speaks your native and learning languages. Select additional languages you'd like to explore with your AI companion."
+        infoLabel.text = "onboarding_muse_info".localized
         infoLabel.font = .systemFont(ofSize: 14)
         infoLabel.textColor = .secondaryLabel
         infoLabel.numberOfLines = 0
@@ -52,7 +52,7 @@ class MuseLanguageSelectionViewController: BaseOnboardingViewController {
         contentView.addSubview(selectionCountLabel)
 
         // Search bar
-        searchBar.placeholder = "Search languages"
+        searchBar.placeholder = "onboarding_muse_search".localized
         searchBar.searchBarStyle = .minimal
         searchBar.delegate = self
         contentView.addSubview(searchBar)
@@ -100,10 +100,10 @@ class MuseLanguageSelectionViewController: BaseOnboardingViewController {
     private func updateSelectionLabel() {
         let count = selectedLanguages.count
         if count == 0 {
-            selectionCountLabel.text = "Optional - Skip if you're happy with your current selection"
+            selectionCountLabel.text = "onboarding_muse_optional".localized
             selectionCountLabel.textColor = .secondaryLabel
         } else {
-            selectionCountLabel.text = "\(count) additional language\(count == 1 ? "" : "s") selected"
+            selectionCountLabel.text = "onboarding_muse_selected".localized(with: ["count": "\(count)"])
             selectionCountLabel.textColor = .systemBlue
         }
     }

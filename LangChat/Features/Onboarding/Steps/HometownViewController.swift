@@ -32,7 +32,7 @@ class HometownViewController: BaseOnboardingViewController {
     // MARK: - Lifecycle
     override func configure() {
         step = .hometown
-        setTitle("Your location?")
+        setTitle("onboarding_hometown_title".localized)
         setupSearchCompleter()
         setupLocationInputs()
     }
@@ -45,7 +45,7 @@ class HometownViewController: BaseOnboardingViewController {
 
     private func setupLocationInputs() {
         // Search text field
-        searchTextField.placeholder = "Search for your city..."
+        searchTextField.placeholder = "onboarding_hometown_search".localized
         searchTextField.font = .systemFont(ofSize: 18, weight: .regular)
         searchTextField.textColor = .label
         searchTextField.autocapitalizationType = .words
@@ -109,7 +109,7 @@ class HometownViewController: BaseOnboardingViewController {
         selectedLocationView.addSubview(pinIcon)
 
         // Timezone label
-        timezoneLabel.text = "🌍 Your timezone will be detected automatically"
+        timezoneLabel.text = "auto_string_2".localized + "onboarding_hometown_timezone".localized
         timezoneLabel.font = .systemFont(ofSize: 14, weight: .regular)
         timezoneLabel.textColor = .secondaryLabel
         timezoneLabel.numberOfLines = 0
@@ -128,13 +128,13 @@ class HometownViewController: BaseOnboardingViewController {
         privacyContainer.addSubview(privacyToggle)
 
         // Privacy label
-        privacyLabel.text = "Show city to other users"
+        privacyLabel.text = "onboarding_hometown_show_city".localized
         privacyLabel.font = .systemFont(ofSize: 16, weight: .medium)
         privacyLabel.textColor = .label
         privacyContainer.addSubview(privacyLabel)
 
         // Privacy description
-        privacyDescriptionLabel.text = "If off, only your country will be visible"
+        privacyDescriptionLabel.text = "onboarding_hometown_country_only".localized
         privacyDescriptionLabel.font = .systemFont(ofSize: 14, weight: .regular)
         privacyDescriptionLabel.textColor = .secondaryLabel
         privacyDescriptionLabel.numberOfLines = 0
@@ -252,7 +252,7 @@ class HometownViewController: BaseOnboardingViewController {
         searchTextField.resignFirstResponder()
 
         // Show loading state
-        selectedLocationLabel.text = "Finding location..."
+        selectedLocationLabel.text = "onboarding_travel_finding".localized
         selectedLocationView.isHidden = false
         searchTextField.isHidden = true
         suggestionsTableView.isHidden = true
@@ -323,7 +323,7 @@ class HometownViewController: BaseOnboardingViewController {
             message: "We couldn't find that location. Please try a different search.",
             preferredStyle: .alert
         )
-        alert.addAction(UIAlertAction(title: "OK", style: .default))
+        alert.addAction(UIAlertAction(title: "common_ok".localized, style: .default))
         present(alert, animated: true)
     }
 

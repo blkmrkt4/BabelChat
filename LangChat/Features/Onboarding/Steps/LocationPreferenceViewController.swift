@@ -26,7 +26,7 @@ class LocationPreferenceViewController: BaseOnboardingViewController {
     // MARK: - Lifecycle
     override func configure() {
         step = .locationPreference
-        setTitle("Location range?")
+        setTitle("onboarding_location_title".localized)
         setupScrollView()
         setupPreferenceButtons()
         setupDistanceSlider()
@@ -93,7 +93,7 @@ class LocationPreferenceViewController: BaseOnboardingViewController {
         distanceContainer.alpha = 0
 
         // Distance label
-        distanceLabel.text = "Maximum distance: 50 km"
+        distanceLabel.text = "location_max_distance".localized(with: ["distance": "50"])
         distanceLabel.font = .systemFont(ofSize: 15, weight: .medium)
         distanceLabel.textColor = .white
         distanceLabel.textAlignment = .center
@@ -109,13 +109,13 @@ class LocationPreferenceViewController: BaseOnboardingViewController {
 
         // Range labels
         let minLabel = UILabel()
-        minLabel.text = "10 km"
+        minLabel.text = "auto_10_km".localized
         minLabel.font = .systemFont(ofSize: 12, weight: .regular)
         minLabel.textColor = .white.withAlphaComponent(0.6)
         distanceContainer.addSubview(minLabel)
 
         let maxLabel = UILabel()
-        maxLabel.text = "200 km"
+        maxLabel.text = "auto_200_km".localized
         maxLabel.font = .systemFont(ofSize: 12, weight: .regular)
         maxLabel.textColor = .white.withAlphaComponent(0.6)
         maxLabel.textAlignment = .right
@@ -161,14 +161,14 @@ class LocationPreferenceViewController: BaseOnboardingViewController {
         countryHeightConstraint.isActive = true
 
         // Selected countries label
-        selectedCountriesLabel.text = "No countries selected"
+        selectedCountriesLabel.text = "location_no_countries".localized
         selectedCountriesLabel.font = .systemFont(ofSize: 14, weight: .regular)
         selectedCountriesLabel.textColor = .white.withAlphaComponent(0.7)
         selectedCountriesLabel.numberOfLines = 0
         countryContainer.addSubview(selectedCountriesLabel)
 
         // Select button
-        selectCountriesButton.setTitle("Select Countries", for: .normal)
+        selectCountriesButton.setTitle("location_select_countries".localized, for: .normal)
         selectCountriesButton.titleLabel?.font = .systemFont(ofSize: 15, weight: .semibold)
         selectCountriesButton.backgroundColor = .systemBlue
         selectCountriesButton.setTitleColor(.white, for: .normal)
@@ -266,7 +266,7 @@ class LocationPreferenceViewController: BaseOnboardingViewController {
         let snappedValue = round(sender.value / 5) * 5
         sender.value = snappedValue
         selectedDistance = Int(snappedValue)
-        distanceLabel.text = "Maximum distance: \(selectedDistance) km"
+        distanceLabel.text = "location_max_distance".localized(with: ["distance": "\(selectedDistance)"])
     }
 
     @objc private func selectCountriesTapped() {
@@ -303,14 +303,14 @@ class LocationPreferenceViewController: BaseOnboardingViewController {
         // Update exclude mode and button text before animation
         isExcludeMode = selectedPreference == .excludeCountries
         if selectedPreference == .excludeCountries {
-            selectCountriesButton.setTitle("Select Countries to Exclude", for: .normal)
+            selectCountriesButton.setTitle("location_select_to_exclude".localized, for: .normal)
         } else {
-            selectCountriesButton.setTitle("Select Countries", for: .normal)
+            selectCountriesButton.setTitle("location_select_countries".localized, for: .normal)
         }
 
         // Reset countries label when switching modes
         if showCountries && selectedCountries.isEmpty {
-            selectedCountriesLabel.text = isExcludeMode ? "No countries excluded" : "No countries selected"
+            selectedCountriesLabel.text = isExcludeMode ? "location_no_excluded".localized : "location_no_countries".localized
         }
 
         // Move country container to correct position before animation
@@ -359,7 +359,7 @@ class LocationPreferenceViewController: BaseOnboardingViewController {
 
     private func updateSelectedCountriesLabel() {
         if selectedCountries.isEmpty {
-            selectedCountriesLabel.text = isExcludeMode ? "No countries excluded" : "No countries selected"
+            selectedCountriesLabel.text = isExcludeMode ? "location_no_excluded".localized : "location_no_countries".localized
         } else {
             let countryNames = selectedCountries.compactMap { code in
                 Locale.current.localizedString(forRegionCode: code)
@@ -368,7 +368,7 @@ class LocationPreferenceViewController: BaseOnboardingViewController {
                 selectedCountriesLabel.text = countryNames.joined(separator: ", ")
             } else {
                 let first3 = countryNames.prefix(3).joined(separator: ", ")
-                selectedCountriesLabel.text = "\(first3) +\(countryNames.count - 3) more"
+                selectedCountriesLabel.text = "\(first3) " + "location_more_countries".localized(with: ["count": "\(countryNames.count - 3)"])
             }
         }
         validateContinueButton()
@@ -438,7 +438,7 @@ class CountryPickerViewController: UIViewController {
 
     // MARK: - Setup
     private func setupViews() {
-        title = isExcludeMode ? "Exclude Countries" : "Select Countries"
+        title = isExcludeMode ? "location_exclude_title".localized : "location_select_title".localized
         view.backgroundColor = .systemBackground
 
         // Done button
@@ -456,7 +456,7 @@ class CountryPickerViewController: UIViewController {
         )
 
         // Search bar
-        searchBar.placeholder = "Search countries"
+        searchBar.placeholder = "location_search_countries".localized
         searchBar.delegate = self
         searchBar.searchBarStyle = .minimal
         view.addSubview(searchBar)

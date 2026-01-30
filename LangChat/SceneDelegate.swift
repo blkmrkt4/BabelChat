@@ -6,10 +6,12 @@
 //
 
 import UIKit
+import Supabase
 
 class SceneDelegate: UIResponder, UIWindowSceneDelegate {
 
     var window: UIWindow?
+    private var onboardingCoordinator: OnboardingCoordinator?
 
 
     func scene(_ scene: UIScene, willConnectTo session: UISceneSession, options connectionOptions: UIScene.ConnectionOptions) {
@@ -90,11 +92,11 @@ class SceneDelegate: UIResponder, UIWindowSceneDelegate {
             preferredStyle: .alert
         )
 
-        alert.addAction(UIAlertAction(title: "Accept", style: .default) { _ in
+        alert.addAction(UIAlertAction(title: "common_accept".localized, style: .default) { _ in
             self.processInviteCode(code)
         })
 
-        alert.addAction(UIAlertAction(title: "Ignore", style: .cancel) { _ in
+        alert.addAction(UIAlertAction(title: "common_ignore".localized, style: .cancel) { _ in
             UserDefaults.standard.removeObject(forKey: "pendingInviteCode")
         })
 
@@ -137,11 +139,11 @@ class SceneDelegate: UIResponder, UIWindowSceneDelegate {
             preferredStyle: .alert
         )
 
-        alert.addAction(UIAlertAction(title: "Start Chatting", style: .default) { [weak self] _ in
+        alert.addAction(UIAlertAction(title: "common_start_chatting".localized, style: .default) { [weak self] _ in
             self?.navigateToChat(matchId: matchId, inviterId: inviterId, inviterName: inviterName)
         })
 
-        alert.addAction(UIAlertAction(title: "Later", style: .cancel) { _ in
+        alert.addAction(UIAlertAction(title: "common_later".localized, style: .cancel) { _ in
             // Just switch to Matches tab
             if let tabBar = rootVC as? MainTabBarController {
                 tabBar.selectedIndex = 1 // Switch to Matches tab
@@ -223,7 +225,7 @@ class SceneDelegate: UIResponder, UIWindowSceneDelegate {
             message: error,
             preferredStyle: .alert
         )
-        alert.addAction(UIAlertAction(title: "OK", style: .default))
+        alert.addAction(UIAlertAction(title: "common_ok".localized, style: .default))
         rootVC.present(alert, animated: true)
     }
 
@@ -284,8 +286,8 @@ class SceneDelegate: UIResponder, UIWindowSceneDelegate {
 
     private func checkConnectivityAndProceed() {
         Task {
-            // Give network monitor a moment to initialize
-            try? await Task.sleep(nanoseconds: 500_000_000) // 0.5 seconds
+            // Wait for NWPathMonitor to report initial network status (up to 3s)
+            await NetworkMonitor.shared.waitForInitialStatus(timeout: 3.0)
 
             let isConnected = await NetworkMonitor.shared.checkSupabaseConnectivity()
 
@@ -308,16 +310,46 @@ class SceneDelegate: UIResponder, UIWindowSceneDelegate {
     }
 
     private func proceedWithAppFlow() {
-        // Check if user has an active Supabase session
-        let hasActiveSession = SupabaseService.shared.isAuthenticated
+        #if DEBUG
+        // Set to true to force onboarding reset for testing, then set back to false
+        let forceOnboardingReset = false
+        if forceOnboardingReset {
+            print("🔄 [DEBUG] Forcing onboarding reset - clearing local data, keeping auth")
+            // Clear UserDefaults but preserve Apple-provided name so we can test the skip
+            let appleFirst = UserDefaults.standard.string(forKey: "appleProvidedFirstName")
+            let appleLast = UserDefaults.standard.string(forKey: "appleProvidedLastName")
+            let appleEmail = UserDefaults.standard.string(forKey: "appleProvidedEmail")
 
-        print("🔍 Session check - Authenticated: \(hasActiveSession)")
+            let domain = Bundle.main.bundleIdentifier!
+            UserDefaults.standard.removePersistentDomain(forName: domain)
+            UserDefaults.standard.synchronize()
 
-        if hasActiveSession {
-            // User has active session - check if they have completed profile in Supabase
-            showLoadingScreen()
+            // Restore Apple-provided data
+            if let first = appleFirst { UserDefaults.standard.set(first, forKey: "appleProvidedFirstName") }
+            if let last = appleLast { UserDefaults.standard.set(last, forKey: "appleProvidedLastName") }
+            if let email = appleEmail { UserDefaults.standard.set(email, forKey: "appleProvidedEmail") }
 
-            Task {
+            // Go straight to onboarding (user is already authenticated)
+            let navController = UINavigationController()
+            self.window?.rootViewController = navController
+            self.onboardingCoordinator = OnboardingCoordinator(navigationController: navController)
+            self.onboardingCoordinator?.start()
+            return
+        }
+        #endif
+
+        // Restore any persisted session before checking auth state
+        showLoadingScreen()
+
+        Task {
+            // Force the SDK to load/validate session from its internal storage
+            await SupabaseService.shared.restoreSession()
+
+            let hasActiveSession = SupabaseService.shared.isAuthenticated
+            print("🔍 Session check - Authenticated: \(hasActiveSession)")
+
+            if hasActiveSession {
+                // User has active session - check if they have completed profile in Supabase
                 do {
                     let hasCompletedProfile = try await SupabaseService.shared.hasCompletedProfile()
 
@@ -341,8 +373,8 @@ class SceneDelegate: UIResponder, UIWindowSceneDelegate {
                             let navController = UINavigationController()
                             self.window?.rootViewController = navController
 
-                            let coordinator = OnboardingCoordinator(navigationController: navController)
-                            coordinator.start()
+                            self.onboardingCoordinator = OnboardingCoordinator(navigationController: navController)
+                            self.onboardingCoordinator?.start()
                         }
                     }
                 } catch {
@@ -354,10 +386,12 @@ class SceneDelegate: UIResponder, UIWindowSceneDelegate {
                         self.showOfflineScreen()
                     }
                 }
+            } else {
+                await MainActor.run {
+                    // No active session - show authentication flow
+                    self.showAuthenticationFlow()
+                }
             }
-        } else {
-            // No active session - show authentication flow
-            showAuthenticationFlow()
         }
     }
 

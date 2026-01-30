@@ -79,7 +79,7 @@ class LanguageBubblePlaceholderView: UIView {
         greetingLabel.translatesAutoresizingMaskIntoConstraints = false
 
         // Instruction text
-        instructionLabel.text = "Long press to add photo"
+        instructionLabel.text = "photo_long_press_hint".localized
         instructionLabel.font = .systemFont(ofSize: 11, weight: .regular)
         instructionLabel.textColor = .systemGray
         instructionLabel.textAlignment = .center

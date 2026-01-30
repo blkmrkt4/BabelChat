@@ -53,8 +53,8 @@ class BlockedUsersViewController: UIViewController {
             preferredStyle: .alert
         )
 
-        alert.addAction(UIAlertAction(title: "Cancel", style: .cancel))
-        alert.addAction(UIAlertAction(title: "Unblock", style: .destructive) { [weak self] _ in
+        alert.addAction(UIAlertAction(title: "common_cancel".localized, style: .cancel))
+        alert.addAction(UIAlertAction(title: "common_unblock".localized, style: .destructive) { [weak self] _ in
             self?.blockedUsers.remove(at: indexPath.row)
             self?.saveBlockedUsers()
             self?.tableView.deleteRows(at: [indexPath], with: .automatic)
@@ -75,7 +75,7 @@ extension BlockedUsersViewController: UITableViewDataSource {
 
         if blockedUsers.isEmpty {
             var config = cell.defaultContentConfiguration()
-            config.text = "No blocked users"
+            config.text = "blocked_users_empty".localized
             config.textProperties.color = .secondaryLabel
             config.textProperties.alignment = .center
             cell.contentConfiguration = config

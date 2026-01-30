@@ -125,7 +125,7 @@ class SupabaseTestViewController: UIViewController {
             textField.isSecureTextEntry = true
         }
 
-        alert.addAction(UIAlertAction(title: "Cancel", style: .cancel))
+        alert.addAction(UIAlertAction(title: "common_cancel".localized, style: .cancel))
         alert.addAction(UIAlertAction(title: "Sign In", style: .default) { [weak self, weak alert] _ in
             guard let email = alert?.textFields?[0].text,
                   let password = alert?.textFields?[1].text else { return }
@@ -209,7 +209,7 @@ class SupabaseTestViewController: UIViewController {
             preferredStyle: .alert
         )
 
-        alert.addAction(UIAlertAction(title: "Cancel", style: .cancel))
+        alert.addAction(UIAlertAction(title: "common_cancel".localized, style: .cancel))
         alert.addAction(UIAlertAction(title: "Insert", style: .default) { [weak self] _ in
             self?.performProfileInsertion()
         })

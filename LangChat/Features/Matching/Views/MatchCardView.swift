@@ -45,7 +45,7 @@ class MatchCardView: UIView {
 
     private let blurLabel: UILabel = {
         let label = UILabel()
-        label.text = "Photos blurred"
+        label.text = "profile_photos_blurred".localized
         label.font = .systemFont(ofSize: 12, weight: .medium)
         label.textColor = .white
         label.textAlignment = .center
@@ -114,7 +114,7 @@ class MatchCardView: UIView {
 
         contentView.addSubview(nativeLanguageBadge)
 
-        aspiringLabel.text = "Aspiring:"
+        aspiringLabel.text = "profile_aspiring".localized
         aspiringLabel.font = .systemFont(ofSize: 16, weight: .regular)
         aspiringLabel.textColor = .secondaryLabel
         contentView.addSubview(aspiringLabel)
@@ -133,7 +133,7 @@ class MatchCardView: UIView {
         openToMatchLabel.textColor = .systemBlue
         contentView.addSubview(openToMatchLabel)
 
-        aboutLabel.text = "About"
+        aboutLabel.text = "settings_section_about".localized
         aboutLabel.font = .systemFont(ofSize: 20, weight: .bold)
         aboutLabel.textColor = .label
         contentView.addSubview(aboutLabel)

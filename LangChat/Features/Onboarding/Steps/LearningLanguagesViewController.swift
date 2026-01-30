@@ -19,7 +19,7 @@ class LearningLanguagesViewController: BaseOnboardingViewController {
     // MARK: - Lifecycle
     override func configure() {
         step = .learningLanguages
-        setTitle("Learning?")
+        setTitle("onboarding_learning_title".localized)
         setupViews()
 
         // Filter out native language from available options
@@ -40,7 +40,7 @@ class LearningLanguagesViewController: BaseOnboardingViewController {
         contentView.addSubview(selectionCountLabel)
 
         // Search bar
-        searchBar.placeholder = "Search languages"
+        searchBar.placeholder = "onboarding_learning_search".localized
         searchBar.searchBarStyle = .minimal
         searchBar.delegate = self
         contentView.addSubview(searchBar)
@@ -80,13 +80,13 @@ class LearningLanguagesViewController: BaseOnboardingViewController {
     private func updateSelectionLabel() {
         let count = selectedLanguages.count
         if count == 0 {
-            selectionCountLabel.text = "Select up to \(maxLanguages) languages"
+            selectionCountLabel.text = "onboarding_learning_select_up_to".localized(with: ["count": "\(maxLanguages)"])
             selectionCountLabel.textColor = .secondaryLabel
         } else if count < maxLanguages {
-            selectionCountLabel.text = "\(count) selected • Select up to \(maxLanguages - count) more"
+            selectionCountLabel.text = "onboarding_learning_selected_more".localized(with: ["selected": "\(count)", "remaining": "\(maxLanguages - count)"])
             selectionCountLabel.textColor = .systemBlue
         } else {
-            selectionCountLabel.text = "Maximum languages selected (\(maxLanguages))"
+            selectionCountLabel.text = "onboarding_learning_max_selected".localized(with: ["count": "\(maxLanguages)"])
             selectionCountLabel.textColor = .systemGreen
         }
     }
@@ -131,11 +131,11 @@ extension LearningLanguagesViewController: UITableViewDelegate {
             // Show alert that max languages reached
             tableView.deselectRow(at: indexPath, animated: false)
             let alert = UIAlertController(
-                title: "Maximum Languages Reached",
-                message: "You can select up to \(maxLanguages) languages. Deselect one to choose another.",
+                title: "onboarding_learning_max_title".localized,
+                message: "onboarding_learning_max_message".localized(with: ["count": "\(maxLanguages)"]),
                 preferredStyle: .alert
             )
-            alert.addAction(UIAlertAction(title: "OK", style: .default))
+            alert.addAction(UIAlertAction(title: "common_ok".localized, style: .default))
             present(alert, animated: true)
             return
         }

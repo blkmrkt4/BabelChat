@@ -82,7 +82,7 @@ class LanguagesViewController: UIViewController {
             })
         }
 
-        alertController.addAction(UIAlertAction(title: "Cancel", style: .cancel))
+        alertController.addAction(UIAlertAction(title: "common_cancel".localized, style: .cancel))
 
         if let popover = alertController.popoverPresentationController {
             if let cell = tableView.cellForRow(at: IndexPath(row: index, section: 1)) {
@@ -127,7 +127,7 @@ class LanguagesViewController: UIViewController {
             })
         }
 
-        alertController.addAction(UIAlertAction(title: "Cancel", style: .cancel))
+        alertController.addAction(UIAlertAction(title: "common_cancel".localized, style: .cancel))
 
         if let popover = alertController.popoverPresentationController {
             popover.sourceView = view
@@ -152,7 +152,7 @@ class LanguagesViewController: UIViewController {
             })
         }
 
-        alertController.addAction(UIAlertAction(title: "Cancel", style: .cancel))
+        alertController.addAction(UIAlertAction(title: "common_cancel".localized, style: .cancel))
 
         if let popover = alertController.popoverPresentationController {
             popover.sourceView = view
@@ -179,8 +179,8 @@ class LanguagesViewController: UIViewController {
             preferredStyle: .alert
         )
 
-        alert.addAction(UIAlertAction(title: "Cancel", style: .cancel))
-        alert.addAction(UIAlertAction(title: "Remove", style: .destructive) { [weak self] _ in
+        alert.addAction(UIAlertAction(title: "common_cancel".localized, style: .cancel))
+        alert.addAction(UIAlertAction(title: "common_remove".localized, style: .destructive) { [weak self] _ in
             self?.learningLanguages.remove(at: index)
             self?.openToLanguages.removeAll { $0.code == language.language.code }
             self?.tableView.reloadData()
@@ -212,7 +212,7 @@ class LanguagesViewController: UIViewController {
             })
         }
 
-        alertController.addAction(UIAlertAction(title: "Cancel", style: .cancel))
+        alertController.addAction(UIAlertAction(title: "common_cancel".localized, style: .cancel))
 
         if let popover = alertController.popoverPresentationController {
             if let cell = tableView.cellForRow(at: IndexPath(row: 0, section: 0)) {
@@ -324,7 +324,7 @@ extension LanguagesViewController: UITableViewDataSource {
                 cell.accessoryType = .disclosureIndicator
             } else {
                 // "Add Language" row
-                config.text = "Add Language"
+                config.text = "add_language".localized
                 config.textProperties.color = .systemBlue
                 config.image = UIImage(systemName: "plus.circle.fill")
                 config.imageProperties.tintColor = .systemBlue

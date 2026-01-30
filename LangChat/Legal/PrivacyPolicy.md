@@ -169,9 +169,9 @@ You can opt out of promotional communications by contacting us. Note that you wi
 
 ## 6. Children's Privacy
 
-The App is intended for users who are at least 17 years old. We do not knowingly collect information from children under 17. If we discover that we have collected information from a child under 17, we will delete it promptly.
+The App is intended for users who are at least 18 years old. We do not knowingly collect information from children under 18. If we discover that we have collected information from a child under 18, we will delete it promptly.
 
-If you believe we have information from a child under 17, please contact us at support@painkillerlabs.com.
+If you believe we have information from a child under 18, please contact us at support@painkillerlabs.com.
 
 ## 7. International Data Transfers
 

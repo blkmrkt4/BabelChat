@@ -65,7 +65,7 @@ class OfflineViewController: UIViewController {
         containerView.addSubview(networkIconView)
 
         // Title
-        titleLabel.text = "Currently Offline"
+        titleLabel.text = "offline_title".localized
         titleLabel.font = .systemFont(ofSize: 28, weight: .bold)
         titleLabel.textColor = .white
         titleLabel.textAlignment = .center
@@ -73,7 +73,7 @@ class OfflineViewController: UIViewController {
         containerView.addSubview(titleLabel)
 
         // Message
-        messageLabel.text = "Unable to connect to Fluenca servers.\nPlease check your internet connection."
+        messageLabel.text = "offline_message".localized
         messageLabel.font = .systemFont(ofSize: 16, weight: .regular)
         messageLabel.textColor = UIColor.white.withAlphaComponent(0.7)
         messageLabel.textAlignment = .center
@@ -82,7 +82,7 @@ class OfflineViewController: UIViewController {
         containerView.addSubview(messageLabel)
 
         // Retrying label with animated dots
-        retryingLabel.text = "Retrying..."
+        retryingLabel.text = "offline_retrying".localized
         retryingLabel.font = .systemFont(ofSize: 15, weight: .medium)
         retryingLabel.textColor = UIColor.systemBlue.withAlphaComponent(0.9)
         retryingLabel.textAlignment = .center
@@ -97,7 +97,7 @@ class OfflineViewController: UIViewController {
         containerView.addSubview(countdownLabel)
 
         // Manual retry button
-        retryButton.setTitle("Retry Now", for: .normal)
+        retryButton.setTitle("offline_retry_button".localized, for: .normal)
         retryButton.titleLabel?.font = .systemFont(ofSize: 17, weight: .semibold)
         retryButton.backgroundColor = .systemBlue
         retryButton.setTitleColor(.white, for: .normal)
@@ -197,17 +197,17 @@ class OfflineViewController: UIViewController {
                 timer.invalidate()
                 self.performRetry()
             } else {
-                self.countdownLabel.text = "Next retry in \(countdown)s"
+                self.countdownLabel.text = String(format: "offline_next_retry".localized, countdown)
             }
         }
 
-        countdownLabel.text = "Next retry in \(Int(interval))s"
+        countdownLabel.text = String(format: "offline_next_retry".localized, Int(interval))
     }
 
     private func performRetry() {
         retryCount += 1
-        retryingLabel.text = "Retrying..."
-        countdownLabel.text = "Checking connection..."
+        retryingLabel.text = "offline_retrying".localized
+        countdownLabel.text = "offline_checking".localized
 
         // Increase next interval (exponential backoff)
         currentRetryInterval = min(currentRetryInterval * 1.5, maxRetryInterval)
@@ -230,7 +230,7 @@ class OfflineViewController: UIViewController {
                     }
                 } else {
                     // Still offline - schedule next retry
-                    self.retryingLabel.text = "Still offline"
+                    self.retryingLabel.text = "offline_still_offline".localized
                     self.scheduleNextRetry()
                 }
             }

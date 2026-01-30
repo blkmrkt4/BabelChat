@@ -65,7 +65,7 @@ class WelcomeViewController: UIViewController {
         contentStackView.addArrangedSubview(logoLabel)
 
         // Headline
-        headlineLabel.text = "Learn Languages\nThrough Real Connections"
+        headlineLabel.text = "welcome_headline".localized
         headlineLabel.font = .systemFont(ofSize: 28, weight: .bold)
         headlineLabel.textColor = .white
         headlineLabel.textAlignment = .center
@@ -73,7 +73,7 @@ class WelcomeViewController: UIViewController {
         contentStackView.addArrangedSubview(headlineLabel)
 
         // Subheadline
-        subheadlineLabel.text = "The best way to learn is through genuine conversations with people who inspire you."
+        subheadlineLabel.text = "welcome_subheadline".localized
         subheadlineLabel.font = .systemFont(ofSize: 17, weight: .regular)
         subheadlineLabel.textColor = .white.withAlphaComponent(0.9)
         subheadlineLabel.textAlignment = .center
@@ -102,7 +102,7 @@ class WelcomeViewController: UIViewController {
         premiumContainer.layer.cornerRadius = 16
         premiumContainer.translatesAutoresizingMaskIntoConstraints = false
 
-        premiumNoteLabel.text = "Free to start, Premium to thrive"
+        premiumNoteLabel.text = "welcome_premium_note".localized
         premiumNoteLabel.font = .systemFont(ofSize: 15, weight: .medium)
         premiumNoteLabel.textColor = Color(hex: "FFD700").uiColor
         premiumNoteLabel.textAlignment = .center
@@ -121,9 +121,9 @@ class WelcomeViewController: UIViewController {
 
         // Continue button
         if isViewingFromProfile {
-            continueButton.setTitle("Close", for: .normal)
+            continueButton.setTitle("common_close".localized, for: .normal)
         } else {
-            continueButton.setTitle("Get Started", for: .normal)
+            continueButton.setTitle("welcome_get_started".localized, for: .normal)
         }
         continueButton.titleLabel?.font = .systemFont(ofSize: 18, weight: .semibold)
         continueButton.backgroundColor = .white
@@ -142,7 +142,7 @@ class WelcomeViewController: UIViewController {
 
         #if DEBUG
         // Reset button (development only)
-        resetButton.setTitle("🔄 Reset", for: .normal)
+        resetButton.setTitle("auto_reset".localized, for: .normal)
         resetButton.titleLabel?.font = .systemFont(ofSize: 14, weight: .semibold)
         resetButton.backgroundColor = .systemRed.withAlphaComponent(0.8)
         resetButton.setTitleColor(.white, for: .normal)
@@ -159,10 +159,10 @@ class WelcomeViewController: UIViewController {
         featuresStackView.translatesAutoresizingMaskIntoConstraints = false
 
         let features = [
-            (icon: "person.2.fill", title: "Match with Real People", description: "Connect with native speakers and learners who share your interests"),
-            (icon: "hand.point.right.fill", title: "Swipe Right for Translation", description: "Instantly see what any message means in your language"),
-            (icon: "hand.point.left.fill", title: "Swipe Left for Grammar Help", description: "Get AI-powered insights to improve your language skills"),
-            (icon: "message.fill", title: "Chat with Confidence", description: "Practice with real people or AI bots anytime")
+            (icon: "person.2.fill", title: "welcome_feature_match_title".localized, description: "welcome_feature_match_desc".localized),
+            (icon: "hand.point.right.fill", title: "welcome_feature_translate_title".localized, description: "welcome_feature_translate_desc".localized),
+            (icon: "hand.point.left.fill", title: "welcome_feature_grammar_title".localized, description: "welcome_feature_grammar_desc".localized),
+            (icon: "message.fill", title: "welcome_feature_chat_title".localized, description: "welcome_feature_chat_desc".localized)
         ]
 
         for feature in features {
@@ -296,9 +296,9 @@ class WelcomeViewController: UIViewController {
             preferredStyle: .alert
         )
 
-        alert.addAction(UIAlertAction(title: "Cancel", style: .cancel))
+        alert.addAction(UIAlertAction(title: "common_cancel".localized, style: .cancel))
 
-        alert.addAction(UIAlertAction(title: "Reset", style: .destructive) { _ in
+        alert.addAction(UIAlertAction(title: "common_reset".localized, style: .destructive) { _ in
             Task {
                 do {
                     // Sign out from Supabase
@@ -319,7 +319,7 @@ class WelcomeViewController: UIViewController {
                         message: "All data has been cleared. Close and reopen the app to see the welcome screen.",
                         preferredStyle: .alert
                     )
-                    confirmAlert.addAction(UIAlertAction(title: "OK", style: .default))
+                    confirmAlert.addAction(UIAlertAction(title: "common_ok".localized, style: .default))
                     self.present(confirmAlert, animated: true)
                 }
             }

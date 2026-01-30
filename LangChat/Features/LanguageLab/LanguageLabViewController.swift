@@ -21,7 +21,12 @@ class LanguageLabViewController: UIViewController {
     private let headerView = UIView()
     private let titleLabel = UILabel()
     private let subtitleLabel = UILabel()
-    private let segmentedControl = UISegmentedControl(items: ["🔥 Streaks", "🌡️ Heat", "💓 Pulse", "⭐ Stats"])
+    private lazy var segmentedControl = UISegmentedControl(items: [
+        "🔥 " + "lab_streaks".localized,
+        "🌡️ " + "lab_heat".localized,
+        "💓 " + "lab_pulse".localized,
+        "⭐ " + "lab_stats".localized
+    ])
     private let containerView = UIView()
     private let loadingIndicator = UIActivityIndicatorView(style: .large)
 
@@ -114,13 +119,13 @@ class LanguageLabViewController: UIViewController {
         headerView.backgroundColor = .clear
 
         // Title with gradient effect
-        titleLabel.text = "Language Lab"
+        titleLabel.text = "lab_title".localized
         titleLabel.font = .systemFont(ofSize: 32, weight: .bold)
         titleLabel.textColor = .white
         headerView.addSubview(titleLabel)
 
         // Subtitle
-        subtitleLabel.text = "Track your fluency journey"
+        subtitleLabel.text = "lab_subtitle".localized
         subtitleLabel.font = .systemFont(ofSize: 16, weight: .regular)
         subtitleLabel.textColor = UIColor.white.withAlphaComponent(0.6)
         headerView.addSubview(subtitleLabel)
@@ -270,7 +275,7 @@ private class SparkStreaksView: UIView {
     init(partnerStreaks: [PartnerStreak], dailyActivity: [DailyActivity]) {
         // Convert partner streaks to display format
         self.partners = partnerStreaks.isEmpty
-            ? [("No partners yet", "👋", 0, nil)]
+            ? [("lab_no_partners_yet".localized, "👋", 0, nil)]
             : partnerStreaks.map { streak in
                 (streak.partnerName, "🌍", streak.currentStreak, streak.partnerPhotoUrl)
             }
@@ -303,13 +308,13 @@ private class SparkStreaksView: UIView {
         titleStack.spacing = 4
 
         let titleLabel = UILabel()
-        titleLabel.text = "Spark Streaks"
+        titleLabel.text = "lab_spark_streaks".localized
         titleLabel.font = .systemFont(ofSize: 24, weight: .bold)
         titleLabel.textColor = .white
         titleStack.addArrangedSubview(titleLabel)
 
         let subtitleLabel = UILabel()
-        subtitleLabel.text = "Keep the conversation alive"
+        subtitleLabel.text = "lab_spark_streaks_subtitle".localized
         subtitleLabel.font = .systemFont(ofSize: 14)
         subtitleLabel.textColor = UIColor.white.withAlphaComponent(0.6)
         titleStack.addArrangedSubview(subtitleLabel)
@@ -367,7 +372,7 @@ private class SparkStreaksView: UIView {
         milestoneView.addSubview(milestoneStack)
 
         let nextLabel = UILabel()
-        nextLabel.text = "Next milestone"
+        nextLabel.text = "lab_next_milestone".localized
         nextLabel.font = .systemFont(ofSize: 14, weight: .medium)
         nextLabel.textColor = FluencaColors.secondary
         milestoneStack.addArrangedSubview(nextLabel)
@@ -375,7 +380,7 @@ private class SparkStreaksView: UIView {
         let daysLabel = UILabel()
         let currentStreak = partners[selectedPartnerIndex].streak
         let daysToMilestone = 30 - currentStreak
-        daysLabel.text = "30 Day Streak in \(daysToMilestone) days!"
+        daysLabel.text = String(format: "lab_streak_milestone_format".localized, daysToMilestone)
         daysLabel.font = .systemFont(ofSize: 16, weight: .bold)
         daysLabel.textColor = .white
         milestoneStack.addArrangedSubview(daysLabel)
@@ -467,7 +472,7 @@ private class SparkStreaksView: UIView {
         stack.addArrangedSubview(nameLabel)
 
         let streakLabel = UILabel()
-        streakLabel.text = "\(partner.streak) days"
+        streakLabel.text = String(format: "lab_days_format".localized, partner.streak)
         streakLabel.font = .systemFont(ofSize: 12)
         streakLabel.textColor = UIColor.white.withAlphaComponent(0.5)
         stack.addArrangedSubview(streakLabel)
@@ -665,14 +670,14 @@ private class FluencyHeatView: UIView {
         backgroundColor = .clear
 
         let titleLabel = UILabel()
-        titleLabel.text = "Fluency Heat"
+        titleLabel.text = "lab_fluency_heat".localized
         titleLabel.font = .systemFont(ofSize: 24, weight: .bold)
         titleLabel.textColor = .white
         titleLabel.textAlignment = .center
         addSubview(titleLabel)
 
         let subtitleLabel = UILabel()
-        subtitleLabel.text = "Your conversation activity"
+        subtitleLabel.text = "lab_fluency_heat_subtitle".localized
         subtitleLabel.font = .systemFont(ofSize: 14)
         subtitleLabel.textColor = UIColor.white.withAlphaComponent(0.5)
         subtitleLabel.textAlignment = .center
@@ -737,10 +742,10 @@ private class FluencyHeatView: UIView {
 
         let statusLabel = UILabel()
         let statusText: String
-        if temperature >= 75 { statusText = "On Fire!" }
-        else if temperature >= 50 { statusText = "Getting Hot" }
-        else if temperature >= 25 { statusText = "Warming Up" }
-        else { statusText = "Ice Cold" }
+        if temperature >= 75 { statusText = "lab_heat_on_fire".localized }
+        else if temperature >= 50 { statusText = "lab_heat_getting_hot".localized }
+        else if temperature >= 25 { statusText = "lab_heat_warming_up".localized }
+        else { statusText = "lab_heat_ice_cold".localized }
         statusLabel.text = statusText
         statusLabel.font = .systemFont(ofSize: 14, weight: .medium)
         statusLabel.textColor = FluencaColors.accent
@@ -756,12 +761,12 @@ private class FluencyHeatView: UIView {
         let trendText: String
         // Show appropriate message based on temperature
         if temperature == 0 {
-            trendText = "💬 Start chatting to warm up!"
+            trendText = "💬 " + "lab_heat_start_chatting".localized
         } else {
             switch trend {
-            case .rising: trendText = "↑ Trending up • Keep it going!"
-            case .falling: trendText = "↓ Cooling down • Chat more!"
-            case .stable: trendText = "→ Steady • Nice consistency!"
+            case .rising: trendText = "↑ " + "lab_heat_trending_up".localized
+            case .falling: trendText = "↓ " + "lab_heat_cooling_down".localized
+            case .stable: trendText = "→ " + "lab_heat_steady".localized
             }
         }
         changeLabel.text = trendText
@@ -878,13 +883,13 @@ private class LearningPulseView: UIView {
         titleStack.spacing = 4
 
         let titleLabel = UILabel()
-        titleLabel.text = "Language Pulse"
+        titleLabel.text = "lab_language_pulse".localized
         titleLabel.font = .systemFont(ofSize: 24, weight: .bold)
         titleLabel.textColor = .white
         titleStack.addArrangedSubview(titleLabel)
 
         let subtitleLabel = UILabel()
-        subtitleLabel.text = "Today's conversation balance"
+        subtitleLabel.text = "lab_language_pulse_subtitle".localized
         subtitleLabel.font = .systemFont(ofSize: 14)
         subtitleLabel.textColor = UIColor.white.withAlphaComponent(0.5)
         titleStack.addArrangedSubview(subtitleLabel)
@@ -911,8 +916,8 @@ private class LearningPulseView: UIView {
         legendStack.spacing = 24
         pulseContainer.addSubview(legendStack)
 
-        let targetLegend = createLegendItem(color: FluencaColors.secondary, text: "Target language")
-        let nativeLegend = createLegendItem(color: UIColor.white.withAlphaComponent(0.3), text: "Native language")
+        let targetLegend = createLegendItem(color: FluencaColors.secondary, text: "lab_target_language".localized)
+        let nativeLegend = createLegendItem(color: UIColor.white.withAlphaComponent(0.3), text: "lab_native_language".localized)
         legendStack.addArrangedSubview(targetLegend)
         legendStack.addArrangedSubview(nativeLegend)
 
@@ -1012,8 +1017,8 @@ private class LearningPulseView: UIView {
         let todayMessages = dailyActivity.last.map { $0.messagesSent + $0.messagesReceived } ?? 0
         let yesterdayMessages = dailyActivity.dropLast().last.map { $0.messagesSent + $0.messagesReceived } ?? 0
 
-        let targetCard = createStatCard(value: "\(targetPercentage)%", label: "Target language usage", color: FluencaColors.secondary, highlighted: true)
-        let messagesCard = createStatCard(value: "\(todayMessages)", label: "Messages today", color: .white, highlighted: false)
+        let targetCard = createStatCard(value: "\(targetPercentage)%", label: "lab_target_language_usage".localized, color: FluencaColors.secondary, highlighted: true)
+        let messagesCard = createStatCard(value: "\(todayMessages)", label: "lab_messages_today".localized, color: .white, highlighted: false)
         row1.addArrangedSubview(targetCard)
         row1.addArrangedSubview(messagesCard)
         statsGrid.addArrangedSubview(row1)
@@ -1037,8 +1042,8 @@ private class LearningPulseView: UIView {
             change = todayMessages > 0 ? "↑100%" : "–"
         }
 
-        let timeCard = createStatCard(value: practiceText, label: "Practice time", color: .white, highlighted: false)
-        let changeCard = createStatCard(value: change, label: "vs. yesterday", color: FluencaColors.primary, highlighted: true)
+        let timeCard = createStatCard(value: practiceText, label: "lab_practice_time".localized, color: .white, highlighted: false)
+        let changeCard = createStatCard(value: change, label: "lab_vs_yesterday".localized, color: FluencaColors.primary, highlighted: true)
         row2.addArrangedSubview(timeCard)
         row2.addArrangedSubview(changeCard)
         statsGrid.addArrangedSubview(row2)
@@ -1055,7 +1060,7 @@ private class LearningPulseView: UIView {
         goalContainer.addSubview(goalHeader)
 
         let goalLabel = UILabel()
-        goalLabel.text = "Daily goal: 70% target language"
+        goalLabel.text = "lab_daily_goal".localized
         goalLabel.font = .systemFont(ofSize: 14)
         goalLabel.textColor = UIColor.white.withAlphaComponent(0.7)
         goalHeader.addArrangedSubview(goalLabel)
@@ -1240,13 +1245,13 @@ private class StatsOverviewView: UIView {
 
         // Title
         let titleLabel = UILabel()
-        titleLabel.text = "Your Journey"
+        titleLabel.text = "lab_your_journey".localized
         titleLabel.font = .systemFont(ofSize: 24, weight: .bold)
         titleLabel.textColor = .white
         addSubview(titleLabel)
 
         let subtitleLabel = UILabel()
-        subtitleLabel.text = "Connections across languages"
+        subtitleLabel.text = "lab_your_journey_subtitle".localized
         subtitleLabel.font = .systemFont(ofSize: 14)
         subtitleLabel.textColor = UIColor.white.withAlphaComponent(0.5)
         addSubview(subtitleLabel)
@@ -1264,9 +1269,9 @@ private class StatsOverviewView: UIView {
         let messageCountFormatted = formatter.string(from: NSNumber(value: wrappedStats.totalMessages)) ?? "\(wrappedStats.totalMessages)"
 
         let stats: [(icon: String, value: String, label: String)] = [
-            ("💬", messageCountFormatted, "Messages"),
-            ("🔥", "\(wrappedStats.longestStreak)", "Best Streak"),
-            ("👥", "\(wrappedStats.totalPartners)", "Partners")
+            ("💬", messageCountFormatted, "lab_messages".localized),
+            ("🔥", "\(wrappedStats.longestStreak)", "lab_best_streak".localized),
+            ("👥", "\(wrappedStats.totalPartners)", "lab_partners".localized)
         ]
 
         for stat in stats {
@@ -1302,7 +1307,7 @@ private class StatsOverviewView: UIView {
         wrappedStack.addArrangedSubview(wrappedBadge)
 
         let badgeLabel = UILabel()
-        badgeLabel.text = "Fluenca Wrapped"
+        badgeLabel.text = "lab_fluenca_wrapped".localized
         badgeLabel.font = .systemFont(ofSize: 14, weight: .semibold)
         badgeLabel.textColor = .white
         wrappedBadge.addSubview(badgeLabel)
@@ -1313,13 +1318,13 @@ private class StatsOverviewView: UIView {
         let periodText = "\(dateFormatter.string(from: wrappedStats.periodStart)) - \(dateFormatter.string(from: wrappedStats.periodEnd))"
 
         let yearLabel = UILabel()
-        yearLabel.text = "Last 12 Months"
+        yearLabel.text = "lab_last_12_months".localized
         yearLabel.font = .systemFont(ofSize: 16)
         yearLabel.textColor = UIColor.white.withAlphaComponent(0.8)
         wrappedStack.addArrangedSubview(yearLabel)
 
         let inLanguages = UILabel()
-        inLanguages.text = "Your Language Journey"
+        inLanguages.text = "lab_your_language_journey".localized
         inLanguages.font = .systemFont(ofSize: 20, weight: .semibold)
         inLanguages.textColor = .white
         wrappedStack.addArrangedSubview(inLanguages)
@@ -1333,13 +1338,13 @@ private class StatsOverviewView: UIView {
         wrappedStack.addArrangedSubview(messageCount)
 
         let messagesLabel = UILabel()
-        messagesLabel.text = "messages exchanged"
+        messagesLabel.text = "lab_messages_exchanged".localized
         messagesLabel.font = .systemFont(ofSize: 16)
         messagesLabel.textColor = UIColor.white.withAlphaComponent(0.8)
         wrappedStack.addArrangedSubview(messagesLabel)
 
         let shareButton = UIButton(type: .system)
-        shareButton.setTitle("Share Your Wrapped ✨", for: .normal)
+        shareButton.setTitle("lab_share_wrapped".localized + " ✨", for: .normal)
         shareButton.setTitleColor(FluencaColors.primary, for: .normal)
         shareButton.titleLabel?.font = .systemFont(ofSize: 16, weight: .semibold)
         shareButton.backgroundColor = .white.withAlphaComponent(0.95)
@@ -1348,7 +1353,7 @@ private class StatsOverviewView: UIView {
 
         // Achievements section
         let achievementsLabel = UILabel()
-        achievementsLabel.text = "Achievements"
+        achievementsLabel.text = "lab_achievements".localized
         achievementsLabel.font = .systemFont(ofSize: 18, weight: .semibold)
         achievementsLabel.textColor = .white
         addSubview(achievementsLabel)

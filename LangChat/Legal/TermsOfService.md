@@ -9,7 +9,7 @@ By accessing or using our Service, you agree to be bound by these Terms. If you 
 ## 1. Eligibility
 
 ### 1.1 Age Requirement
-You must be at least 17 years old to use the Service. By using the Service, you represent and warrant that you meet this age requirement.
+You must be at least 18 years old to use the Service. By using the Service, you represent and warrant that you meet this age requirement.
 
 ### 1.2 Account Registration
 To use certain features of the Service, you must create an account using Sign in with Apple. You agree to:
@@ -30,9 +30,23 @@ Fluenca is a language exchange platform that connects users who want to practice
 - **Text-to-Speech:** Audio pronunciation of messages
 - **Language Lab:** Additional learning tools and exercises
 
-## 3. User Conduct
+## 3. User Conduct and Zero Tolerance Policy
 
-### 3.1 Acceptable Use
+### 3.1 Zero Tolerance for Objectionable Content and Abusive Users
+Fluenca maintains a zero-tolerance policy for objectionable content and abusive behavior. Any user who posts objectionable content or engages in abusive behavior will have their account terminated immediately and may be reported to the appropriate authorities. Objectionable content includes, but is not limited to:
+
+- Sexually explicit, pornographic, or obscene material
+- Content that promotes violence, self-harm, or terrorism
+- Hate speech, discriminatory language, or content targeting individuals or groups based on race, ethnicity, religion, gender, sexual orientation, disability, or national origin
+- Harassment, bullying, intimidation, or threats directed at other users
+- Content that exploits or endangers minors in any way
+- Spam, scams, phishing, or other fraudulent content
+- Content that infringes on intellectual property rights
+- Any other content that is illegal, harmful, or inappropriate
+
+We actively moderate user-generated content through a combination of automated filters and human review. Users who violate this policy will be permanently banned from the Service without warning or refund.
+
+### 3.2 Acceptable Use
 You agree to use the Service only for lawful purposes and in accordance with these Terms. You agree not to:
 
 - Use the Service for any illegal purpose
@@ -46,7 +60,7 @@ You agree to use the Service only for lawful purposes and in accordance with the
 - Manipulate or interfere with the Service's functionality
 - Use automated systems or bots to access the Service
 
-### 3.2 Language Exchange Purpose
+### 3.3 Language Exchange Purpose
 The Service is designed for language learning and cultural exchange. While we encourage meaningful connections, the primary purpose is educational. Users should:
 
 - Engage respectfully in language practice
@@ -54,7 +68,7 @@ The Service is designed for language learning and cultural exchange. While we en
 - Provide helpful and constructive feedback
 - Respect cultural differences
 
-### 3.3 Strictly Platonic Option
+### 3.4 Strictly Platonic Option
 Users who enable the "Strictly Platonic" setting will only be matched with other users who have also enabled this setting, ensuring a focused language learning environment without romantic undertones.
 
 ## 4. User Content
@@ -73,11 +87,14 @@ Your content must not:
 - Violate any applicable laws or regulations
 - Contain malware or harmful code
 
-### 4.3 Content Removal
+### 4.3 Content Moderation
+We employ a combination of automated content filtering and human review to detect and remove objectionable content. Content that violates our zero-tolerance policy (Section 3.1) will be removed immediately, and the offending user's account will be terminated.
+
+### 4.4 Content Removal
 We reserve the right to remove any content that violates these Terms or that we deem inappropriate, without prior notice.
 
-### 4.4 Reporting
-If you encounter content or behavior that violates these Terms, please report it using the in-app reporting feature or by contacting us at support@painkillerlabs.com.
+### 4.5 Reporting
+If you encounter content or behavior that violates these Terms, please report it using the in-app reporting feature or by contacting us at support@painkillerlabs.com. We review all reports and take appropriate action, which may include content removal, user warnings, or account termination.
 
 ## 5. Privacy and Data
 

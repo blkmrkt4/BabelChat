@@ -15,18 +15,20 @@ class BioViewController: BaseOnboardingViewController {
     // MARK: - Properties
     private let maxCharacters = 500
     private var isPromptsExpanded = false
-    private let prompts = [
-        "What's your language learning story?",
-        "What motivates you to learn?",
-        "What are your hobbies?",
-        "Describe yourself in 3 words",
-        "Share a fun fact about yourself"
-    ]
+    private var prompts: [String] {
+        return [
+            "bio_prompt_1".localized,
+            "bio_prompt_2".localized,
+            "bio_prompt_3".localized,
+            "bio_prompt_4".localized,
+            "bio_prompt_5".localized
+        ]
+    }
 
     // MARK: - Lifecycle
     override func configure() {
         step = .bio
-        setTitle("About you?")
+        setTitle("onboarding_bio_title".localized)
         setupViews()
         setupKeyboardToolbar()
     }
@@ -45,7 +47,7 @@ class BioViewController: BaseOnboardingViewController {
         contentView.addSubview(textView)
 
         // Placeholder
-        placeholderLabel.text = "Share your story, interests, personality..."
+        placeholderLabel.text = "onboarding_bio_placeholder".localized
         placeholderLabel.font = .systemFont(ofSize: 16, weight: .regular)
         placeholderLabel.textColor = .white.withAlphaComponent(0.4)
         placeholderLabel.numberOfLines = 0
@@ -59,7 +61,7 @@ class BioViewController: BaseOnboardingViewController {
         contentView.addSubview(characterCountLabel)
 
         // Prompts header (expandable)
-        promptsHeader.setTitle("💡 Need inspiration? Tap for prompts", for: .normal)
+        promptsHeader.setTitle("onboarding_bio_inspiration".localized, for: .normal)
         promptsHeader.setTitleColor(.white.withAlphaComponent(0.7), for: .normal)
         promptsHeader.titleLabel?.font = .systemFont(ofSize: 14, weight: .medium)
         promptsHeader.contentHorizontalAlignment = .left
@@ -94,7 +96,7 @@ class BioViewController: BaseOnboardingViewController {
 
         for prompt in prompts {
             let button = UIButton(type: .system)
-            button.setTitle("• " + prompt, for: .normal)
+            button.setTitle("auto_string_1".localized + prompt, for: .normal)
             button.titleLabel?.font = .systemFont(ofSize: 14, weight: .regular)
             button.setTitleColor(.white.withAlphaComponent(0.8), for: .normal)
             button.contentHorizontalAlignment = .left
@@ -103,7 +105,7 @@ class BioViewController: BaseOnboardingViewController {
         }
 
         // Skip label
-        skipLabel.text = "This field is optional - feel free to skip"
+        skipLabel.text = "onboarding_bio_optional".localized
         skipLabel.font = .systemFont(ofSize: 13, weight: .regular)
         skipLabel.textColor = .white.withAlphaComponent(0.5)
         skipLabel.textAlignment = .center
@@ -187,7 +189,7 @@ class BioViewController: BaseOnboardingViewController {
 
         // Done button to dismiss keyboard
         let doneButton = UIBarButtonItem(
-            title: "Done",
+            title: "common_done".localized,
             style: .done,
             target: self,
             action: #selector(dismissKeyboard)

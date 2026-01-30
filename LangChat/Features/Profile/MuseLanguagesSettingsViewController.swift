@@ -21,7 +21,7 @@ class MuseLanguagesSettingsViewController: UIViewController {
 
     // MARK: - Setup
     private func setupViews() {
-        title = "Muse Languages"
+        title = "settings_muse_languages".localized
         view.backgroundColor = .systemGroupedBackground
 
         // Add close button if presented modally
@@ -145,17 +145,17 @@ extension MuseLanguagesSettingsViewController: UITableViewDataSource {
 
     func tableView(_ tableView: UITableView, titleForHeaderInSection section: Int) -> String? {
         if section == 0 {
-            return "Always Available"
+            return "muse_always_available".localized
         } else {
-            return "Additional Languages"
+            return "muse_additional_languages".localized
         }
     }
 
     func tableView(_ tableView: UITableView, titleForFooterInSection section: Int) -> String? {
         if section == 0 {
-            return "Your native and learning languages are always available when chatting with your Muse."
+            return "muse_always_available_desc".localized
         } else {
-            return "Select additional languages you'd like to explore. These will appear as options when messaging your AI Muse."
+            return "muse_additional_languages_desc".localized
         }
     }
 

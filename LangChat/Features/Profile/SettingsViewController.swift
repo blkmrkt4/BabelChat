@@ -14,6 +14,7 @@ class SettingsViewController: UIViewController {
         case profileSettings
         case matchingSettings
         case museSettings
+        case general
         case social
         case grammarFeedback
         case privacy
@@ -24,12 +25,13 @@ class SettingsViewController: UIViewController {
             switch self {
             case .profileSettings: return nil  // No header for single profile item
             case .matchingSettings: return nil  // No header for single matching item
-            case .museSettings: return "AI Muse"
-            case .social: return "Share"
-            case .grammarFeedback: return "Grammar Feedback"
-            case .privacy: return "Privacy & Safety"
-            case .support: return "Support"
-            case .about: return "About"
+            case .museSettings: return "settings_section_ai_muse".localized
+            case .general: return "settings_section_general".localized
+            case .social: return "settings_section_share".localized
+            case .grammarFeedback: return "settings_section_grammar_feedback".localized
+            case .privacy: return "settings_section_privacy".localized
+            case .support: return "settings_section_support".localized
+            case .about: return "settings_section_about".localized
             }
         }
 
@@ -37,44 +39,49 @@ class SettingsViewController: UIViewController {
             switch self {
             case .profileSettings:
                 return [
-                    ("Profile Settings", "person.circle")
+                    ("settings_profile_settings".localized, "person.circle")
                 ]
             case .matchingSettings:
                 return [
-                    ("Matching Settings", "slider.horizontal.3")
+                    ("settings_matching_settings".localized, "slider.horizontal.3")
                 ]
             case .museSettings:
                 return [
-                    ("Muse Languages", "globe")
+                    ("settings_muse_languages".localized, "globe")
+                ]
+            case .general:
+                return [
+                    ("settings_app_language".localized, "globe")
                 ]
             case .social:
                 return [
-                    ("Invite Matches", "person.badge.plus")
+                    ("settings_invite_matches".localized, "person.badge.plus")
                 ]
             case .grammarFeedback:
                 return [
-                    ("Feedback Level", "slider.horizontal.3")
+                    ("settings_feedback_level".localized, "slider.horizontal.3")
                 ]
             case .privacy:
                 return [
-                    ("Data & Privacy", "lock.shield"),
-                    ("Notifications", "bell"),
-                    ("Appearance", "moon")
+                    ("settings_data_privacy".localized, "lock.shield"),
+                    ("settings_notifications".localized, "bell"),
+                    ("settings_appearance".localized, "moon"),
+                    ("settings_delete_account".localized, "trash")
                 ]
             case .support:
                 return [
-                    ("Subscription", "crown"),
-                    ("Help Center", "questionmark.circle"),
-                    ("Request a Feature", "lightbulb"),
-                    ("Contact Us", "envelope"),
-                    ("Report a Problem", "exclamationmark.bubble")
+                    ("settings_subscription".localized, "crown"),
+                    ("settings_help_center".localized, "questionmark.circle"),
+                    ("settings_request_feature".localized, "lightbulb"),
+                    ("settings_contact_us".localized, "envelope"),
+                    ("settings_report_problem".localized, "exclamationmark.bubble")
                 ]
             case .about:
                 return [
-                    ("Terms of Service", "doc.text"),
-                    ("Privacy Policy", "hand.raised"),
-                    ("Open Source Libraries", "chevron.left.forwardslash.chevron.right"),
-                    ("Version", "info.circle")
+                    ("settings_terms_of_service".localized, "doc.text"),
+                    ("settings_privacy_policy".localized, "hand.raised"),
+                    ("settings_open_source".localized, "chevron.left.forwardslash.chevron.right"),
+                    ("settings_version".localized, "info.circle")
                 ]
             }
         }
@@ -86,7 +93,7 @@ class SettingsViewController: UIViewController {
     }
 
     private func setupViews() {
-        title = "Settings"
+        title = "settings_title".localized
         navigationItem.largeTitleDisplayMode = .never
         view.backgroundColor = .systemGroupedBackground
 
@@ -115,7 +122,7 @@ class SettingsViewController: UIViewController {
         let footerView = UIView(frame: CGRect(x: 0, y: 0, width: view.frame.width, height: footerHeight))
 
         let signOutButton = UIButton(type: .system)
-        signOutButton.setTitle("Sign Out", for: .normal)
+        signOutButton.setTitle("settings_sign_out".localized, for: .normal)
         signOutButton.setTitleColor(.systemRed, for: .normal)
         signOutButton.titleLabel?.font = .systemFont(ofSize: 17, weight: .regular)
         signOutButton.addTarget(self, action: #selector(signOutTapped), for: .touchUpInside)
@@ -131,7 +138,7 @@ class SettingsViewController: UIViewController {
         #if DEBUG
         // Add debug reset button to return to landing page
         let resetToLandingButton = UIButton(type: .system)
-        resetToLandingButton.setTitle("Reset to Landing Page", for: .normal)
+        resetToLandingButton.setTitle("settings_reset_landing".localized, for: .normal)
         resetToLandingButton.setTitleColor(.systemOrange, for: .normal)
         resetToLandingButton.titleLabel?.font = .systemFont(ofSize: 15, weight: .regular)
         resetToLandingButton.addTarget(self, action: #selector(resetToLandingPageTapped), for: .touchUpInside)
@@ -150,13 +157,13 @@ class SettingsViewController: UIViewController {
 
     @objc private func signOutTapped() {
         let alert = UIAlertController(
-            title: "Sign Out",
-            message: "Are you sure you want to sign out?",
+            title: "settings_sign_out".localized,
+            message: "settings_sign_out_confirm".localized,
             preferredStyle: .alert
         )
 
-        alert.addAction(UIAlertAction(title: "Cancel", style: .cancel))
-        alert.addAction(UIAlertAction(title: "Sign Out", style: .destructive) { [weak self] _ in
+        alert.addAction(UIAlertAction(title: "common_cancel".localized, style: .cancel))
+        alert.addAction(UIAlertAction(title: "settings_sign_out".localized, style: .destructive) { [weak self] _ in
             Task {
                 do {
                     // Sign out from Supabase
@@ -198,8 +205,8 @@ class SettingsViewController: UIViewController {
             preferredStyle: .alert
         )
 
-        alert.addAction(UIAlertAction(title: "Cancel", style: .cancel))
-        alert.addAction(UIAlertAction(title: "Reset", style: .destructive) { [weak self] _ in
+        alert.addAction(UIAlertAction(title: "common_cancel".localized, style: .cancel))
+        alert.addAction(UIAlertAction(title: "common_reset".localized, style: .destructive) { [weak self] _ in
             Task {
                 do {
                     // Sign out from Supabase
@@ -250,6 +257,12 @@ class SettingsViewController: UIViewController {
         case .museSettings:
             showMuseLanguages()
 
+        case .general:
+            switch row {
+            case 0: showLanguageSettings()
+            default: break
+            }
+
         case .social:
             showInviteFriends()
 
@@ -264,6 +277,7 @@ class SettingsViewController: UIViewController {
             case 0: showDataPrivacy()
             case 1: break // Notifications switch cell handled by switch control
             case 2: showAppearanceSettings()
+            case 3: showDeleteAccount()
             default: break
             }
 
@@ -314,7 +328,7 @@ class SettingsViewController: UIViewController {
                         message: "Could not update your preference. Please try again.",
                         preferredStyle: .alert
                     )
-                    alert.addAction(UIAlertAction(title: "OK", style: .default))
+                    alert.addAction(UIAlertAction(title: "common_ok".localized, style: .default))
                     self.present(alert, animated: true)
                 }
             }
@@ -346,7 +360,7 @@ class SettingsViewController: UIViewController {
                         message: "Could not update your preference. Please try again.",
                         preferredStyle: .alert
                     )
-                    alert.addAction(UIAlertAction(title: "OK", style: .default))
+                    alert.addAction(UIAlertAction(title: "common_ok".localized, style: .default))
                     self.present(alert, animated: true)
                 }
             }
@@ -369,6 +383,11 @@ class SettingsViewController: UIViewController {
     private func showMuseLanguages() {
         let museLanguagesVC = MuseLanguagesSettingsViewController()
         navigationController?.pushViewController(museLanguagesVC, animated: true)
+    }
+
+    private func showLanguageSettings() {
+        let languageVC = LanguageSettingsViewController()
+        navigationController?.pushViewController(languageVC, animated: true)
     }
 
     private func showInviteFriends() {
@@ -437,7 +456,7 @@ class SettingsViewController: UIViewController {
                             message: "Please check your connection and try again.",
                             preferredStyle: .alert
                         )
-                        errorAlert.addAction(UIAlertAction(title: "OK", style: .default))
+                        errorAlert.addAction(UIAlertAction(title: "common_ok".localized, style: .default))
                         self.present(errorAlert, animated: true)
                     }
                 }
@@ -458,15 +477,15 @@ class SettingsViewController: UIViewController {
         let currentLevel = savedGranularity == 0 ? 2 : savedGranularity // Default to Moderate
 
         let alert = UIAlertController(
-            title: "Grammar Feedback Level",
-            message: "Choose how much grammar feedback you want when chatting",
+            title: "settings_grammar_feedback_title".localized,
+            message: "settings_grammar_feedback_message".localized,
             preferredStyle: .actionSheet
         )
 
         let levels: [(String, String, Int)] = [
-            ("Minimal", "Only critical errors", 1),
-            ("Moderate", "Important corrections and alternatives", 2),
-            ("Verbose", "Detailed feedback with cultural notes", 3)
+            ("settings_grammar_minimal".localized, "settings_grammar_minimal_desc".localized, 1),
+            ("settings_grammar_moderate".localized, "settings_grammar_moderate_desc".localized, 2),
+            ("settings_grammar_verbose".localized, "settings_grammar_verbose_desc".localized, 3)
         ]
 
         for (title, description, value) in levels {
@@ -479,7 +498,7 @@ class SettingsViewController: UIViewController {
             alert.addAction(action)
         }
 
-        alert.addAction(UIAlertAction(title: "Cancel", style: .cancel))
+        alert.addAction(UIAlertAction(title: "common_cancel".localized, style: .cancel))
 
         if let popover = alert.popoverPresentationController {
             popover.sourceView = tableView
@@ -497,15 +516,15 @@ class SettingsViewController: UIViewController {
         let currentMode = UserDefaults.standard.integer(forKey: "appearanceMode")
 
         let alert = UIAlertController(
-            title: "Appearance",
-            message: "Choose your preferred appearance mode",
+            title: "settings_appearance".localized,
+            message: "settings_appearance_message".localized,
             preferredStyle: .actionSheet
         )
 
         let modes: [(String, Int, UIUserInterfaceStyle)] = [
-            ("Light", 0, .light),
-            ("Dark", 1, .dark),
-            ("System Default", 2, .unspecified)
+            ("settings_appearance_light".localized, 0, .light),
+            ("settings_appearance_dark".localized, 1, .dark),
+            ("settings_appearance_system".localized, 2, .unspecified)
         ]
 
         for (title, value, style) in modes {
@@ -524,7 +543,7 @@ class SettingsViewController: UIViewController {
             alert.addAction(action)
         }
 
-        alert.addAction(UIAlertAction(title: "Cancel", style: .cancel))
+        alert.addAction(UIAlertAction(title: "common_cancel".localized, style: .cancel))
 
         if let popover = alert.popoverPresentationController {
             popover.sourceView = tableView
@@ -537,6 +556,99 @@ class SettingsViewController: UIViewController {
     private func showDataPrivacy() {
         let dataPrivacyVC = DataPrivacyViewController()
         navigationController?.pushViewController(dataPrivacyVC, animated: true)
+    }
+
+    private func showDeleteAccount() {
+        // Direct access to account deletion (Guideline 5.1.1v requires easy discoverability)
+        let alert = UIAlertController(
+            title: "privacy_delete_account_title".localized,
+            message: "privacy_delete_account_message".localized,
+            preferredStyle: .alert
+        )
+
+        alert.addAction(UIAlertAction(title: "common_cancel".localized, style: .cancel))
+        alert.addAction(UIAlertAction(title: "common_delete".localized, style: .destructive) { [weak self] _ in
+            self?.confirmDeleteAccount()
+        })
+
+        present(alert, animated: true)
+    }
+
+    private func confirmDeleteAccount() {
+        let confirmAlert = UIAlertController(
+            title: "privacy_delete_confirm_title".localized,
+            message: "privacy_delete_confirm_message".localized,
+            preferredStyle: .alert
+        )
+
+        confirmAlert.addTextField { textField in
+            textField.placeholder = "privacy_delete_confirm_placeholder".localized
+            textField.autocapitalizationType = .allCharacters
+        }
+
+        confirmAlert.addAction(UIAlertAction(title: "common_cancel".localized, style: .cancel))
+        confirmAlert.addAction(UIAlertAction(title: "common_delete".localized, style: .destructive) { [weak self] _ in
+            guard let textField = confirmAlert.textFields?.first,
+                  textField.text?.uppercased() == "DELETE" else {
+                let errorAlert = UIAlertController(
+                    title: "privacy_delete_incorrect".localized,
+                    message: "privacy_delete_incorrect_message".localized,
+                    preferredStyle: .alert
+                )
+                errorAlert.addAction(UIAlertAction(title: "common_ok".localized, style: .default))
+                self?.present(errorAlert, animated: true)
+                return
+            }
+
+            self?.performAccountDeletion()
+        })
+
+        present(confirmAlert, animated: true)
+    }
+
+    private func performAccountDeletion() {
+        let loadingAlert = UIAlertController(
+            title: nil,
+            message: "privacy_deleting_account".localized,
+            preferredStyle: .alert
+        )
+        present(loadingAlert, animated: true)
+
+        Task {
+            do {
+                try await SupabaseService.shared.deleteAccount()
+
+                await MainActor.run {
+                    // Clear local data
+                    if let domain = Bundle.main.bundleIdentifier {
+                        UserDefaults.standard.removePersistentDomain(forName: domain)
+                    }
+
+                    loadingAlert.dismiss(animated: true) {
+                        // Navigate to landing screen
+                        if let windowScene = UIApplication.shared.connectedScenes.first as? UIWindowScene,
+                           let window = windowScene.windows.first {
+                            let landingVC = LandingViewController()
+                            let navController = UINavigationController(rootViewController: landingVC)
+                            window.rootViewController = navController
+                            window.makeKeyAndVisible()
+                        }
+                    }
+                }
+            } catch {
+                await MainActor.run {
+                    loadingAlert.dismiss(animated: true) {
+                        let errorAlert = UIAlertController(
+                            title: "privacy_delete_error_title".localized,
+                            message: "privacy_delete_error_message".localized,
+                            preferredStyle: .alert
+                        )
+                        errorAlert.addAction(UIAlertAction(title: "common_ok".localized, style: .default))
+                        self.present(errorAlert, animated: true)
+                    }
+                }
+            }
+        }
     }
 
     private func showHelpCenter() {
@@ -557,16 +669,16 @@ class SettingsViewController: UIViewController {
     private func contactSupport() {
         // Show contact support with email option
         let alert = UIAlertController(
-            title: "Contact Support",
-            message: "How would you like to contact us?",
+            title: "settings_contact_support_title".localized,
+            message: "settings_contact_support_message".localized,
             preferredStyle: .actionSheet
         )
 
-        alert.addAction(UIAlertAction(title: "Send Email", style: .default) { [weak self] _ in
+        alert.addAction(UIAlertAction(title: "settings_send_email".localized, style: .default) { [weak self] _ in
             self?.sendSupportEmail(type: "general")
         })
 
-        alert.addAction(UIAlertAction(title: "Cancel", style: .cancel))
+        alert.addAction(UIAlertAction(title: "common_cancel".localized, style: .cancel))
 
         if let popover = alert.popoverPresentationController {
             popover.sourceView = tableView
@@ -579,19 +691,19 @@ class SettingsViewController: UIViewController {
     private func reportProblem() {
         // Show report problem with text input
         let alert = UIAlertController(
-            title: "Report a Problem",
-            message: "Please describe the issue you're experiencing",
+            title: "settings_report_problem".localized,
+            message: "settings_report_problem_message".localized,
             preferredStyle: .alert
         )
 
         alert.addTextField { textField in
-            textField.placeholder = "Describe the problem..."
+            textField.placeholder = "settings_report_problem_placeholder".localized
         }
 
-        alert.addAction(UIAlertAction(title: "Cancel", style: .cancel))
-        alert.addAction(UIAlertAction(title: "Submit", style: .default) { [weak self] _ in
+        alert.addAction(UIAlertAction(title: "common_cancel".localized, style: .cancel))
+        alert.addAction(UIAlertAction(title: "common_submit".localized, style: .default) { [weak self] _ in
             guard let message = alert.textFields?.first?.text, !message.isEmpty else {
-                self?.showAlert(title: "Error", message: "Please describe the problem")
+                self?.showAlert(title: "common_error".localized, message: "settings_report_problem_error".localized)
                 return
             }
             self?.submitFeedback(type: "bug_report", message: message)
@@ -603,19 +715,19 @@ class SettingsViewController: UIViewController {
     private func sendSupportEmail(type: String) {
         // Submit as contact support feedback
         let alert = UIAlertController(
-            title: "Contact Support",
-            message: "Please describe how we can help you",
+            title: "settings_contact_support_title".localized,
+            message: "settings_contact_support_describe".localized,
             preferredStyle: .alert
         )
 
         alert.addTextField { textField in
-            textField.placeholder = "How can we help?"
+            textField.placeholder = "settings_contact_support_placeholder".localized
         }
 
-        alert.addAction(UIAlertAction(title: "Cancel", style: .cancel))
-        alert.addAction(UIAlertAction(title: "Submit", style: .default) { [weak self] _ in
+        alert.addAction(UIAlertAction(title: "common_cancel".localized, style: .cancel))
+        alert.addAction(UIAlertAction(title: "common_submit".localized, style: .default) { [weak self] _ in
             guard let message = alert.textFields?.first?.text, !message.isEmpty else {
-                self?.showAlert(title: "Error", message: "Please describe your question")
+                self?.showAlert(title: "common_error".localized, message: "settings_contact_support_error".localized)
                 return
             }
             self?.submitFeedback(type: "contact_support", message: message)
@@ -632,12 +744,12 @@ class SettingsViewController: UIViewController {
                     message: message
                 )
                 await MainActor.run {
-                    self.showAlert(title: "Thank You!", message: "Your feedback has been submitted.")
+                    self.showAlert(title: "settings_feedback_thank_you".localized, message: "settings_feedback_submitted".localized)
                 }
             } catch {
                 print("❌ Error submitting feedback: \(error)")
                 await MainActor.run {
-                    self.showAlert(title: "Error", message: "Failed to submit feedback. Please try again.")
+                    self.showAlert(title: "common_error".localized, message: "settings_feedback_error".localized)
                 }
             }
         }
@@ -645,7 +757,7 @@ class SettingsViewController: UIViewController {
 
     private func showAlert(title: String, message: String) {
         let alert = UIAlertController(title: title, message: message, preferredStyle: .alert)
-        alert.addAction(UIAlertAction(title: "OK", style: .default))
+        alert.addAction(UIAlertAction(title: "common_ok".localized, style: .default))
         present(alert, animated: true)
     }
 
@@ -671,7 +783,7 @@ class SettingsViewController: UIViewController {
                 message: "Could not load \(title)",
                 preferredStyle: .alert
             )
-            alert.addAction(UIAlertAction(title: "OK", style: .default))
+            alert.addAction(UIAlertAction(title: "common_ok".localized, style: .default))
             present(alert, animated: true)
             return
         }
@@ -716,7 +828,7 @@ class SettingsViewController: UIViewController {
             message: message,
             preferredStyle: .alert
         )
-        alert.addAction(UIAlertAction(title: "OK", style: .default))
+        alert.addAction(UIAlertAction(title: "common_ok".localized, style: .default))
         present(alert, animated: true)
     }
 
@@ -737,7 +849,7 @@ class SettingsViewController: UIViewController {
             self?.devMenuResetToLandingPage()
         })
 
-        alert.addAction(UIAlertAction(title: "Cancel", style: .cancel))
+        alert.addAction(UIAlertAction(title: "common_cancel".localized, style: .cancel))
 
         // For iPad
         if let popover = alert.popoverPresentationController {
@@ -756,8 +868,8 @@ class SettingsViewController: UIViewController {
             preferredStyle: .alert
         )
 
-        confirm.addAction(UIAlertAction(title: "Cancel", style: .cancel))
-        confirm.addAction(UIAlertAction(title: "Reset", style: .destructive) { [weak self] _ in
+        confirm.addAction(UIAlertAction(title: "common_cancel".localized, style: .cancel))
+        confirm.addAction(UIAlertAction(title: "common_reset".localized, style: .destructive) { [weak self] _ in
             // Clear UserDefaults (except auth tokens)
             let keysToPreserve = ["supabase_access_token", "supabase_refresh_token"]
             let domain = Bundle.main.bundleIdentifier!
@@ -777,7 +889,7 @@ class SettingsViewController: UIViewController {
                 message: "All local data has been cleared. Restart the app to see changes.",
                 preferredStyle: .alert
             )
-            success.addAction(UIAlertAction(title: "OK", style: .default))
+            success.addAction(UIAlertAction(title: "common_ok".localized, style: .default))
             self?.present(success, animated: true)
 
             print("🔧 Dev Menu: Reset all local data")
@@ -793,8 +905,8 @@ class SettingsViewController: UIViewController {
             preferredStyle: .alert
         )
 
-        confirm.addAction(UIAlertAction(title: "Cancel", style: .cancel))
-        confirm.addAction(UIAlertAction(title: "Reset", style: .destructive) { _ in
+        confirm.addAction(UIAlertAction(title: "common_cancel".localized, style: .cancel))
+        confirm.addAction(UIAlertAction(title: "common_reset".localized, style: .destructive) { _ in
             Task {
                 do {
                     // Sign out from Supabase
@@ -973,13 +1085,25 @@ extension SettingsViewController: UITableViewDataSource {
         config.image = UIImage(systemName: item.icon)
 
         // Add detail text for specific items
+        if settingSection == .general && indexPath.row == 0 { // App Language
+            let currentLang = LocalizationService.shared.currentLanguage
+            config.secondaryText = LocalizationService.shared.nativeName(for: currentLang)
+        }
         if settingSection == .about && indexPath.row == 3 { // Version
             let version = Bundle.main.infoDictionary?["CFBundleShortVersionString"] as? String ?? "1.0"
             config.secondaryText = version
         }
 
+        // Style delete account cell in red for visibility
+        if settingSection == .privacy && indexPath.row == 3 {
+            config.textProperties.color = .systemRed
+            config.imageProperties.tintColor = .systemRed
+            cell.accessoryType = .none
+        } else {
+            cell.accessoryType = .disclosureIndicator
+        }
+
         cell.contentConfiguration = config
-        cell.accessoryType = .disclosureIndicator
 
         return cell
     }

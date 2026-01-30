@@ -42,13 +42,13 @@ class FeatureRequestViewController: UIViewController {
         contentView.translatesAutoresizingMaskIntoConstraints = false
 
         // Title label
-        titleLabel.text = "What feature would you like to see?"
+        titleLabel.text = "feature_request_placeholder".localized
         titleLabel.font = .systemFont(ofSize: 24, weight: .bold)
         titleLabel.numberOfLines = 0
         contentView.addSubview(titleLabel)
 
         // Description label
-        descriptionLabel.text = "Tell us about a feature that would improve your language learning experience. We read every suggestion!"
+        descriptionLabel.text = "feature_request_description".localized
         descriptionLabel.font = .systemFont(ofSize: 16)
         descriptionLabel.textColor = .secondaryLabel
         descriptionLabel.numberOfLines = 0
@@ -71,7 +71,7 @@ class FeatureRequestViewController: UIViewController {
         contentView.addSubview(characterCountLabel)
 
         // Submit button
-        submitButton.setTitle("Submit Feature Request", for: .normal)
+        submitButton.setTitle("feature_request_submit".localized, for: .normal)
         submitButton.titleLabel?.font = .systemFont(ofSize: 17, weight: .semibold)
         submitButton.backgroundColor = .systemBlue
         submitButton.setTitleColor(.white, for: .normal)
@@ -170,7 +170,7 @@ class FeatureRequestViewController: UIViewController {
         }
 
         submitButton.isEnabled = false
-        submitButton.setTitle("Submitting...", for: .normal)
+        submitButton.setTitle("common_submitting".localized, for: .normal)
 
         Task {
             do {
@@ -185,7 +185,7 @@ class FeatureRequestViewController: UIViewController {
                 print("Error submitting feature request: \(error)")
                 await MainActor.run {
                     self.submitButton.isEnabled = true
-                    self.submitButton.setTitle("Submit Feature Request", for: .normal)
+                    self.submitButton.setTitle("feature_request_submit".localized, for: .normal)
                     self.showAlert(title: "Error", message: "Failed to submit your feature request. Please try again.")
                 }
             }
@@ -198,7 +198,7 @@ class FeatureRequestViewController: UIViewController {
             message: "Your feature request has been submitted. We appreciate your feedback!",
             preferredStyle: .alert
         )
-        alert.addAction(UIAlertAction(title: "OK", style: .default) { [weak self] _ in
+        alert.addAction(UIAlertAction(title: "common_ok".localized, style: .default) { [weak self] _ in
             self?.dismiss(animated: true)
         })
         present(alert, animated: true)
@@ -206,7 +206,7 @@ class FeatureRequestViewController: UIViewController {
 
     private func showAlert(title: String, message: String) {
         let alert = UIAlertController(title: title, message: message, preferredStyle: .alert)
-        alert.addAction(UIAlertAction(title: "OK", style: .default))
+        alert.addAction(UIAlertAction(title: "common_ok".localized, style: .default))
         present(alert, animated: true)
     }
 

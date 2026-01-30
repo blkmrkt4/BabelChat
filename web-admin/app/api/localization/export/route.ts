@@ -13,21 +13,36 @@ export async function GET(request: Request) {
     const format = searchParams.get('format') || 'json'
     const languageCode = searchParams.get('language_code')
 
-    let query = supabase
-      .from('app_translations')
-      .select('*')
-      .order('string_key', { ascending: true })
+    // Fetch all translations with pagination to avoid row limit
+    let allData: Translation[] = []
+    let offset = 0
+    const limit = 1000
 
-    if (languageCode) {
-      query = query.eq('language_code', languageCode)
+    while (true) {
+      let query = supabase
+        .from('app_translations')
+        .select('*')
+        .order('string_key', { ascending: true })
+        .range(offset, offset + limit - 1)
+
+      if (languageCode) {
+        query = query.eq('language_code', languageCode)
+      }
+
+      const { data, error } = await query
+
+      if (error) {
+        console.error('Error fetching translations:', error)
+        return NextResponse.json({ error: error.message }, { status: 500 })
+      }
+
+      if (!data || data.length === 0) break
+      allData = allData.concat(data)
+      if (data.length < limit) break
+      offset += limit
     }
 
-    const { data, error } = await query
-
-    if (error) {
-      console.error('Error fetching translations:', error)
-      return NextResponse.json({ error: error.message }, { status: 500 })
-    }
+    const data = allData
 
     switch (format) {
       case 'xcstrings': {

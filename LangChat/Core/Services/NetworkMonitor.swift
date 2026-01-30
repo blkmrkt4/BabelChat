@@ -11,6 +11,9 @@ final class NetworkMonitor {
     /// Current connectivity status
     private(set) var isConnected: Bool = true
 
+    /// Whether NWPathMonitor has reported at least once
+    private(set) var hasReceivedInitialStatus: Bool = false
+
     /// Connection type
     private(set) var connectionType: ConnectionType = .unknown
 
@@ -30,6 +33,7 @@ final class NetworkMonitor {
     func startMonitoring() {
         monitor.pathUpdateHandler = { [weak self] path in
             self?.isConnected = path.status == .satisfied
+            self?.hasReceivedInitialStatus = true
             self?.updateConnectionType(path)
 
             DispatchQueue.main.async {
@@ -62,6 +66,14 @@ final class NetworkMonitor {
             connectionType = .wiredEthernet
         } else {
             connectionType = .unknown
+        }
+    }
+
+    /// Wait for NWPathMonitor to report its initial network status
+    func waitForInitialStatus(timeout: TimeInterval = 3.0) async {
+        let deadline = Date().addingTimeInterval(timeout)
+        while !hasReceivedInitialStatus && Date() < deadline {
+            try? await Task.sleep(nanoseconds: 100_000_000) // 100ms
         }
     }
 

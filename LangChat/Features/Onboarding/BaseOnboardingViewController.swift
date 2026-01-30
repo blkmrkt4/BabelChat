@@ -103,7 +103,7 @@ class BaseOnboardingViewController: UIViewController {
         scrollContentView.addSubview(contentView)
 
         // Continue button
-        continueButton.setTitle("Continue", for: .normal)
+        continueButton.setTitle("common_continue".localized, for: .normal)
         continueButton.titleLabel?.font = .systemFont(ofSize: 18, weight: .semibold)
         continueButton.backgroundColor = .systemBlue
         continueButton.setTitleColor(.white, for: .normal)
@@ -264,9 +264,9 @@ class BaseOnboardingViewController: UIViewController {
             preferredStyle: .alert
         )
 
-        alert.addAction(UIAlertAction(title: "Cancel", style: .cancel))
+        alert.addAction(UIAlertAction(title: "common_cancel".localized, style: .cancel))
 
-        alert.addAction(UIAlertAction(title: "Reset", style: .destructive) { _ in
+        alert.addAction(UIAlertAction(title: "common_reset".localized, style: .destructive) { _ in
             Task {
                 do {
                     // Sign out from Supabase

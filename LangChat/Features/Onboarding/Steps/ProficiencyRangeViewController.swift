@@ -14,14 +14,14 @@ class ProficiencyRangeViewController: BaseOnboardingViewController {
     // MARK: - Lifecycle
     override func configure() {
         step = .proficiencyRange
-        setTitle("Partner level?")
+        setTitle("onboarding_partner_level_title".localized)
         setupViews()
     }
 
     // MARK: - Setup
     private func setupViews() {
         // Explanation
-        explanationLabel.text = "Choose whether you prefer matching with native speakers, learners like yourself, or everyone. This helps us find the best language exchange partners for you."
+        explanationLabel.text = "onboarding_partner_level_desc".localized
         explanationLabel.font = .systemFont(ofSize: 15, weight: .regular)
         explanationLabel.textColor = .white.withAlphaComponent(0.8)
         explanationLabel.numberOfLines = 0
@@ -40,7 +40,7 @@ class ProficiencyRangeViewController: BaseOnboardingViewController {
         contentView.addSubview(proficiencyRangeSelector)
 
         // Hint label
-        hintLabel.text = "Tap or drag to select a range. Long press for level details."
+        hintLabel.text = "onboarding_partner_level_hint".localized
         hintLabel.font = .systemFont(ofSize: 13, weight: .regular)
         hintLabel.textColor = .white.withAlphaComponent(0.5)
         hintLabel.textAlignment = .center
@@ -93,10 +93,10 @@ class ProficiencyRangeViewController: BaseOnboardingViewController {
         stack.alignment = .fill
 
         let levels: [(String, String, String)] = [
-            ("Native", "Fluent speakers who grew up with the language", "person.fill.checkmark"),
-            ("Adv", "Near-fluent speakers with excellent command", "star.fill"),
-            ("Int", "Comfortable with everyday conversations", "message.fill"),
-            ("Beg", "Just starting to learn the basics", "book.fill")
+            ("proficiency_native".localized, "proficiency_native_desc".localized, "person.fill.checkmark"),
+            ("proficiency_advanced_short".localized, "proficiency_advanced_long".localized, "star.fill"),
+            ("proficiency_intermediate_short".localized, "proficiency_intermediate_long".localized, "message.fill"),
+            ("proficiency_beginner_short".localized, "proficiency_beginner_long".localized, "book.fill")
         ]
 
         for (abbrev, description, icon) in levels {

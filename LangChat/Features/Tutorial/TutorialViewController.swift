@@ -50,138 +50,140 @@ class TutorialViewController: UIViewController {
 
     private var actionButtons: [ActionButtonInfo] {
         [
-            ActionButtonInfo(imageName: "RejectButton", sfSymbol: nil, description: "Pass on this profile", size: 50),
-            ActionButtonInfo(imageName: "StarButton", sfSymbol: nil, description: "Save for later", size: 36),
-            ActionButtonInfo(imageName: "MatchButton", sfSymbol: nil, description: "Send match request", size: 50)
+            ActionButtonInfo(imageName: "RejectButton", sfSymbol: nil, description: "tutorial_action_pass".localized, size: 50),
+            ActionButtonInfo(imageName: "StarButton", sfSymbol: nil, description: "tutorial_action_save".localized, size: 36),
+            ActionButtonInfo(imageName: "MatchButton", sfSymbol: nil, description: "tutorial_action_match".localized, size: 50)
         ]
     }
 
-    private let tutorialPages: [TutorialPage] = [
-        TutorialPage(
-            icon: "hand.tap.fill",
-            title: "Discover & Match",
-            description: "Browse potential partners using the action buttons",
-            tips: [], // Will use custom button display instead
-            isDiscoverPage: true
-        ),
-        TutorialPage(
-            icon: "bubble.left.and.bubble.right.fill",
-            title: "Chat & Learn",
-            description: "Have real conversations to practice your target language",
-            tips: [
-                "Write messages in your learning language",
-                "Don't worry about mistakes - that's how you learn!",
-                "Ask your partner to correct you",
-                "Tap the Muse button in the message bar for help composing"
-            ]
-        ),
-        TutorialPage(
-            icon: "sparkles",
-            title: "Your Muse Assistant",
-            description: "Get instant help composing messages in your target language",
-            tips: [
-                "Tap the Muse button (left of message input) anytime",
-                "Ask how to say something in your learning language",
-                "Muse gives you the perfect phrase to copy or use directly",
-                "Practice with AI Muses 24/7 from the Matches screen"
-            ]
-        ),
-        TutorialPage(
-            icon: "hand.point.right.fill",
-            title: "Swipe Right for Translation",
-            description: "Instantly understand any message",
-            tips: [
-                "Swipe right on any message to see the translation",
-                "The translation appears in your native language",
-                "Helps you follow along when you don't understand",
-                "Great for learning new vocabulary in context"
-            ]
-        ),
-        TutorialPage(
-            icon: "hand.point.left.fill",
-            title: "Swipe Left for Grammar",
-            description: "Get AI-powered language insights",
-            tips: [
-                "Swipe left on any message to see grammar help",
-                "See corrections and explanations",
-                "Learn alternative ways to express the same idea",
-                "Long-press the grammar pane to toggle explanation language"
-            ]
-        ),
-        TutorialPage(
-            icon: "speaker.wave.3.fill",
-            title: "Listen & Speak",
-            description: "Hear how words and phrases are pronounced",
-            tips: [
-                "Double-tap any message to hear it spoken aloud",
-                "Double-tap translations to hear the pronunciation",
-                "Free users get standard text-to-speech voices",
-                "Premium & Pro unlock natural, local-sounding voices"
-            ]
-        ),
-        TutorialPage(
-            icon: "heart.circle.fill",
-            title: "Your Way to Connect",
-            description: "Match for friendship or see where it goes",
-            tips: [
-                "Enable Strictly Platonic in settings for friendship only",
-                "Platonic users only see other platonic users",
-                "Or stay open to connections that might spark",
-                "Change your preference anytime in Matching Settings"
-            ]
-        ),
-        TutorialPage(
-            icon: "photo.on.rectangle.angled",
-            title: "Managing Photos",
-            description: "Control your profile photos and privacy",
-            tips: [
-                "Long-press any photo slot to add or change photos",
-                "Add captions to tell your story",
-                "Blur individual photos until you match someone",
-                "Tap the blur icon on any photo to toggle blur"
-            ]
-        ),
-        TutorialPage(
-            icon: "person.text.rectangle.fill",
-            title: "Your Profile",
-            description: "Tell others about yourself",
-            tips: [
-                "Long-press the About section to edit your bio",
-                "Share your interests and what you're looking for",
-                "A great bio helps you find better matches",
-                "Keep it friendly and authentic"
-            ]
-        ),
-        TutorialPage(
-            icon: "link.badge.plus",
-            title: "Invite Friends",
-            description: "Bring friends to practice with",
-            tips: [
-                "Send an invite link to someone you'd like to match with",
-                "When they join, you'll be instantly matched",
-                "Premium & Pro members get instant matching",
-                "Find invite links in your Profile settings"
-            ]
-        ),
-        TutorialPage(
-            icon: "flask.fill",
-            title: "Language Lab",
-            description: "Track your language learning journey",
-            tips: [
-                "Access from the flask icon on your profile",
-                "View your progress dashboard and stats",
-                "See your conversation history highlights",
-                "Track vocabulary and phrases you've learned"
-            ]
-        ),
-        TutorialPage(
-            icon: "star.fill",
-            title: "Choose Your Plan",
-            description: "Start free, upgrade when you're ready",
-            tips: [], // Uses custom pricing layout
-            isPricingPage: true
-        )
-    ]
+    private var tutorialPages: [TutorialPage] {
+        [
+            TutorialPage(
+                icon: "hand.tap.fill",
+                title: "tutorial_discover_match_title".localized,
+                description: "tutorial_discover_match_desc".localized,
+                tips: [], // Will use custom button display instead
+                isDiscoverPage: true
+            ),
+            TutorialPage(
+                icon: "bubble.left.and.bubble.right.fill",
+                title: "tutorial_chat_learn_title".localized,
+                description: "tutorial_chat_learn_desc".localized,
+                tips: [
+                    "tutorial_tip_write_messages".localized,
+                    "tutorial_tip_dont_worry".localized,
+                    "tutorial_tip_ask_partner".localized,
+                    "tutorial_tip_muse_button".localized
+                ]
+            ),
+            TutorialPage(
+                icon: "sparkles",
+                title: "tutorial_muse_assistant_title".localized,
+                description: "tutorial_muse_assistant_desc".localized,
+                tips: [
+                    "tutorial_tip_muse_anytime".localized,
+                    "tutorial_tip_muse_ask".localized,
+                    "tutorial_tip_muse_phrase".localized,
+                    "tutorial_tip_muse_24_7".localized
+                ]
+            ),
+            TutorialPage(
+                icon: "hand.point.right.fill",
+                title: "tutorial_swipe_translate_title".localized,
+                description: "tutorial_swipe_translate_desc".localized,
+                tips: [
+                    "tutorial_tip_swipe_right".localized,
+                    "tutorial_tip_translation_native".localized,
+                    "tutorial_tip_follow_along".localized,
+                    "tutorial_tip_vocab_context".localized
+                ]
+            ),
+            TutorialPage(
+                icon: "hand.point.left.fill",
+                title: "tutorial_swipe_grammar_title".localized,
+                description: "tutorial_swipe_grammar_desc".localized,
+                tips: [
+                    "tutorial_tip_swipe_left".localized,
+                    "tutorial_tip_corrections".localized,
+                    "tutorial_tip_alternatives".localized,
+                    "tutorial_tip_longpress_grammar".localized
+                ]
+            ),
+            TutorialPage(
+                icon: "speaker.wave.3.fill",
+                title: "tutorial_listen_speak_title".localized,
+                description: "tutorial_listen_speak_desc".localized,
+                tips: [
+                    "tutorial_tip_doubletap".localized,
+                    "tutorial_tip_doubletap_translation".localized,
+                    "tutorial_tip_free_tts".localized,
+                    "tutorial_tip_premium_tts".localized
+                ]
+            ),
+            TutorialPage(
+                icon: "heart.circle.fill",
+                title: "tutorial_connect_title".localized,
+                description: "tutorial_connect_desc".localized,
+                tips: [
+                    "tutorial_tip_platonic_setting".localized,
+                    "tutorial_tip_platonic_see".localized,
+                    "tutorial_tip_open_connections".localized,
+                    "tutorial_tip_change_preference".localized
+                ]
+            ),
+            TutorialPage(
+                icon: "photo.on.rectangle.angled",
+                title: "tutorial_photos_title".localized,
+                description: "tutorial_photos_desc".localized,
+                tips: [
+                    "tutorial_tip_longpress_photo".localized,
+                    "tutorial_tip_captions".localized,
+                    "tutorial_tip_blur_photos".localized,
+                    "tutorial_tip_blur_toggle".localized
+                ]
+            ),
+            TutorialPage(
+                icon: "person.text.rectangle.fill",
+                title: "tutorial_profile_title".localized,
+                description: "tutorial_profile_desc".localized,
+                tips: [
+                    "tutorial_tip_longpress_bio".localized,
+                    "tutorial_tip_share_interests".localized,
+                    "tutorial_tip_great_bio".localized,
+                    "tutorial_tip_friendly_authentic".localized
+                ]
+            ),
+            TutorialPage(
+                icon: "link.badge.plus",
+                title: "tutorial_invite_title".localized,
+                description: "tutorial_invite_desc".localized,
+                tips: [
+                    "tutorial_tip_invite_link".localized,
+                    "tutorial_tip_instant_match".localized,
+                    "tutorial_tip_premium_instant".localized,
+                    "tutorial_tip_find_invite".localized
+                ]
+            ),
+            TutorialPage(
+                icon: "flask.fill",
+                title: "tutorial_lab_title".localized,
+                description: "tutorial_lab_desc".localized,
+                tips: [
+                    "tutorial_tip_lab_access".localized,
+                    "tutorial_tip_lab_dashboard".localized,
+                    "tutorial_tip_lab_history".localized,
+                    "tutorial_tip_lab_vocabulary".localized
+                ]
+            ),
+            TutorialPage(
+                icon: "star.fill",
+                title: "tutorial_pricing_title".localized,
+                description: "tutorial_pricing_desc".localized,
+                tips: [], // Uses custom pricing layout
+                isPricingPage: true
+            )
+        ]
+    }
 
     // MARK: - Lifecycle
     override func viewDidLoad() {
@@ -307,7 +309,7 @@ class TutorialViewController: UIViewController {
         view.addSubview(closeButton)
 
         // Done button - gold themed
-        doneButton.setTitle("Got It!", for: .normal)
+        doneButton.setTitle("tutorial_got_it".localized, for: .normal)
         doneButton.titleLabel?.font = .systemFont(ofSize: 18, weight: .semibold)
         doneButton.backgroundColor = goldColor
         doneButton.setTitleColor(.black, for: .normal)
@@ -678,7 +680,7 @@ class TutorialViewController: UIViewController {
             priceLabel.text = subscriptionService.localizedPricePerPeriod(for: .pro)
             self.proPriceLabel = priceLabel
         } else {
-            priceLabel.text = "Free"  // Free tier is always "Free"
+            priceLabel.text = "tier_trial_price".localized  // Free tier is always "Free"
             self.freePriceLabel = priceLabel
         }
         priceLabel.font = .systemFont(ofSize: 14, weight: .semibold)
@@ -757,9 +759,9 @@ extension TutorialViewController: UIScrollViewDelegate {
 
         // Update done button text on last page
         if page == tutorialPages.count - 1 {
-            doneButton.setTitle("Start Chatting!", for: .normal)
+            doneButton.setTitle("tutorial_start_chatting".localized, for: .normal)
         } else {
-            doneButton.setTitle("Got It!", for: .normal)
+            doneButton.setTitle("tutorial_got_it".localized, for: .normal)
         }
     }
 }

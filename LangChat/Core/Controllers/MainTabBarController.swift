@@ -8,6 +8,92 @@ class MainTabBarController: UITabBarController, UITabBarControllerDelegate {
         setupViewControllers()
         setupAppearance()
         setupConnectivityBanner()
+
+        // Auto-sync UserDefaults to Supabase if data is out of sync
+        // This fixes cases where onboarding data wasn't synced properly
+        syncLocalDataToSupabaseIfNeeded()
+    }
+
+    /// Check if UserDefaults has more complete data than Supabase and sync if needed
+    private func syncLocalDataToSupabaseIfNeeded() {
+        print("🔄 MainTabBarController: Starting auto-sync check...")
+        print("🔄 Authenticated: \(SupabaseService.shared.isAuthenticated)")
+        print("🔄 CurrentUserId: \(SupabaseService.shared.currentUserId?.uuidString ?? "nil")")
+
+        Task {
+            do {
+                print("🔄 Fetching current profile from Supabase...")
+                let profile = try await SupabaseService.shared.getCurrentProfile()
+
+                // Get local data from UserDefaults
+                let localFirstName = UserDefaults.standard.string(forKey: "firstName") ?? ""
+                let localLastName = UserDefaults.standard.string(forKey: "lastName") ?? ""
+                let localBio = UserDefaults.standard.string(forKey: "bio") ?? ""
+
+                // Check if we have language data locally
+                var localHasLanguages = false
+                if let data = UserDefaults.standard.data(forKey: "userLanguages") {
+                    localHasLanguages = true
+                }
+
+                // Check if local data is more complete than Supabase data
+                let supabaseFirstName = profile.firstName
+                let supabaseBio = profile.bio ?? ""
+                let supabaseLearningLanguages = profile.learningLanguages ?? []
+
+                print("🔄 Supabase data: firstName='\(supabaseFirstName)', bio='\(supabaseBio.prefix(20))...', languages=\(supabaseLearningLanguages)")
+                print("🔄 Local data: firstName='\(localFirstName)', lastName='\(localLastName)', bio='\(localBio.prefix(20))...', hasLanguages=\(localHasLanguages)")
+
+                var needsSync = false
+                var syncReasons: [String] = []
+
+                // If Supabase has empty/default name but UserDefaults has real name
+                if (supabaseFirstName.isEmpty || supabaseFirstName.lowercased() == "user") && !localFirstName.isEmpty {
+                    syncReasons.append("name mismatch")
+                    needsSync = true
+                }
+
+                // If names don't match at all
+                if !localFirstName.isEmpty && supabaseFirstName != localFirstName {
+                    syncReasons.append("firstName differs ('\(supabaseFirstName)' vs '\(localFirstName)')")
+                    needsSync = true
+                }
+
+                // If Supabase has no bio but UserDefaults has bio
+                if supabaseBio.isEmpty && !localBio.isEmpty {
+                    syncReasons.append("bio mismatch")
+                    needsSync = true
+                }
+
+                // If Supabase has no learning languages but we have them locally
+                if supabaseLearningLanguages.isEmpty && localHasLanguages {
+                    syncReasons.append("languages mismatch")
+                    needsSync = true
+                }
+
+                // If photos need syncing - Supabase has no photos but we completed onboarding
+                if (profile.profilePhotos?.filter { !$0.isEmpty }.count ?? 0) == 0 {
+                    // No photos in Supabase - might need upload
+                    // But we can't recover UIImages from UserDefaults, so just sync text data
+                }
+
+                if needsSync {
+                    print("📤 Auto-sync NEEDED. Reasons: \(syncReasons.joined(separator: ", "))")
+                    print("📤 Auto-syncing local profile data to Supabase...")
+                    try await SupabaseService.shared.syncOnboardingDataToSupabase()
+                    print("✅ Auto-sync completed successfully!")
+
+                    // Notify that profile was updated so UI refreshes
+                    await MainActor.run {
+                        NotificationCenter.default.post(name: .userProfileUpdated, object: nil)
+                    }
+                } else {
+                    print("✅ Auto-sync check: No sync needed, data appears in sync")
+                }
+            } catch {
+                print("❌ Auto-sync check FAILED with error: \(error)")
+            }
+        }
     }
 
     override func viewDidAppear(_ animated: Bool) {
@@ -119,7 +205,7 @@ class MainTabBarController: UITabBarController, UITabBarControllerDelegate {
     private func createDiscoverViewController() -> UINavigationController {
         let discoverVC = DiscoverViewController()
         discoverVC.tabBarItem = UITabBarItem(
-            title: "Discover",
+            title: "tab_discover".localized,
             image: UIImage(systemName: "rectangle.stack.fill"),
             selectedImage: UIImage(systemName: "rectangle.stack.fill")
         )
@@ -129,7 +215,7 @@ class MainTabBarController: UITabBarController, UITabBarControllerDelegate {
     private func createLanguageLabViewController() -> UINavigationController {
         let languageLabVC = LanguageLabViewController()
         languageLabVC.tabBarItem = UITabBarItem(
-            title: "Language Lab",
+            title: "tab_language_lab".localized,
             image: UIImage(systemName: "brain.head.profile"),
             selectedImage: UIImage(systemName: "brain.head.profile.fill")
         )
@@ -139,7 +225,7 @@ class MainTabBarController: UITabBarController, UITabBarControllerDelegate {
     private func createMatchesViewController() -> UINavigationController {
         let matchesVC = MatchesListViewController()
         let tabItem = UITabBarItem(
-            title: "Matches",
+            title: "tab_matches".localized,
             image: UIImage(systemName: "person.2"),
             selectedImage: UIImage(systemName: "person.2.fill")
         )
@@ -152,7 +238,7 @@ class MainTabBarController: UITabBarController, UITabBarControllerDelegate {
     private func createChatsViewController() -> UINavigationController {
         let chatsVC = ChatsListViewController()
         chatsVC.tabBarItem = UITabBarItem(
-            title: "Chats",
+            title: "tab_chats".localized,
             image: UIImage(systemName: "message"),
             selectedImage: UIImage(systemName: "message.fill")
         )
@@ -167,7 +253,7 @@ class MainTabBarController: UITabBarController, UITabBarControllerDelegate {
     private func createProfileViewController() -> UINavigationController {
         let profileVC = ProfileViewController()
         profileVC.tabBarItem = UITabBarItem(
-            title: "Profile",
+            title: "tab_profile".localized,
             image: UIImage(systemName: "person.circle"),
             selectedImage: UIImage(systemName: "person.circle.fill")
         )

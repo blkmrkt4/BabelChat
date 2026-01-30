@@ -11,6 +11,7 @@ class TermsAcceptanceViewController: BaseOnboardingViewController {
     private let ageCheckbox = CheckboxButton()
 
     private let termsLinkButton = UIButton(type: .system)
+    private let eulaLinkButton = UIButton(type: .system)
     private let privacyLinkButton = UIButton(type: .system)
     private let communityGuidelinesButton = UIButton(type: .system)
 
@@ -40,8 +41,8 @@ class TermsAcceptanceViewController: BaseOnboardingViewController {
         descriptionLabel.textAlignment = .center
         descriptionLabel.numberOfLines = 0
 
-        // Terms checkbox
-        termsCheckbox.setTitle("terms_checkbox_label".localized, for: .normal)
+        // Terms & EULA checkbox
+        termsCheckbox.setTitle("terms_eula_checkbox_label".localized, for: .normal)
         termsCheckbox.addTarget(self, action: #selector(checkboxChanged), for: .touchUpInside)
 
         // Privacy checkbox
@@ -54,6 +55,7 @@ class TermsAcceptanceViewController: BaseOnboardingViewController {
 
         // Link buttons
         setupLinkButton(termsLinkButton, title: "view_terms_of_service".localized, action: #selector(viewTermsTapped))
+        setupLinkButton(eulaLinkButton, title: "view_eula".localized, action: #selector(viewEulaTapped))
         setupLinkButton(privacyLinkButton, title: "view_privacy_policy".localized, action: #selector(viewPrivacyTapped))
         setupLinkButton(communityGuidelinesButton, title: "view_community_guidelines".localized, action: #selector(viewGuidelinesTapped))
 
@@ -77,6 +79,7 @@ class TermsAcceptanceViewController: BaseOnboardingViewController {
 
         // Links
         contentStack.addArrangedSubview(termsLinkButton)
+        contentStack.addArrangedSubview(eulaLinkButton)
         contentStack.addArrangedSubview(privacyLinkButton)
         contentStack.addArrangedSubview(communityGuidelinesButton)
 
@@ -128,6 +131,10 @@ class TermsAcceptanceViewController: BaseOnboardingViewController {
 
     @objc private func viewTermsTapped() {
         showDocument(title: "terms_of_service_title".localized, markdownFile: "TermsOfService")
+    }
+
+    @objc private func viewEulaTapped() {
+        showDocument(title: "eula_title".localized, markdownFile: "EULA")
     }
 
     @objc private func viewPrivacyTapped() {

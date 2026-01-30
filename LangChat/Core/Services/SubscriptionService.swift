@@ -641,6 +641,16 @@ class SubscriptionService: NSObject {
         return UserDefaults.standard.object(forKey: freeTrialStartKey) as? Date
     }
 
+    #if DEBUG
+    /// Reset the free trial to start from now (debug only)
+    func resetFreeTrial() {
+        let newStart = Date()
+        UserDefaults.standard.set(newStart, forKey: freeTrialStartKey)
+        currentStatus = SubscriptionStatus.freeWithTrial(startDate: newStart)
+        print("🔄 [DEBUG] Free trial reset to: \(newStart)")
+    }
+    #endif
+
     /// Whether the paywall should be shown (free trial expired and not subscribed)
     var shouldShowPaywall: Bool {
         // If user has an active paid subscription, no paywall needed

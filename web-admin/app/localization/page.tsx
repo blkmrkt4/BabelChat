@@ -1,6 +1,7 @@
 'use client'
 
 import { useState, useEffect, useRef } from 'react'
+import { OpenRouterStatus } from '@/components/OpenRouterStatus'
 
 interface Translation {
   id: string
@@ -351,6 +352,9 @@ export default function LocalizationPage() {
           </div>
         </div>
       </div>
+
+      {/* OpenRouter API Status */}
+      <OpenRouterStatus />
 
       {/* Quick Start Guide */}
       {englishStrings.length === 0 && (

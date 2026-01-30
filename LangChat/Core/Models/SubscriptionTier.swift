@@ -34,11 +34,11 @@ enum SubscriptionTier: String, Codable {
     var displayName: String {
         switch self {
         case .free:
-            return "Trial"
+            return "tier_free_display_name".localized
         case .premium:
-            return "Premium"
+            return "tier_premium_display_name".localized
         case .pro:
-            return "Pro"
+            return "tier_pro_display_name".localized
         }
     }
 
@@ -57,24 +57,24 @@ enum SubscriptionTier: String, Codable {
         switch self {
         case .free:
             return [
-                "7 days to explore all features",
-                "AI Muse conversations",
-                "Full translation & grammar insights",
-                "Basic text-to-speech"
+                "tier_free_feature_1".localized,
+                "tier_free_feature_2".localized,
+                "tier_free_feature_3".localized,
+                "tier_free_feature_4".localized
             ]
         case .premium:
             return [
-                "Match with real people worldwide",
-                "Unlimited messages",
-                "Full translation & grammar insights",
-                "200 Text-to-Speech plays/month with natural voices"
+                "tier_premium_feature_1".localized,
+                "tier_premium_feature_2".localized,
+                "tier_premium_feature_3".localized,
+                "tier_premium_feature_4".localized
             ]
         case .pro:
             return [
-                "Everything in Premium",
-                "Unlimited Text-to-Speech plays",
-                "Natural voices (Google Neural2)",
-                "Higher word limit per play - 150 vs 100 for Premium"
+                "tier_pro_feature_1".localized,
+                "tier_pro_feature_2".localized,
+                "tier_pro_feature_3".localized,
+                "tier_pro_feature_4".localized
             ]
         }
     }
@@ -82,11 +82,11 @@ enum SubscriptionTier: String, Codable {
     var shortDescription: String {
         switch self {
         case .free:
-            return "7-day trial to explore Fluenca"
+            return "tier_free_short_desc".localized
         case .premium:
-            return "Match with real people + natural voices"
+            return "tier_premium_short_desc".localized
         case .pro:
-            return "Unlimited learning, zero limits"
+            return "tier_pro_short_desc".localized
         }
     }
 

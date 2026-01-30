@@ -76,7 +76,7 @@ class OnboardingCarouselViewController: UIViewController {
         }
 
         // Free tier shows "7-Day Trial" (no price change needed)
-        freePriceLabel?.text = "Free"
+        freePriceLabel?.text = "tier_trial_price".localized
     }
 
     private func updatePricingCards(with config: PricingConfig) {
@@ -158,7 +158,7 @@ class OnboardingCarouselViewController: UIViewController {
         view.addSubview(closeButton)
 
         // Get Started button (only visible when NOT viewing from profile)
-        getStartedButton.setTitle("Get Started", for: .normal)
+        getStartedButton.setTitle("welcome_get_started".localized, for: .normal)
         getStartedButton.titleLabel?.font = .systemFont(ofSize: 18, weight: .semibold)
         getStartedButton.backgroundColor = UIColor(red: 1.0, green: 0.84, blue: 0.0, alpha: 1.0) // Gold
         getStartedButton.setTitleColor(.black, for: .normal)
@@ -278,7 +278,7 @@ class OnboardingCarouselViewController: UIViewController {
 
         // Tagline
         let taglineLabel = UILabel()
-        taglineLabel.text = "Science says your brain learns faster when it cares"
+        taglineLabel.text = "tagline_1".localized
         taglineLabel.font = .systemFont(ofSize: 18, weight: .medium)
         taglineLabel.textColor = UIColor.white.withAlphaComponent(0.9)
         taglineLabel.textAlignment = .center
@@ -295,7 +295,7 @@ class OnboardingCarouselViewController: UIViewController {
 
         // Second tagline
         let taglineLabel2 = UILabel()
-        taglineLabel2.text = "Speaking like a local is the fastest path to fluency"
+        taglineLabel2.text = "tagline_2".localized
         taglineLabel2.font = .systemFont(ofSize: 15, weight: .regular)
         taglineLabel2.textColor = UIColor.white.withAlphaComponent(0.7)
         taglineLabel2.textAlignment = .center
@@ -306,7 +306,7 @@ class OnboardingCarouselViewController: UIViewController {
 
         // Swipe hint
         let swipeHint = UILabel()
-        swipeHint.text = "Swipe to learn more →"
+        swipeHint.text = "carousel_swipe_hint".localized
         swipeHint.font = .systemFont(ofSize: 15, weight: .medium)
         swipeHint.textColor = UIColor.white.withAlphaComponent(0.7)
         swipeHint.textAlignment = .center
@@ -395,7 +395,7 @@ class OnboardingCarouselViewController: UIViewController {
 
         // Title
         let titleLabel = UILabel()
-        titleLabel.text = "Learn the Way People Really Talk"
+        titleLabel.text = "carousel_title_1".localized
         titleLabel.font = .systemFont(ofSize: 28, weight: .bold)
         titleLabel.textColor = .white
         titleLabel.textAlignment = .center
@@ -404,7 +404,7 @@ class OnboardingCarouselViewController: UIViewController {
 
         // Subtitle
         let subtitleLabel = UILabel()
-        subtitleLabel.text = "Textbooks can't teach you the local lingo, slang, and authentic expressions. Real conversations can."
+        subtitleLabel.text = "carousel_subtitle_1".localized
         subtitleLabel.font = .systemFont(ofSize: 16, weight: .regular)
         subtitleLabel.textColor = UIColor.white.withAlphaComponent(0.85)
         subtitleLabel.textAlignment = .center
@@ -418,9 +418,9 @@ class OnboardingCarouselViewController: UIViewController {
 
         // Feature points
         let features = [
-            ("sparkles", "Chemistry makes learning stick", "You're more likely to stay motivated with someone you genuinely connect with"),
-            ("person.2.fill", "Match your way", "Looking for romance, friendship, or just language practice? You choose"),
-            ("bubble.left.and.text.bubble.right.fill", "Practice with your Muse", "AI-powered language muses available 24/7 when humans aren't around")
+            ("sparkles", "carousel_feature_chemistry_title".localized, "carousel_feature_chemistry_desc".localized),
+            ("person.2.fill", "carousel_feature_match_title".localized, "carousel_feature_match_desc".localized),
+            ("bubble.left.and.text.bubble.right.fill", "carousel_feature_muse_title".localized, "carousel_feature_muse_desc".localized)
         ]
 
         for (icon, title, desc) in features {
@@ -520,7 +520,7 @@ class OnboardingCarouselViewController: UIViewController {
 
         // Title
         let titleLabel = UILabel()
-        titleLabel.text = "Learn As You Chat"
+        titleLabel.text = "carousel_title_2".localized
         titleLabel.font = .systemFont(ofSize: 32, weight: .bold)
         titleLabel.textColor = .white
         titleLabel.textAlignment = .center
@@ -528,7 +528,7 @@ class OnboardingCarouselViewController: UIViewController {
 
         // Subtitle
         let subtitleLabel = UILabel()
-        subtitleLabel.text = "Built-in tools help you understand\nand improve with every message"
+        subtitleLabel.text = "auto_builtin_tools_help_you_understandnand_im".localized
         subtitleLabel.font = .systemFont(ofSize: 17, weight: .regular)
         subtitleLabel.textColor = UIColor.white.withAlphaComponent(0.9)
         subtitleLabel.textAlignment = .center
@@ -542,10 +542,10 @@ class OnboardingCarouselViewController: UIViewController {
 
         // How it works items
         let items = [
-            ("hand.point.right.fill", "Swipe Right", "See instant translations in your language"),
-            ("hand.point.left.fill", "Swipe Left", "Get grammar help and learn from corrections"),
-            ("flask.fill", "Language Lab", "Track your progress and see how you're improving"),
-            ("message.badge.filled.fill", "Practice Daily", "The more you chat, the faster you learn")
+            ("hand.point.right.fill", "carousel_how_swipe_right_title".localized, "carousel_how_swipe_right_desc".localized),
+            ("hand.point.left.fill", "carousel_how_swipe_left_title".localized, "carousel_how_swipe_left_desc".localized),
+            ("flask.fill", "carousel_how_lab_title".localized, "carousel_how_lab_desc".localized),
+            ("message.badge.filled.fill", "carousel_how_practice_title".localized, "carousel_how_practice_desc".localized)
         ]
 
         for (icon, title, desc) in items {
@@ -659,7 +659,7 @@ class OnboardingCarouselViewController: UIViewController {
 
         // Title
         let titleLabel = UILabel()
-        titleLabel.text = "Choose Your Plan"
+        titleLabel.text = "pricing_title".localized
         titleLabel.font = .systemFont(ofSize: 28, weight: .bold)
         titleLabel.textColor = .white
         titleLabel.textAlignment = .center
@@ -668,7 +668,7 @@ class OnboardingCarouselViewController: UIViewController {
 
         // Subtitle
         let subtitleLabel = UILabel()
-        subtitleLabel.text = "Start free, upgrade when you're ready"
+        subtitleLabel.text = "carousel_subtitle_3".localized
         subtitleLabel.font = .systemFont(ofSize: 15, weight: .regular)
         subtitleLabel.textColor = UIColor.white.withAlphaComponent(0.8)
         subtitleLabel.textAlignment = .center
@@ -765,7 +765,7 @@ class OnboardingCarouselViewController: UIViewController {
         let priceLabel = UILabel()
         // Use localized price from RevenueCat if available, fallback to tier.price
         if isFree {
-            priceLabel.text = "Free"
+            priceLabel.text = "tier_trial_price".localized
         } else if isPremium {
             priceLabel.text = subscriptionService.localizedPricePerPeriod(for: .premium)
         } else if isPro {

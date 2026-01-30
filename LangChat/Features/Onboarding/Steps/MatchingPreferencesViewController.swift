@@ -36,7 +36,13 @@ class MatchingPreferencesViewController: UIViewController {
 
     // Looking For (Relationship Intent)
     private var lookingForButtons: [UIButton] = []
-    private let lookingForOptions = ["Friendship", "Language Exchange", "Dating", "Networking", "Travel Buddy"]
+    private var lookingForOptions: [String] {
+        ["matching_intent_friendship".localized,
+         "matching_intent_language_exchange".localized,
+         "matching_intent_dating".localized,
+         "matching_intent_networking".localized,
+         "matching_intent_travel_buddy".localized]
+    }
 
     // Save confirmation
     private let saveConfirmationLabel = UILabel()
@@ -67,7 +73,7 @@ class MatchingPreferencesViewController: UIViewController {
     }
 
     private func setupNavigationBar() {
-        title = "Matching Settings"
+        title = "settings_matching_settings".localized
         navigationItem.largeTitleDisplayMode = .never
         view.backgroundColor = .systemBackground
     }
@@ -191,13 +197,13 @@ class MatchingPreferencesViewController: UIViewController {
         container.layer.cornerRadius = 12
 
         let titleLabel = UILabel()
-        titleLabel.text = "Strictly Platonic"
+        titleLabel.text = "matching_strictly_platonic".localized
         titleLabel.font = .systemFont(ofSize: 17, weight: .semibold)
         titleLabel.textColor = .label
         container.addSubview(titleLabel)
 
         let subtitleLabel = UILabel()
-        subtitleLabel.text = "Only match with others seeking platonic language exchange"
+        subtitleLabel.text = "matching_strictly_platonic_desc".localized
         subtitleLabel.font = .systemFont(ofSize: 14, weight: .regular)
         subtitleLabel.textColor = .secondaryLabel
         subtitleLabel.numberOfLines = 0
@@ -243,13 +249,13 @@ class MatchingPreferencesViewController: UIViewController {
         container.layer.cornerRadius = 12
 
         let titleLabel = UILabel()
-        titleLabel.text = "Blur Photos Until Match"
+        titleLabel.text = "matching_blur_photos".localized
         titleLabel.font = .systemFont(ofSize: 17, weight: .semibold)
         titleLabel.textColor = .label
         container.addSubview(titleLabel)
 
         let subtitleLabel = UILabel()
-        subtitleLabel.text = "Your photos will be blurred for potential matches until you both swipe right"
+        subtitleLabel.text = "matching_blur_photos_desc".localized
         subtitleLabel.font = .systemFont(ofSize: 14, weight: .regular)
         subtitleLabel.textColor = .secondaryLabel
         subtitleLabel.numberOfLines = 0
@@ -315,14 +321,14 @@ class MatchingPreferencesViewController: UIViewController {
 
         // Title
         let titleLabel = UILabel()
-        titleLabel.text = "Looking For"
+        titleLabel.text = "matching_looking_for".localized
         titleLabel.font = .systemFont(ofSize: 17, weight: .semibold)
         titleLabel.textColor = .label
         innerStack.addArrangedSubview(titleLabel)
 
         // Subtitle
         let subtitleLabel = UILabel()
-        subtitleLabel.text = "Select all that apply"
+        subtitleLabel.text = "matching_select_all".localized
         subtitleLabel.font = .systemFont(ofSize: 14, weight: .regular)
         subtitleLabel.textColor = .secondaryLabel
         innerStack.addArrangedSubview(subtitleLabel)
@@ -424,7 +430,7 @@ class MatchingPreferencesViewController: UIViewController {
 
     // MARK: - Save Confirmation
     private func setupSaveConfirmation() {
-        saveConfirmationLabel.text = "✓ Saved"
+        saveConfirmationLabel.text = "auto_string".localized + "common_saved".localized
         saveConfirmationLabel.font = .systemFont(ofSize: 14, weight: .semibold)
         saveConfirmationLabel.textColor = .white
         saveConfirmationLabel.backgroundColor = UIColor.systemGreen
@@ -488,14 +494,14 @@ class MatchingPreferencesViewController: UIViewController {
 
         // Title
         let titleLabel = UILabel()
-        titleLabel.text = "Dating Preferences"
+        titleLabel.text = "matching_dating_preferences".localized
         titleLabel.font = .systemFont(ofSize: 17, weight: .semibold)
         titleLabel.textColor = .label
         innerStack.addArrangedSubview(titleLabel)
 
         // Gender identity section
         let genderLabel = UILabel()
-        genderLabel.text = "I identify as..."
+        genderLabel.text = "matching_i_identify_as".localized
         genderLabel.font = .systemFont(ofSize: 15, weight: .medium)
         genderLabel.textColor = .secondaryLabel
         innerStack.addArrangedSubview(genderLabel)
@@ -506,10 +512,10 @@ class MatchingPreferencesViewController: UIViewController {
         genderStack.distribution = .fillEqually
 
         let genderOptions: [(Gender, String)] = [
-            (.male, "Man"),
-            (.female, "Woman"),
-            (.nonBinary, "Non-binary"),
-            (.preferNotToSay, "Other")
+            (.male, "dating_gender_man".localized),
+            (.female, "dating_gender_woman".localized),
+            (.nonBinary, "dating_gender_nonbinary".localized),
+            (.preferNotToSay, "matching_gender_other".localized)
         ]
 
         for (index, option) in genderOptions.enumerated() {
@@ -528,7 +534,7 @@ class MatchingPreferencesViewController: UIViewController {
 
         // Preference section
         let prefLabel = UILabel()
-        prefLabel.text = "I'm interested in..."
+        prefLabel.text = "matching_interested_in".localized
         prefLabel.font = .systemFont(ofSize: 15, weight: .medium)
         prefLabel.textColor = .secondaryLabel
         innerStack.addArrangedSubview(prefLabel)
@@ -539,9 +545,9 @@ class MatchingPreferencesViewController: UIViewController {
         prefStack.distribution = .fillEqually
 
         let prefOptions: [(GenderPreference, String)] = [
-            (.all, "Everyone"),
-            (.sameOnly, "Same"),
-            (.differentOnly, "Different")
+            (.all, "dating_pref_everyone".localized),
+            (.sameOnly, "dating_pref_same".localized),
+            (.differentOnly, "dating_pref_different".localized)
         ]
 
         for (index, option) in prefOptions.enumerated() {
@@ -633,7 +639,7 @@ class MatchingPreferencesViewController: UIViewController {
 
         // Title
         let titleLabel = UILabel()
-        titleLabel.text = "Location Preferences"
+        titleLabel.text = "matching_location_preferences".localized
         titleLabel.font = .systemFont(ofSize: 17, weight: .semibold)
         titleLabel.textColor = .label
         innerStack.addArrangedSubview(titleLabel)
@@ -687,13 +693,13 @@ class MatchingPreferencesViewController: UIViewController {
         switch preference {
         case .country:
             if !userCountry.isEmpty {
-                displayText = "My Country: \(userCountry)"
+                displayText = "\("matching_my_country".localized): \(userCountry)"
             }
         case .localRegional:
             if !userCity.isEmpty && !userCountry.isEmpty {
-                displayText = "Local/Regional: \(userCity), \(userCountry)"
+                displayText = "\("matching_local_regional".localized): \(userCity), \(userCountry)"
             } else if !userCity.isEmpty {
-                displayText = "Local/Regional: \(userCity)"
+                displayText = "\("matching_local_regional".localized): \(userCity)"
             }
         default:
             break
@@ -736,7 +742,7 @@ class MatchingPreferencesViewController: UIViewController {
         distanceContainer.clipsToBounds = true
         distanceContainer.alpha = 0
 
-        distanceLabel.text = "Maximum distance: \(selectedDistance) km"
+        distanceLabel.text = String(format: "matching_max_distance_format".localized, selectedDistance)
         distanceLabel.font = .systemFont(ofSize: 14, weight: .medium)
         distanceLabel.textColor = .secondaryLabel
         distanceLabel.textAlignment = .center
@@ -774,13 +780,13 @@ class MatchingPreferencesViewController: UIViewController {
         countryContainer.clipsToBounds = true
         countryContainer.alpha = 0
 
-        selectedCountriesLabel.text = selectedCountries.isEmpty ? "No countries selected" : "\(selectedCountries.count) selected"
+        selectedCountriesLabel.text = selectedCountries.isEmpty ? "matching_no_countries_selected".localized : String(format: "matching_countries_selected".localized, selectedCountries.count)
         selectedCountriesLabel.font = .systemFont(ofSize: 14, weight: .regular)
         selectedCountriesLabel.textColor = .secondaryLabel
         selectedCountriesLabel.numberOfLines = 0
         countryContainer.addSubview(selectedCountriesLabel)
 
-        selectCountriesButton.setTitle("Select Countries", for: .normal)
+        selectCountriesButton.setTitle("matching_select_countries".localized, for: .normal)
         selectCountriesButton.titleLabel?.font = .systemFont(ofSize: 14, weight: .semibold)
         selectCountriesButton.backgroundColor = .systemBlue
         selectCountriesButton.setTitleColor(.white, for: .normal)
@@ -819,7 +825,7 @@ class MatchingPreferencesViewController: UIViewController {
         let snappedValue = round(sender.value / 5) * 5
         sender.value = snappedValue
         selectedDistance = Int(snappedValue)
-        distanceLabel.text = "Maximum distance: \(selectedDistance) km"
+        distanceLabel.text = String(format: "matching_max_distance_format".localized, selectedDistance)
     }
 
     @objc private func distanceSliderEnded() {
@@ -858,10 +864,10 @@ class MatchingPreferencesViewController: UIViewController {
         let showCountries = selectedLocationPreference == .specificCountries || selectedLocationPreference == .excludeCountries
 
         isExcludeMode = selectedLocationPreference == .excludeCountries
-        selectCountriesButton.setTitle(isExcludeMode ? "Select Countries to Exclude" : "Select Countries", for: .normal)
+        selectCountriesButton.setTitle(isExcludeMode ? "matching_select_countries_exclude".localized : "matching_select_countries".localized, for: .normal)
 
         if showCountries && selectedCountries.isEmpty {
-            selectedCountriesLabel.text = isExcludeMode ? "No countries excluded" : "No countries selected"
+            selectedCountriesLabel.text = isExcludeMode ? "matching_no_countries_excluded".localized : "matching_no_countries_selected".localized
         }
 
         let animationBlock = {
@@ -883,7 +889,7 @@ class MatchingPreferencesViewController: UIViewController {
 
     private func updateSelectedCountriesLabel() {
         if selectedCountries.isEmpty {
-            selectedCountriesLabel.text = isExcludeMode ? "No countries excluded" : "No countries selected"
+            selectedCountriesLabel.text = isExcludeMode ? "matching_no_countries_excluded".localized : "matching_no_countries_selected".localized
         } else {
             let names = selectedCountries.prefix(3).compactMap { Locale.current.localizedString(forRegionCode: $0) }
             if selectedCountries.count <= 3 {
@@ -901,13 +907,13 @@ class MatchingPreferencesViewController: UIViewController {
         container.layer.cornerRadius = 12
 
         let titleLabel = UILabel()
-        titleLabel.text = "Proficiency Levels"
+        titleLabel.text = "matching_proficiency_levels".localized
         titleLabel.font = .systemFont(ofSize: 17, weight: .semibold)
         titleLabel.textColor = .label
         container.addSubview(titleLabel)
 
         let subtitleLabel = UILabel()
-        subtitleLabel.text = "Tap to toggle which levels you want to match with"
+        subtitleLabel.text = "matching_proficiency_subtitle".localized
         subtitleLabel.font = .systemFont(ofSize: 14, weight: .regular)
         subtitleLabel.textColor = .secondaryLabel
         subtitleLabel.numberOfLines = 0

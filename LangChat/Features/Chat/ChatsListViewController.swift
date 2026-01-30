@@ -17,7 +17,7 @@ class ChatsListViewController: UIViewController {
     }
 
     private func setupNavigationBar() {
-        title = "Chats"
+        title = "tab_chats".localized
         navigationController?.navigationBar.prefersLargeTitles = true
 
         // Add "New Chat" button
@@ -49,7 +49,7 @@ class ChatsListViewController: UIViewController {
 
                 guard !mutualMatches.isEmpty else {
                     await MainActor.run {
-                        self.showMuseSelectionWithMessage("No matches yet. Practice with a Muse while you wait!")
+                        self.showMuseSelectionWithMessage("chats_no_matches_message".localized)
                     }
                     return
                 }
@@ -86,7 +86,7 @@ class ChatsListViewController: UIViewController {
 
                 await MainActor.run {
                     if matchedUsers.isEmpty {
-                        self.showMuseSelectionWithMessage("You've started chats with all your matches. Practice with a Muse!")
+                        self.showMuseSelectionWithMessage("chats_all_matches_message".localized)
                     } else {
                         self.presentMatchSelectionSheet(matchedUsers: matchedUsers)
                     }
@@ -102,8 +102,8 @@ class ChatsListViewController: UIViewController {
 
     private func presentMatchSelectionSheet(matchedUsers: [(matchId: String, user: User)]) {
         let alert = UIAlertController(
-            title: "Start a New Chat",
-            message: "Choose someone to chat with",
+            title: "chats_start_new".localized,
+            message: "chats_choose_someone".localized,
             preferredStyle: .actionSheet
         )
 
@@ -119,11 +119,11 @@ class ChatsListViewController: UIViewController {
         }
 
         // Add Muse option
-        alert.addAction(UIAlertAction(title: "Practice with a Muse ✨", style: .default) { [weak self] _ in
+        alert.addAction(UIAlertAction(title: "chats_practice_with_muse".localized, style: .default) { [weak self] _ in
             self?.showMuseSelection()
         })
 
-        alert.addAction(UIAlertAction(title: "Cancel", style: .cancel))
+        alert.addAction(UIAlertAction(title: "common_cancel".localized, style: .cancel))
 
         if let popover = alert.popoverPresentationController {
             popover.barButtonItem = navigationItem.rightBarButtonItem
@@ -134,13 +134,13 @@ class ChatsListViewController: UIViewController {
 
     private func showMuseSelectionWithMessage(_ message: String) {
         let alert = UIAlertController(
-            title: "Meet your Muse",
+            title: "matches_meet_your_muse".localized,
             message: message,
             preferredStyle: .actionSheet
         )
 
         // Add "Edit Languages" option at the top
-        let editAction = UIAlertAction(title: "Edit Languages...", style: .default) { [weak self] _ in
+        let editAction = UIAlertAction(title: "chats_edit_languages".localized, style: .default) { [weak self] _ in
             self?.openMuseLanguagesSettings()
         }
         alert.addAction(editAction)
@@ -156,7 +156,7 @@ class ChatsListViewController: UIViewController {
             alert.addAction(action)
         }
 
-        alert.addAction(UIAlertAction(title: "Cancel", style: .cancel))
+        alert.addAction(UIAlertAction(title: "common_cancel".localized, style: .cancel))
 
         if let popover = alert.popoverPresentationController {
             popover.barButtonItem = navigationItem.rightBarButtonItem
@@ -167,13 +167,13 @@ class ChatsListViewController: UIViewController {
 
     private func showMuseSelection() {
         let alert = UIAlertController(
-            title: "Meet your Muse",
-            message: "Choose a language to practice",
+            title: "matches_meet_your_muse".localized,
+            message: "chats_choose_language".localized,
             preferredStyle: .actionSheet
         )
 
         // Add "Edit Languages" option at the top
-        let editAction = UIAlertAction(title: "Edit Languages...", style: .default) { [weak self] _ in
+        let editAction = UIAlertAction(title: "chats_edit_languages".localized, style: .default) { [weak self] _ in
             self?.openMuseLanguagesSettings()
         }
         alert.addAction(editAction)
@@ -189,7 +189,7 @@ class ChatsListViewController: UIViewController {
             alert.addAction(action)
         }
 
-        alert.addAction(UIAlertAction(title: "Cancel", style: .cancel))
+        alert.addAction(UIAlertAction(title: "common_cancel".localized, style: .cancel))
 
         if let popover = alert.popoverPresentationController {
             popover.barButtonItem = navigationItem.rightBarButtonItem
@@ -322,12 +322,12 @@ class ChatsListViewController: UIViewController {
         imageView.widthAnchor.constraint(equalToConstant: 80).isActive = true
         imageView.heightAnchor.constraint(equalToConstant: 80).isActive = true
 
-        emptyStateLabel.text = "No conversations yet"
+        emptyStateLabel.text = "chats_no_conversations".localized
         emptyStateLabel.font = .systemFont(ofSize: 18, weight: .medium)
         emptyStateLabel.textColor = .secondaryLabel
         emptyStateLabel.textAlignment = .center
 
-        emptyStateButton.setTitle("Start a Chat", for: .normal)
+        emptyStateButton.setTitle("chats_start_chat".localized, for: .normal)
         emptyStateButton.titleLabel?.font = .systemFont(ofSize: 16, weight: .semibold)
         emptyStateButton.addTarget(self, action: #selector(newChatTapped), for: .touchUpInside)
 
@@ -528,7 +528,7 @@ class ChatTableViewCell: UITableViewCell {
         contentView.addSubview(onlineIndicator)
         onlineIndicator.translatesAutoresizingMaskIntoConstraints = false
 
-        aiBadge.text = "AI"
+        aiBadge.text = "auto_ai".localized
         aiBadge.font = .systemFont(ofSize: 10, weight: .semibold)
         aiBadge.textColor = .white
         aiBadge.backgroundColor = .systemPurple

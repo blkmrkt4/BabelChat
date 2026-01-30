@@ -9,6 +9,7 @@ class SignInWithAppleService: NSObject {
     // MARK: - Properties
     private var currentNonce: String?
     private var continuation: CheckedContinuation<AppleSignInResult, Error>?
+    private weak var presentingWindow: UIWindow?
 
     // MARK: - Public Methods
 
@@ -18,6 +19,10 @@ class SignInWithAppleService: NSObject {
     func signIn(from presentingViewController: UIViewController) async throws -> AppleSignInResult {
         return try await withCheckedThrowingContinuation { continuation in
             self.continuation = continuation
+
+            // Store the presenting window for use in presentationAnchor
+            // This is critical for iPad where multiple windows may exist
+            self.presentingWindow = presentingViewController.view.window
 
             // Generate a random nonce for security
             let nonce = randomNonceString()
@@ -146,6 +151,7 @@ extension SignInWithAppleService: ASAuthorizationControllerDelegate {
         continuation?.resume(returning: result)
         continuation = nil
         currentNonce = nil
+        presentingWindow = nil
     }
 
     func authorizationController(controller: ASAuthorizationController, didCompleteWithError error: Error) {
@@ -173,6 +179,7 @@ extension SignInWithAppleService: ASAuthorizationControllerDelegate {
 
         continuation = nil
         currentNonce = nil
+        presentingWindow = nil
     }
 }
 
@@ -180,11 +187,18 @@ extension SignInWithAppleService: ASAuthorizationControllerDelegate {
 
 extension SignInWithAppleService: ASAuthorizationControllerPresentationContextProviding {
     func presentationAnchor(for controller: ASAuthorizationController) -> ASPresentationAnchor {
-        // Try to find the key window
+        // First, use the window from the presenting view controller
+        // This is the most reliable approach, especially on iPad
+        if let window = presentingWindow {
+            return window
+        }
+
+        // Fallback: Try to find the key window
         if let window = UIApplication.shared.connectedScenes
             .compactMap({ $0 as? UIWindowScene })
             .flatMap({ $0.windows })
             .first(where: { $0.isKeyWindow }) {
+            print("⚠️ Presenting window was nil, using key window")
             return window
         }
 

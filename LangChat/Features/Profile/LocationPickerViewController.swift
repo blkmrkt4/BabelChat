@@ -63,7 +63,7 @@ class LocationPickerViewController: UIViewController {
         navigationItem.rightBarButtonItem?.isEnabled = false
 
         // Search text field
-        searchTextField.placeholder = "Search for your city..."
+        searchTextField.placeholder = "search_city_placeholder".localized
         searchTextField.font = .systemFont(ofSize: 18, weight: .regular)
         searchTextField.textColor = .label
         searchTextField.autocapitalizationType = .words

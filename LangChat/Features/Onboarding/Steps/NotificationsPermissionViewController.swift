@@ -10,17 +10,19 @@ class NotificationsPermissionViewController: BaseOnboardingViewController {
     private let skipButton = UIButton(type: .system)
 
     // MARK: - Properties
-    private let benefits = [
-        ("💬", "New Matches", "Know when someone wants to practice with you"),
-        ("📬", "Messages", "Never miss a language exchange opportunity"),
-        ("🎯", "Practice Reminders", "Stay consistent with your learning goals"),
-        ("📈", "Weekly Progress", "Track your language learning journey")
-    ]
+    private var benefits: [(String, String, String)] {
+        return [
+            ("💬", "notif_benefit_matches".localized, "notif_benefit_matches_desc".localized),
+            ("📬", "notif_benefit_messages".localized, "notif_benefit_messages_desc".localized),
+            ("🎯", "notif_benefit_reminders".localized, "notif_benefit_reminders_desc".localized),
+            ("📈", "notif_benefit_progress".localized, "notif_benefit_progress_desc".localized)
+        ]
+    }
 
     // MARK: - Lifecycle
     override func configure() {
         step = .notifications
-        setTitle("Stay Connected")
+        setTitle("onboarding_notifications_title".localized)
         setupViews()
 
         // Hide the default continue button
@@ -52,7 +54,7 @@ class NotificationsPermissionViewController: BaseOnboardingViewController {
         }
 
         // Enable button
-        enableButton.setTitle("Enable Notifications", for: .normal)
+        enableButton.setTitle("onboarding_notifications_enable".localized, for: .normal)
         enableButton.titleLabel?.font = .systemFont(ofSize: 18, weight: .semibold)
         enableButton.backgroundColor = .systemBlue
         enableButton.setTitleColor(.white, for: .normal)
@@ -61,7 +63,7 @@ class NotificationsPermissionViewController: BaseOnboardingViewController {
         contentView.addSubview(enableButton)
 
         // Skip button
-        skipButton.setTitle("Maybe Later", for: .normal)
+        skipButton.setTitle("onboarding_notifications_skip".localized, for: .normal)
         skipButton.titleLabel?.font = .systemFont(ofSize: 16, weight: .regular)
         skipButton.setTitleColor(.secondaryLabel, for: .normal)
         skipButton.addTarget(self, action: #selector(skipTapped), for: .touchUpInside)

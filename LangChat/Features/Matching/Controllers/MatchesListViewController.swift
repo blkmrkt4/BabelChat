@@ -50,7 +50,7 @@ class MatchesListViewController: UIViewController {
         view.addSubview(emptyStateView)
         emptyStateView.translatesAutoresizingMaskIntoConstraints = false
 
-        emptyStateLabel.text = "No matches yet\nSwipe right on profiles you like in Discover!"
+        emptyStateLabel.text = "matches_empty_title".localized + "\n" + "matches_empty_subtitle".localized
         emptyStateLabel.textAlignment = .center
         emptyStateLabel.numberOfLines = 0
         emptyStateLabel.font = .systemFont(ofSize: 18, weight: .medium)
@@ -552,7 +552,7 @@ class MuseHeaderView: UICollectionReusableView {
         backgroundColor = .systemBackground
 
         // Centered title
-        titleLabel.text = "Your Matches"
+        titleLabel.text = "matches_your_matches".localized
         titleLabel.font = .systemFont(ofSize: 34, weight: .bold)
         titleLabel.textColor = .label
         titleLabel.textAlignment = .center
@@ -676,7 +676,7 @@ class MuseSelectionSheetViewController: UIViewController {
         headerView.backgroundColor = .systemBackground
 
         let titleLabel = UILabel()
-        titleLabel.text = "Meet your Muse"
+        titleLabel.text = "matches_meet_your_muse".localized
         titleLabel.font = .systemFont(ofSize: 20, weight: .semibold)
         titleLabel.textAlignment = .center
         headerView.addSubview(titleLabel)
@@ -684,7 +684,7 @@ class MuseSelectionSheetViewController: UIViewController {
 
         // Edit pill button
         let editPill = UIButton(type: .system)
-        editPill.setTitle(" Edit", for: .normal)
+        editPill.setTitle(" " + "common_edit".localized, for: .normal)
         editPill.setImage(UIImage(systemName: "pencil"), for: .normal)
         editPill.tintColor = .white
         editPill.setTitleColor(.white, for: .normal)

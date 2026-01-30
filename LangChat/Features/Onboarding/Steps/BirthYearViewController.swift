@@ -24,7 +24,9 @@ struct BirthDate: Codable {
 
     /// Format as "Month Year" (e.g., "March 1990")
     var displayString: String {
-        let monthName = DateFormatter().monthSymbols[month - 1]
+        let formatter = DateFormatter()
+        formatter.locale = LocalizationService.shared.currentLocale
+        let monthName = formatter.monthSymbols[month - 1]
         return "\(monthName) \(year)"
     }
 }
@@ -43,7 +45,7 @@ class BirthYearViewController: BaseOnboardingViewController {
     // MARK: - Lifecycle
     override func configure() {
         step = .birthYear
-        setTitle("Birthday?")
+        setTitle("onboarding_birthyear_title".localized)
         setupDatePicker()
     }
 
@@ -60,6 +62,7 @@ class BirthYearViewController: BaseOnboardingViewController {
         // Date picker - use .date mode to get month and year
         datePicker.datePickerMode = .date
         datePicker.preferredDatePickerStyle = .wheels
+        datePicker.locale = LocalizationService.shared.currentLocale
         datePicker.addTarget(self, action: #selector(dateChanged), for: .valueChanged)
 
         // Set minimum and maximum dates
@@ -70,8 +73,8 @@ class BirthYearViewController: BaseOnboardingViewController {
         let minDate = Calendar.current.date(from: dateComponents)
         datePicker.minimumDate = minDate
 
-        // Maximum date: Must be at least 13 years old
-        let maxDate = Calendar.current.date(byAdding: .year, value: -13, to: Date())
+        // Maximum date: Must be at least 18 years old
+        let maxDate = Calendar.current.date(byAdding: .year, value: -18, to: Date())
         datePicker.maximumDate = maxDate
 
         // Set default date to 25 years ago
@@ -82,7 +85,7 @@ class BirthYearViewController: BaseOnboardingViewController {
         contentView.addSubview(datePicker)
 
         // Age restriction label
-        ageRestrictionLabel.text = "You must be at least 13 years old to use Fluenca"
+        ageRestrictionLabel.text = "onboarding_birthyear_age_restriction".localized
         ageRestrictionLabel.font = .systemFont(ofSize: 14, weight: .regular)
         ageRestrictionLabel.textColor = .tertiaryLabel
         ageRestrictionLabel.textAlignment = .center
@@ -121,7 +124,9 @@ class BirthYearViewController: BaseOnboardingViewController {
         selectedMonth = calendar.component(.month, from: date)
         selectedYear = calendar.component(.year, from: date)
 
-        let monthName = DateFormatter().monthSymbols[selectedMonth - 1]
+        let formatter = DateFormatter()
+        formatter.locale = LocalizationService.shared.currentLocale
+        let monthName = formatter.monthSymbols[selectedMonth - 1]
         selectedDateLabel.text = "\(monthName) \(selectedYear)"
     }
 

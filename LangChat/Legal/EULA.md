@@ -33,14 +33,22 @@ You retain ownership of any content you submit, post, or display through the App
 ### 3.2 License to User Content
 By submitting User Content, you grant us a worldwide, non-exclusive, royalty-free license to use, reproduce, modify, adapt, publish, and display such content solely for the purpose of operating and providing the App's services.
 
-### 3.3 Content Standards
+### 3.3 Zero Tolerance for Objectionable Content and Abusive Users
+Fluenca maintains a **zero-tolerance policy** for objectionable content and abusive behavior. Any user who posts objectionable content or engages in abusive behavior will have their account terminated immediately and may be reported to the appropriate authorities.
+
 You agree that your User Content will not:
+- Contain sexually explicit, pornographic, or obscene material
+- Promote violence, self-harm, terrorism, discrimination, or illegal activities
+- Contain hate speech or content targeting individuals or groups based on race, ethnicity, religion, gender, sexual orientation, disability, or national origin
+- Constitute harassment, bullying, intimidation, or threats directed at other users
+- Exploit or endanger minors in any way
 - Contain false, misleading, or fraudulent information
 - Infringe any third party's intellectual property rights
-- Contain sexually explicit, pornographic, or obscene material
-- Promote violence, discrimination, or illegal activities
 - Contain personal information of others without their consent
+- Constitute spam, scams, phishing, or other fraudulent content
 - Violate any applicable law or regulation
+
+We actively moderate user-generated content through a combination of automated filters and human review. Users who violate this policy will be permanently banned from the App without warning or refund.
 
 ## 4. Subscription Services
 

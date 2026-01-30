@@ -136,26 +136,26 @@ class EditProfileViewController: UIViewController {
         profileImageView.tintColor = .systemGray3
         contentView.addSubview(profileImageView)
 
-        changePhotoButton.setTitle("Change Photo", for: .normal)
+        changePhotoButton.setTitle("profile_change_photo".localized, for: .normal)
         changePhotoButton.titleLabel?.font = .systemFont(ofSize: 16, weight: .medium)
         changePhotoButton.addTarget(self, action: #selector(changePhotoTapped), for: .touchUpInside)
         contentView.addSubview(changePhotoButton)
 
         // First Name
-        firstNameTextField.placeholder = "First Name"
+        firstNameTextField.placeholder = "common_first_name".localized
         firstNameTextField.borderStyle = .roundedRect
         firstNameTextField.font = .systemFont(ofSize: 16)
         contentView.addSubview(firstNameTextField)
 
         // Last Name
-        lastNameTextField.placeholder = "Last Name"
+        lastNameTextField.placeholder = "common_last_name".localized
         lastNameTextField.borderStyle = .roundedRect
         lastNameTextField.font = .systemFont(ofSize: 16)
         contentView.addSubview(lastNameTextField)
 
         // Bio
         let bioLabel = UILabel()
-        bioLabel.text = "About Me"
+        bioLabel.text = "profile_about_me".localized
         bioLabel.font = .systemFont(ofSize: 14, weight: .medium)
         bioLabel.textColor = .secondaryLabel
         contentView.addSubview(bioLabel)
@@ -169,7 +169,7 @@ class EditProfileViewController: UIViewController {
 
         // Bio tips label
         let bioTipsLabel = UILabel()
-        bioTipsLabel.text = "💡 Tip: Share your interests, hobbies, and mention if you're learning other languages!"
+        bioTipsLabel.text = "auto_tip_share_your_interests_hobbies_and_men".localized
         bioTipsLabel.font = .systemFont(ofSize: 13)
         bioTipsLabel.textColor = .secondaryLabel
         bioTipsLabel.numberOfLines = 0
@@ -178,13 +178,13 @@ class EditProfileViewController: UIViewController {
 
         // Location
         let locationLabel = UILabel()
-        locationLabel.text = "Location"
+        locationLabel.text = "common_location".localized
         locationLabel.font = .systemFont(ofSize: 14, weight: .medium)
         locationLabel.textColor = .secondaryLabel
         contentView.addSubview(locationLabel)
         locationLabel.translatesAutoresizingMaskIntoConstraints = false
 
-        locationTextField.placeholder = "City, Country"
+        locationTextField.placeholder = "profile_city_country_placeholder".localized
         locationTextField.borderStyle = .roundedRect
         locationTextField.font = .systemFont(ofSize: 16)
         contentView.addSubview(locationTextField)
@@ -197,7 +197,7 @@ class EditProfileViewController: UIViewController {
         contentView.addSubview(privacyContainer)
         privacyContainer.translatesAutoresizingMaskIntoConstraints = false
 
-        privacyLabel.text = "Show city in profile"
+        privacyLabel.text = "onboarding_hometown_show_city".localized
         privacyLabel.font = .systemFont(ofSize: 16)
         privacyContainer.addSubview(privacyLabel)
         privacyLabel.translatesAutoresizingMaskIntoConstraints = false
@@ -207,25 +207,25 @@ class EditProfileViewController: UIViewController {
         showCitySwitch.translatesAutoresizingMaskIntoConstraints = false
 
         let privacyHelpLabel = UILabel()
-        privacyHelpLabel.text = "When off, only your country will be shown"
+        privacyHelpLabel.text = "profile_show_city_help".localized
         privacyHelpLabel.font = .systemFont(ofSize: 12)
         privacyHelpLabel.textColor = .secondaryLabel
         contentView.addSubview(privacyHelpLabel)
         privacyHelpLabel.translatesAutoresizingMaskIntoConstraints = false
 
         // Native Language
-        nativeLanguageLabel.text = "Native Language"
+        nativeLanguageLabel.text = "profile_field_native_language".localized
         nativeLanguageLabel.font = .systemFont(ofSize: 18, weight: .semibold)
         contentView.addSubview(nativeLanguageLabel)
 
-        nativeLanguageButton.setTitle("Select Native Language", for: .normal)
+        nativeLanguageButton.setTitle("profile_select_native".localized, for: .normal)
         nativeLanguageButton.contentHorizontalAlignment = .left
         nativeLanguageButton.titleLabel?.font = .systemFont(ofSize: 16)
         nativeLanguageButton.addTarget(self, action: #selector(selectNativeLanguageTapped), for: .touchUpInside)
         contentView.addSubview(nativeLanguageButton)
 
         // Learning Languages
-        learningLanguagesLabel.text = "Languages I'm Learning"
+        learningLanguagesLabel.text = "profile_learning_languages".localized
         learningLanguagesLabel.font = .systemFont(ofSize: 18, weight: .semibold)
         contentView.addSubview(learningLanguagesLabel)
 
@@ -234,13 +234,13 @@ class EditProfileViewController: UIViewController {
         contentView.addSubview(learningLanguagesStack)
 
         let addLearningButton = UIButton(type: .system)
-        addLearningButton.setTitle("+ Add Language", for: .normal)
+        addLearningButton.setTitle("profile_add_language".localized, for: .normal)
         addLearningButton.titleLabel?.font = .systemFont(ofSize: 16, weight: .medium)
         addLearningButton.addTarget(self, action: #selector(addLearningLanguageTapped), for: .touchUpInside)
         contentView.addSubview(addLearningButton)
 
         // Practice Languages (Languages you want to practice/chat in)
-        practiceLanguagesLabel.text = "Languages I Want to Match In"
+        practiceLanguagesLabel.text = "profile_want_to_match".localized
         practiceLanguagesLabel.font = .systemFont(ofSize: 18, weight: .semibold)
         contentView.addSubview(practiceLanguagesLabel)
 
@@ -248,14 +248,14 @@ class EditProfileViewController: UIViewController {
         practiceLanguagesStack.spacing = 10
         contentView.addSubview(practiceLanguagesStack)
 
-        addPracticeLanguageButton.setTitle("+ Add Language to Match In", for: .normal)
+        addPracticeLanguageButton.setTitle("profile_add_match_language".localized, for: .normal)
         addPracticeLanguageButton.titleLabel?.font = .systemFont(ofSize: 16)
         addPracticeLanguageButton.contentHorizontalAlignment = .left
         addPracticeLanguageButton.addTarget(self, action: #selector(addPracticeLanguageTapped), for: .touchUpInside)
         contentView.addSubview(addPracticeLanguageButton)
 
         // Open to Match (hidden - we now use practice languages)
-        openToMatchLabel.text = "Open to Match In"
+        openToMatchLabel.text = "profile_open_to_match".localized
         openToMatchLabel.font = .systemFont(ofSize: 18, weight: .semibold)
         openToMatchLabel.isHidden = true
         contentView.addSubview(openToMatchLabel)
@@ -266,29 +266,29 @@ class EditProfileViewController: UIViewController {
         contentView.addSubview(openToMatchStack)
 
         // Gender Section
-        genderLabel.text = "My Gender"
+        genderLabel.text = "profile_my_gender".localized
         genderLabel.font = .systemFont(ofSize: 18, weight: .semibold)
         contentView.addSubview(genderLabel)
 
-        genderButton.setTitle("Select Gender", for: .normal)
+        genderButton.setTitle("profile_select_gender".localized, for: .normal)
         genderButton.contentHorizontalAlignment = .left
         genderButton.titleLabel?.font = .systemFont(ofSize: 16)
         genderButton.addTarget(self, action: #selector(selectGenderTapped), for: .touchUpInside)
         contentView.addSubview(genderButton)
 
         // Gender Preference Section
-        genderPreferenceLabel.text = "Interested in Matching With"
+        genderPreferenceLabel.text = "profile_interested_in".localized
         genderPreferenceLabel.font = .systemFont(ofSize: 18, weight: .semibold)
         contentView.addSubview(genderPreferenceLabel)
 
-        genderPreferenceButton.setTitle("Select Preference", for: .normal)
+        genderPreferenceButton.setTitle("profile_select_preference".localized, for: .normal)
         genderPreferenceButton.contentHorizontalAlignment = .left
         genderPreferenceButton.titleLabel?.font = .systemFont(ofSize: 16)
         genderPreferenceButton.addTarget(self, action: #selector(selectGenderPreferenceTapped), for: .touchUpInside)
         contentView.addSubview(genderPreferenceButton)
 
         // Photos
-        photosLabel.text = "My Photos"
+        photosLabel.text = "profile_my_photos".localized
         photosLabel.font = .systemFont(ofSize: 18, weight: .semibold)
         contentView.addSubview(photosLabel)
 
@@ -563,7 +563,7 @@ class EditProfileViewController: UIViewController {
         } else {
             // No language data saved - show defaults without mock data
             selectedNativeLanguage = .english
-            nativeLanguageButton.setTitle("Select Native Language", for: .normal)
+            nativeLanguageButton.setTitle("profile_select_native".localized, for: .normal)
             learningLanguages = []
             openToLanguages = []
             practiceLanguages = []
@@ -623,7 +623,7 @@ class EditProfileViewController: UIViewController {
         row.addSubview(editIcon)
 
         let deleteButton = UIButton(type: .system)
-        deleteButton.setTitle("Remove", for: .normal)
+        deleteButton.setTitle("profile_remove".localized, for: .normal)
         deleteButton.titleLabel?.font = .systemFont(ofSize: 14)
         deleteButton.setTitleColor(.systemRed, for: .normal)
         deleteButton.tag = row.tag
@@ -673,7 +673,7 @@ class EditProfileViewController: UIViewController {
             })
         }
 
-        alertController.addAction(UIAlertAction(title: "Cancel", style: .cancel))
+        alertController.addAction(UIAlertAction(title: "common_cancel".localized, style: .cancel))
 
         if let popover = alertController.popoverPresentationController {
             popover.sourceView = sender
@@ -734,7 +734,7 @@ class EditProfileViewController: UIViewController {
         row.addSubview(editIcon)
 
         let deleteButton = UIButton(type: .system)
-        deleteButton.setTitle("Remove", for: .normal)
+        deleteButton.setTitle("profile_remove".localized, for: .normal)
         deleteButton.titleLabel?.font = .systemFont(ofSize: 14)
         deleteButton.setTitleColor(.systemRed, for: .normal)
         deleteButton.tag = row.tag
@@ -782,7 +782,7 @@ class EditProfileViewController: UIViewController {
             })
         }
 
-        alertController.addAction(UIAlertAction(title: "Cancel", style: .cancel))
+        alertController.addAction(UIAlertAction(title: "common_cancel".localized, style: .cancel))
 
         if let popover = alertController.popoverPresentationController {
             popover.sourceView = sender
@@ -870,7 +870,7 @@ class EditProfileViewController: UIViewController {
             })
         }
 
-        alertController.addAction(UIAlertAction(title: "Cancel", style: .cancel))
+        alertController.addAction(UIAlertAction(title: "common_cancel".localized, style: .cancel))
 
         if let popover = alertController.popoverPresentationController {
             popover.sourceView = isNative ? nativeLanguageButton : view
@@ -898,7 +898,7 @@ class EditProfileViewController: UIViewController {
             })
         }
 
-        alertController.addAction(UIAlertAction(title: "Cancel", style: .cancel))
+        alertController.addAction(UIAlertAction(title: "common_cancel".localized, style: .cancel))
 
         if let popover = alertController.popoverPresentationController {
             popover.sourceView = view
@@ -926,7 +926,7 @@ class EditProfileViewController: UIViewController {
             })
         }
 
-        alertController.addAction(UIAlertAction(title: "Cancel", style: .cancel))
+        alertController.addAction(UIAlertAction(title: "common_cancel".localized, style: .cancel))
 
         if let popover = alertController.popoverPresentationController {
             popover.sourceView = addPracticeLanguageButton
@@ -951,7 +951,7 @@ class EditProfileViewController: UIViewController {
             })
         }
 
-        alertController.addAction(UIAlertAction(title: "Cancel", style: .cancel))
+        alertController.addAction(UIAlertAction(title: "common_cancel".localized, style: .cancel))
 
         if let popover = alertController.popoverPresentationController {
             popover.sourceView = view
@@ -985,7 +985,7 @@ class EditProfileViewController: UIViewController {
             })
         }
 
-        alertController.addAction(UIAlertAction(title: "Cancel", style: .cancel))
+        alertController.addAction(UIAlertAction(title: "common_cancel".localized, style: .cancel))
 
         if let popover = alertController.popoverPresentationController {
             popover.sourceView = genderButton
@@ -1020,7 +1020,7 @@ class EditProfileViewController: UIViewController {
             })
         }
 
-        alertController.addAction(UIAlertAction(title: "Cancel", style: .cancel))
+        alertController.addAction(UIAlertAction(title: "common_cancel".localized, style: .cancel))
 
         if let popover = alertController.popoverPresentationController {
             popover.sourceView = genderPreferenceButton
@@ -1128,7 +1128,7 @@ class EditProfileViewController: UIViewController {
 
     private func showAlert(title: String, message: String) {
         let alert = UIAlertController(title: title, message: message, preferredStyle: .alert)
-        alert.addAction(UIAlertAction(title: "OK", style: .default))
+        alert.addAction(UIAlertAction(title: "common_ok".localized, style: .default))
         present(alert, animated: true)
     }
 }
@@ -1158,11 +1158,11 @@ extension EditProfileViewController: UICollectionViewDataSource, UICollectionVie
         if indexPath.item < photoURLs.count {
             // Show option to delete
             let alert = UIAlertController(title: nil, message: nil, preferredStyle: .actionSheet)
-            alert.addAction(UIAlertAction(title: "Delete Photo", style: .destructive) { _ in
+            alert.addAction(UIAlertAction(title: "common_delete_photo".localized, style: .destructive) { _ in
                 self.photoURLs.remove(at: indexPath.item)
                 collectionView.reloadData()
             })
-            alert.addAction(UIAlertAction(title: "Cancel", style: .cancel))
+            alert.addAction(UIAlertAction(title: "common_cancel".localized, style: .cancel))
 
             if let popover = alert.popoverPresentationController {
                 if let cell = collectionView.cellForItem(at: indexPath) {
@@ -1192,18 +1192,45 @@ extension EditProfileViewController: PHPickerViewControllerDelegate {
 
         guard !results.isEmpty else { return }
 
-        // Show loading indicator
-        let loadingAlert = UIAlertController(title: "Uploading Photos", message: "Please wait...", preferredStyle: .alert)
+        // Show loading indicator with cancel option
+        let loadingAlert = UIAlertController(title: "profile_uploading_photo".localized, message: "common_please_wait".localized, preferredStyle: .alert)
+        var isCancelled = false
+        loadingAlert.addAction(UIAlertAction(title: "common_cancel".localized, style: .cancel) { _ in
+            isCancelled = true
+        })
         present(loadingAlert, animated: true)
+
+        // Safety timeout - dismiss alert after 90 seconds no matter what
+        let timeoutTask = Task {
+            try? await Task.sleep(nanoseconds: 90_000_000_000) // 90 seconds
+            if !Task.isCancelled {
+                await MainActor.run {
+                    if self.presentedViewController is UIAlertController {
+                        self.dismiss(animated: true) {
+                            let alert = UIAlertController(
+                                title: "profile_upload_failed".localized,
+                                message: "profile_upload_failed_message".localized,
+                                preferredStyle: .alert
+                            )
+                            alert.addAction(UIAlertAction(title: "common_ok".localized, style: .default))
+                            self.present(alert, animated: true)
+                        }
+                    }
+                }
+            }
+        }
 
         Task {
             var uploadedCount = 0
             var failedCount = 0
 
             for result in results {
+                // Check if user cancelled
+                if isCancelled { break }
+
                 do {
-                    // Load the image from picker result
-                    let image = try await loadImage(from: result)
+                    // Load the image from picker result with timeout
+                    let image = try await loadImageWithTimeout(from: result, timeout: 30)
 
                     // Compress image to JPEG
                     guard let imageData = image.jpegData(compressionQuality: 0.8) else {
@@ -1220,12 +1247,23 @@ extension EditProfileViewController: PHPickerViewControllerDelegate {
                     // Determine photo index
                     let photoIndex = self.photoURLs.count
 
-                    // Upload to Supabase storage
-                    let storagePath = try await SupabaseService.shared.uploadPhoto(
-                        imageData,
-                        userId: userId,
-                        photoIndex: photoIndex
-                    )
+                    // Upload to Supabase storage with timeout
+                    let storagePath = try await withThrowingTaskGroup(of: String.self) { group in
+                        group.addTask {
+                            try await SupabaseService.shared.uploadPhoto(
+                                imageData,
+                                userId: userId,
+                                photoIndex: photoIndex
+                            )
+                        }
+                        group.addTask {
+                            try await Task.sleep(nanoseconds: 60_000_000_000) // 60 second timeout
+                            throw NSError(domain: "Upload", code: -1, userInfo: [NSLocalizedDescriptionKey: "Upload timed out"])
+                        }
+                        let result = try await group.next()!
+                        group.cancelAll()
+                        return result
+                    }
 
                     // Add the storage path to our array
                     await MainActor.run {
@@ -1253,16 +1291,30 @@ extension EditProfileViewController: PHPickerViewControllerDelegate {
                 }
             }
 
+            // Cancel the safety timeout since we're done
+            timeoutTask.cancel()
+
             // Dismiss loading and show result
             await MainActor.run {
+                // Only dismiss if the alert is still showing
+                guard self.presentedViewController is UIAlertController else { return }
+
                 loadingAlert.dismiss(animated: true) {
-                    if failedCount > 0 {
+                    if isCancelled {
+                        let alert = UIAlertController(
+                            title: "common_cancelled".localized,
+                            message: uploadedCount > 0 ? "\(uploadedCount) photo(s) were uploaded before cancellation." : nil,
+                            preferredStyle: .alert
+                        )
+                        alert.addAction(UIAlertAction(title: "common_ok".localized, style: .default))
+                        self.present(alert, animated: true)
+                    } else if failedCount > 0 {
                         let alert = UIAlertController(
                             title: "Upload Complete",
                             message: "\(uploadedCount) photo(s) uploaded. \(failedCount) failed.",
                             preferredStyle: .alert
                         )
-                        alert.addAction(UIAlertAction(title: "OK", style: .default))
+                        alert.addAction(UIAlertAction(title: "common_ok".localized, style: .default))
                         self.present(alert, animated: true)
                     }
                     // Reload to show the new photos
@@ -1272,23 +1324,48 @@ extension EditProfileViewController: PHPickerViewControllerDelegate {
         }
     }
 
-    /// Helper to load UIImage from PHPickerResult asynchronously
-    private func loadImage(from result: PHPickerResult) async throws -> UIImage {
-        let originalImage: UIImage = try await withCheckedThrowingContinuation { continuation in
-            result.itemProvider.loadObject(ofClass: UIImage.self) { object, error in
-                if let error = error {
-                    continuation.resume(throwing: error)
-                } else if let image = object as? UIImage {
-                    continuation.resume(returning: image)
-                } else {
-                    continuation.resume(throwing: NSError(domain: "PhotoPicker", code: -1,
-                        userInfo: [NSLocalizedDescriptionKey: "Could not load image"]))
+    /// Helper to load UIImage from PHPickerResult asynchronously with timeout
+    private func loadImageWithTimeout(from result: PHPickerResult, timeout: TimeInterval) async throws -> UIImage {
+        let originalImage: UIImage = try await withThrowingTaskGroup(of: UIImage.self) { group in
+            // Image loading task
+            group.addTask {
+                try await withCheckedThrowingContinuation { continuation in
+                    var hasResumed = false
+                    result.itemProvider.loadObject(ofClass: UIImage.self) { object, error in
+                        guard !hasResumed else { return }
+                        hasResumed = true
+
+                        if let error = error {
+                            continuation.resume(throwing: error)
+                        } else if let image = object as? UIImage {
+                            continuation.resume(returning: image)
+                        } else {
+                            continuation.resume(throwing: NSError(domain: "PhotoPicker", code: -1,
+                                userInfo: [NSLocalizedDescriptionKey: "Could not load image"]))
+                        }
+                    }
                 }
             }
+
+            // Timeout task
+            group.addTask {
+                try await Task.sleep(nanoseconds: UInt64(timeout * 1_000_000_000))
+                throw NSError(domain: "PhotoPicker", code: -2,
+                    userInfo: [NSLocalizedDescriptionKey: "Image loading timed out"])
+            }
+
+            let result = try await group.next()!
+            group.cancelAll()
+            return result
         }
 
         // Resize image to max 1200px to reduce memory usage and prevent crashes
         return resizeImage(originalImage, maxDimension: 1200)
+    }
+
+    /// Helper to load UIImage from PHPickerResult asynchronously (legacy, kept for compatibility)
+    private func loadImage(from result: PHPickerResult) async throws -> UIImage {
+        return try await loadImageWithTimeout(from: result, timeout: 30)
     }
 
     /// Resize image to fit within maxDimension while maintaining aspect ratio

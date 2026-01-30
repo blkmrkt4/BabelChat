@@ -99,7 +99,7 @@ class SubscriptionViewController: UIViewController {
         currentTierLabel.translatesAutoresizingMaskIntoConstraints = false
 
         // Description
-        descriptionLabel.text = "Upgrade your plan to unlock more features"
+        descriptionLabel.text = "subscription_upgrade_prompt".localized
         descriptionLabel.font = .systemFont(ofSize: 16)
         descriptionLabel.textColor = .secondaryLabel
         descriptionLabel.textAlignment = .center
@@ -182,7 +182,7 @@ class SubscriptionViewController: UIViewController {
         let priceLabel = UILabel()
         // Use localized price from RevenueCat if available, fallback to tier.price
         if tier == .free {
-            priceLabel.text = "Free"
+            priceLabel.text = "tier_trial_price".localized
         } else {
             priceLabel.text = subscriptionService.localizedPricePerPeriod(for: tier)
         }
@@ -287,7 +287,7 @@ class SubscriptionViewController: UIViewController {
             preferredStyle: .alert
         )
 
-        alert.addAction(UIAlertAction(title: "Cancel", style: .cancel) { [weak self] _ in
+        alert.addAction(UIAlertAction(title: "common_cancel".localized, style: .cancel) { [weak self] _ in
             // Track paywall dismissed
             AnalyticsService.shared.track(.paywallDismissed, properties: ["tier": tier.displayName])
         })
@@ -349,7 +349,7 @@ class SubscriptionViewController: UIViewController {
             message: "Your subscription is now active.",
             preferredStyle: .alert
         )
-        alert.addAction(UIAlertAction(title: "OK", style: .default) { [weak self] _ in
+        alert.addAction(UIAlertAction(title: "common_ok".localized, style: .default) { [weak self] _ in
             self?.dismiss(animated: true)
         })
         present(alert, animated: true)
@@ -378,7 +378,7 @@ class SubscriptionViewController: UIViewController {
             message: errorMessage,
             preferredStyle: .alert
         )
-        alert.addAction(UIAlertAction(title: "OK", style: .default))
+        alert.addAction(UIAlertAction(title: "common_ok".localized, style: .default))
         present(alert, animated: true)
     }
 
@@ -393,7 +393,7 @@ class SubscriptionViewController: UIViewController {
                 UIApplication.shared.open(url)
             }
         })
-        alert.addAction(UIAlertAction(title: "Cancel", style: .cancel))
+        alert.addAction(UIAlertAction(title: "common_cancel".localized, style: .cancel))
         present(alert, animated: true)
     }
 
@@ -422,7 +422,7 @@ class SubscriptionViewController: UIViewController {
                             message: "Your \(status.tier.displayName) subscription has been restored.",
                             preferredStyle: .alert
                         )
-                        alert.addAction(UIAlertAction(title: "OK", style: .default) { _ in
+                        alert.addAction(UIAlertAction(title: "common_ok".localized, style: .default) { _ in
                             self?.dismiss(animated: true)
                         })
                         self?.present(alert, animated: true)
@@ -432,7 +432,7 @@ class SubscriptionViewController: UIViewController {
                             message: "No previous subscriptions were found for this account.",
                             preferredStyle: .alert
                         )
-                        alert.addAction(UIAlertAction(title: "OK", style: .default))
+                        alert.addAction(UIAlertAction(title: "common_ok".localized, style: .default))
                         self?.present(alert, animated: true)
                     }
                 case .failure(let error):
