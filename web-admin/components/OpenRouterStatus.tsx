@@ -91,15 +91,15 @@ export function OpenRouterStatus() {
           </div>
         </div>
 
-        {health.keyInfo?.usagePercent !== null && (
+        {health.keyInfo?.usagePercent != null && (
           <div className="w-24 h-2 bg-gray-200 dark:bg-gray-700 rounded-full overflow-hidden">
             <div
               className={`h-full transition-all ${
-                health.keyInfo.usagePercent >= 90 ? 'bg-red-500' :
-                health.keyInfo.usagePercent >= 75 ? 'bg-yellow-500' :
+                health.keyInfo!.usagePercent >= 90 ? 'bg-red-500' :
+                health.keyInfo!.usagePercent >= 75 ? 'bg-yellow-500' :
                 'bg-green-500'
               }`}
-              style={{ width: `${Math.min(health.keyInfo.usagePercent, 100)}%` }}
+              style={{ width: `${Math.min(health.keyInfo!.usagePercent, 100)}%` }}
             />
           </div>
         )}
