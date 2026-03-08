@@ -125,6 +125,21 @@ class SubscriptionService: NSObject {
         }
 
         super.init()
+
+        // In debug builds, allow forcing a subscription tier for simulator testing
+        #if DEBUG
+        if let forcedTier = DebugConfig.forceSubscriptionTier {
+            print("🔧 DEBUG: Forcing subscription tier to \(forcedTier.displayName)")
+            self.currentStatus = SubscriptionStatus(
+                tier: forcedTier,
+                isActive: true,
+                expiresAt: Date.distantFuture,
+                isTrialing: false,
+                trialStartDate: nil,
+                trialEndDate: nil
+            )
+        }
+        #endif
     }
 
     // MARK: - RevenueCat Configuration
@@ -515,6 +530,13 @@ class SubscriptionService: NSObject {
     func checkSubscriptionStatus() {
         print("🔍 [Status] Checking subscription status...")
 
+        #if DEBUG
+        if DebugConfig.forceSubscriptionTier != nil {
+            print("🔧 [Status] DEBUG: Subscription tier is forced, skipping RevenueCat check")
+            return
+        }
+        #endif
+
         if isDevelopmentMode {
             print("⚠️ [Status] Development Mode: Using local subscription status")
             return
@@ -534,6 +556,12 @@ class SubscriptionService: NSObject {
 
     // MARK: - Private Helpers
     private func updateStatus(from customerInfo: CustomerInfo?) {
+        #if DEBUG
+        if DebugConfig.forceSubscriptionTier != nil {
+            return // Don't let RevenueCat overwrite the debug override
+        }
+        #endif
+
         guard let customerInfo = customerInfo else {
             print("⚠️ [Status] CustomerInfo is nil")
             return
@@ -606,96 +634,6 @@ class SubscriptionService: NSObject {
         return currentStatus.isTrialing
     }
 
-    // MARK: - Free Tier App Trial (7-day limited access)
-
-    private let freeTrialStartKey = "free_trial_start_date"
-
-    /// Initialize the free trial if user is on free tier and hasn't started yet
-    func initializeFreeTrialIfNeeded() {
-        // Only for free tier users who haven't started trial
-        guard currentStatus.tier == .free else { return }
-
-        // Check if trial already started
-        if let existingStartDate = UserDefaults.standard.object(forKey: freeTrialStartKey) as? Date {
-            // Trial already exists, make sure status reflects it
-            if currentStatus.freeTrialStartDate == nil {
-                var updatedStatus = SubscriptionStatus.freeWithTrial(startDate: existingStartDate)
-                currentStatus = updatedStatus
-            }
-            return
-        }
-
-        // Start the 7-day free trial
-        let startDate = Date()
-        UserDefaults.standard.set(startDate, forKey: freeTrialStartKey)
-
-        // Update status with trial info
-        let updatedStatus = SubscriptionStatus.freeWithTrial(startDate: startDate)
-        currentStatus = updatedStatus
-
-        print("🎉 Free trial started: \(startDate)")
-    }
-
-    /// Load free trial start date from UserDefaults
-    func loadFreeTrialStartDate() -> Date? {
-        return UserDefaults.standard.object(forKey: freeTrialStartKey) as? Date
-    }
-
-    #if DEBUG
-    /// Reset the free trial to start from now (debug only)
-    func resetFreeTrial() {
-        let newStart = Date()
-        UserDefaults.standard.set(newStart, forKey: freeTrialStartKey)
-        currentStatus = SubscriptionStatus.freeWithTrial(startDate: newStart)
-        print("🔄 [DEBUG] Free trial reset to: \(newStart)")
-    }
-    #endif
-
-    /// Whether the paywall should be shown (free trial expired and not subscribed)
-    var shouldShowPaywall: Bool {
-        // If user has an active paid subscription, no paywall needed
-        if currentStatus.tier != .free && currentStatus.isActive {
-            return false
-        }
-
-        // If user is on free tier, check if trial expired
-        if currentStatus.tier == .free {
-            // Load trial start from UserDefaults if not in status
-            if let startDate = loadFreeTrialStartDate() {
-                let endDate = Calendar.current.date(byAdding: .day, value: 7, to: startDate) ?? startDate
-                return Date() > endDate
-            }
-            // No trial started yet - don't show paywall (will start trial)
-            return false
-        }
-
-        return false
-    }
-
-    /// Days remaining in free trial (0 if expired or not on free tier)
-    var daysRemainingInFreeTrial: Int {
-        guard currentStatus.tier == .free else { return 0 }
-
-        if let startDate = loadFreeTrialStartDate() {
-            let endDate = Calendar.current.date(byAdding: .day, value: 7, to: startDate) ?? startDate
-            let days = Calendar.current.dateComponents([.day], from: Date(), to: endDate).day ?? 0
-            return max(0, days)
-        }
-
-        return 7 // Trial not started yet, full 7 days available
-    }
-
-    /// Whether user is currently in free trial period (not expired)
-    var isInFreeTrial: Bool {
-        guard currentStatus.tier == .free else { return false }
-
-        if let startDate = loadFreeTrialStartDate() {
-            let endDate = Calendar.current.date(byAdding: .day, value: 7, to: startDate) ?? startDate
-            return Date() <= endDate
-        }
-
-        return true // Trial not started = will have full trial available
-    }
 }
 
 // MARK: - Subscription Offering Model

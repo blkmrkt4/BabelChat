@@ -98,32 +98,29 @@ class MainTabBarController: UITabBarController, UITabBarControllerDelegate {
 
     override func viewDidAppear(_ animated: Bool) {
         super.viewDidAppear(animated)
-        checkSubscriptionAccess()
+        showWelcomeBackPromptIfNeeded()
     }
 
-    // MARK: - Subscription Access Check
+    // MARK: - Welcome Back Prompt (one-time for returning users)
 
-    private func checkSubscriptionAccess() {
-        let subscriptionService = SubscriptionService.shared
+    private func showWelcomeBackPromptIfNeeded() {
+        let hasSeenPrompt = UserDefaults.standard.bool(forKey: "has_seen_welcome_back_prompt")
+        guard !hasSeenPrompt else { return }
 
-        // Initialize free trial for new users
-        subscriptionService.initializeFreeTrialIfNeeded()
+        // Check if user had a free trial that expired (returning user)
+        guard let trialStart = UserDefaults.standard.object(forKey: "free_trial_start_date") as? Date else { return }
+        let trialEnd = Calendar.current.date(byAdding: .day, value: 7, to: trialStart) ?? trialStart
+        guard Date() > trialEnd else { return }
 
-        // Check if paywall should be shown (free trial expired)
-        if subscriptionService.shouldShowPaywall {
-            presentPaywall()
-        }
-    }
+        // Only show for free tier users (not already subscribed)
+        guard SubscriptionService.shared.isFreeTier else { return }
 
-    private func presentPaywall() {
-        // Create pricing view controller as a forced paywall
+        UserDefaults.standard.set(true, forKey: "has_seen_welcome_back_prompt")
+
+        // Present dismissible upgrade prompt
         let pricingVC = PricingViewController()
-        pricingVC.isModalPaywall = true  // Flag to prevent dismissal and show different messaging
-
         let navController = UINavigationController(rootViewController: pricingVC)
-        navController.modalPresentationStyle = .fullScreen
-        navController.isModalInPresentation = true  // Prevent swipe to dismiss
-
+        navController.modalPresentationStyle = .pageSheet
         present(navController, animated: true)
     }
 
@@ -178,9 +175,9 @@ class MainTabBarController: UITabBarController, UITabBarControllerDelegate {
         let languageLabVC = createLanguageLabViewController()
         let matchesVC = createMatchesViewController()
         let chatsVC = createChatsViewController()
-        let profileVC = createProfileViewController()
+        let sessionsVC = createSessionsViewController()
 
-        viewControllers = [discoverVC, languageLabVC, matchesVC, chatsVC, profileVC]
+        viewControllers = [discoverVC, languageLabVC, matchesVC, chatsVC, sessionsVC]
 
         selectedIndex = 2 // Start on Matches tab
     }
@@ -250,13 +247,14 @@ class MainTabBarController: UITabBarController, UITabBarControllerDelegate {
         return UINavigationController(rootViewController: chatsVC)
     }
 
-    private func createProfileViewController() -> UINavigationController {
-        let profileVC = ProfileViewController()
-        profileVC.tabBarItem = UITabBarItem(
-            title: "tab_profile".localized,
-            image: UIImage(systemName: "person.circle"),
-            selectedImage: UIImage(systemName: "person.circle.fill")
+    private func createSessionsViewController() -> UINavigationController {
+        let sessionsVC = SessionsListViewController()
+        sessionsVC.tabBarItem = UITabBarItem(
+            title: "tab_sessions".localized,
+            image: UIImage(systemName: "video"),
+            selectedImage: UIImage(systemName: "video.fill")
         )
-        return UINavigationController(rootViewController: profileVC)
+        return UINavigationController(rootViewController: sessionsVC)
     }
+
 }

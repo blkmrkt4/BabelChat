@@ -88,15 +88,14 @@ class ProfileViewController: UIViewController, PhotoGridViewDelegate {
     }
 
     private func setupNavigationBar() {
-        // No title needed - it's clear from the tab bar
         navigationController?.navigationBar.prefersLargeTitles = false
 
-        // Left side: Welcome Screen
-        let welcomeButton = UIBarButtonItem(
+        // Left side: Home button to go back to current tab
+        let homeButton = UIBarButtonItem(
             image: UIImage(systemName: "house"),
             style: .plain,
             target: self,
-            action: #selector(welcomeScreenTapped)
+            action: #selector(homeTapped)
         )
 
         // Right side: App Tutorial, Settings
@@ -114,8 +113,9 @@ class ProfileViewController: UIViewController, PhotoGridViewDelegate {
             action: #selector(settingsTapped)
         )
 
-        navigationItem.leftBarButtonItems = [welcomeButton]
+        navigationItem.leftBarButtonItems = [homeButton]
         navigationItem.rightBarButtonItems = [settingsButton, tutorialButton]
+        navigationItem.hidesBackButton = true
     }
 
     private func setupViews() {
@@ -629,11 +629,8 @@ class ProfileViewController: UIViewController, PhotoGridViewDelegate {
         navigationController?.pushViewController(settingsVC, animated: true)
     }
 
-    @objc private func welcomeScreenTapped() {
-        let carouselVC = OnboardingCarouselViewController()
-        carouselVC.isViewingFromProfile = true
-        carouselVC.modalPresentationStyle = .fullScreen
-        present(carouselVC, animated: true)
+    @objc private func homeTapped() {
+        navigationController?.popViewController(animated: true)
     }
 
     @objc private func tutorialTapped() {

@@ -632,6 +632,49 @@ extension SupabaseService {
             if let longitude = profile.longitude {
                 UserDefaults.standard.set(longitude, forKey: "longitude")
             }
+            if let city = profile.city {
+                UserDefaults.standard.set(city, forKey: "city")
+            }
+            if let country = profile.country {
+                UserDefaults.standard.set(country, forKey: "country")
+            }
+
+            // Country preferences
+            if let preferredCountries = profile.preferredCountries {
+                UserDefaults.standard.set(preferredCountries, forKey: "preferredCountries")
+            }
+            if let excludedCountries = profile.excludedCountries {
+                UserDefaults.standard.set(excludedCountries, forKey: "excludedCountries")
+            }
+
+            // Travel destination
+            if let travel = profile.travelDestination {
+                let travelModel = travel.toModel()
+                if let encoded = try? JSONEncoder().encode(travelModel) {
+                    UserDefaults.standard.set(encoded, forKey: "travelDestination")
+                }
+            }
+
+            // Relationship intent
+            if let intents = profile.relationshipIntents, !intents.isEmpty {
+                UserDefaults.standard.set(intents.first, forKey: "relationshipIntent")
+                UserDefaults.standard.set(intents, forKey: "relationshipIntents")
+            }
+
+            // Learning contexts
+            if let contexts = profile.learningContexts {
+                UserDefaults.standard.set(contexts, forKey: "learningContexts")
+            }
+
+            // Muse languages
+            if let museLanguages = profile.museLanguages {
+                UserDefaults.standard.set(museLanguages, forKey: "museLanguages")
+            }
+
+            // City visibility
+            if let showCity = profile.showCityInProfile {
+                UserDefaults.standard.set(showCity, forKey: "showCityInProfile")
+            }
 
             // User ID
             UserDefaults.standard.set(profile.id, forKey: "userId")
@@ -813,6 +856,9 @@ extension SupabaseService {
         // Privacy preferences
         profileUpdate.strictlyPlatonic = UserDefaults.standard.bool(forKey: "strictlyPlatonic")
         profileUpdate.blurPhotosUntilMatch = UserDefaults.standard.bool(forKey: "blurPhotosUntilMatch")
+        if UserDefaults.standard.object(forKey: "showCityInProfile") != nil {
+            profileUpdate.showCityInProfile = UserDefaults.standard.bool(forKey: "showCityInProfile")
+        }
 
         // Relationship intent
         if let intentString = UserDefaults.standard.string(forKey: "relationshipIntent") {
@@ -1184,6 +1230,33 @@ extension SupabaseService {
         return Array(scoredMatches.prefix(limit))
     }
 
+    /// Fetch the number of completed sessions hosted by each user in the given set
+    func getSessionHostCounts(for userIds: [String]) async throws -> [String: Int] {
+        guard !userIds.isEmpty else { return [:] }
+
+        struct HostCountRow: Codable {
+            let hostId: String
+            let count: Int
+
+            enum CodingKeys: String, CodingKey {
+                case hostId = "host_id"
+                case count
+            }
+        }
+
+        // Query sessions grouped by host_id, counting ended sessions
+        let response: [HostCountRow] = try await client
+            .rpc("get_session_host_counts", params: ["p_user_ids": userIds])
+            .execute()
+            .value
+
+        var counts: [String: Int] = [:]
+        for row in response {
+            counts[row.hostId] = row.count
+        }
+        return counts
+    }
+
     /// Simple version that returns just User models
     func getDiscoveryUsers(limit: Int = 20) async throws -> [User] {
         let scoredMatches = try await getMatchedDiscoveryProfiles(limit: limit)
@@ -1499,13 +1572,16 @@ struct ProfileResponse: Codable {
     let latitude: Double?
     let longitude: Double?
     let preferredCountries: [String]?
+    let excludedCountries: [String]?
     let travelDestination: TravelDestinationDB?
     let relationshipIntents: [String]?
     let learningContexts: [String]?
+    let museLanguages: [String]?
 
     // Platonic and blur preferences
     let strictlyPlatonic: Bool?
     let blurPhotosUntilMatch: Bool?
+    let showCityInProfile: Bool?
 
     enum CodingKeys: String, CodingKey {
         case id, email, bio, location, city, country, latitude, longitude
@@ -1531,11 +1607,14 @@ struct ProfileResponse: Codable {
         case maxAge = "max_age"
         case locationPreference = "location_preference"
         case preferredCountries = "preferred_countries"
+        case excludedCountries = "excluded_countries"
         case travelDestination = "travel_destination"
         case relationshipIntents = "relationship_intents"
         case learningContexts = "learning_contexts"
+        case museLanguages = "muse_languages"
         case strictlyPlatonic = "strictly_platonic"
         case blurPhotosUntilMatch = "blur_photos_until_match"
+        case showCityInProfile = "show_city_in_profile"
     }
 
     /// Convert ProfileResponse to User model
@@ -1593,7 +1672,7 @@ struct ProfileResponse: Codable {
             openToLanguages: openToLanguages,
             practiceLanguages: nil,
             location: location,
-            showCityInProfile: true,
+            showCityInProfile: showCityInProfile ?? true,
             matchedDate: nil,
             isOnline: isRecentlyActive(),
             isAI: false,
@@ -1631,7 +1710,7 @@ struct ProfileResponse: Codable {
         let userRelationshipIntents = (relationshipIntents ?? []).compactMap { intentString in
             RelationshipIntent.allCases.first(where: { $0.rawValue == intentString })
         }
-        let finalIntent = userRelationshipIntents.first ?? .languagePracticeOnly
+        let finalIntent = userRelationshipIntents.first ?? .languageExchange
 
         // Parse learning contexts (empty array = open to all styles)
         let userLearningContexts = (learningContexts ?? []).compactMap { contextString in
@@ -1655,6 +1734,7 @@ struct ProfileResponse: Codable {
             latitude: latitude,
             longitude: longitude,
             preferredCountries: preferredCountries,
+            excludedCountries: excludedCountries,
             travelDestination: userTravelDestination,
             relationshipIntent: finalIntent,
             learningContexts: finalContexts,

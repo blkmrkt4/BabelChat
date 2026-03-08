@@ -167,6 +167,21 @@ class UpgradePromptViewController: UIViewController {
             iconLabel.text = "👤"
             titleLabel.text = "upgrade_profile_limit_title".localized
             messageLabel.text = "upgrade_profile_limit_message".localized
+
+        case .dailySwipes:
+            iconLabel.text = "🔍"
+            titleLabel.text = "upgrade_swipe_limit_title".localized
+            messageLabel.text = "upgrade_swipe_limit_message".localized
+
+        case .humanMessages:
+            iconLabel.text = "✉️"
+            titleLabel.text = "upgrade_message_limit_title".localized
+            messageLabel.text = "upgrade_message_limit_message".localized
+
+        case .sessionJoins:
+            iconLabel.text = "🎥"
+            titleLabel.text = "upgrade_session_join_limit_title".localized
+            messageLabel.text = "upgrade_session_join_limit_message".localized
         }
 
         // Add premium features with TTS benefits

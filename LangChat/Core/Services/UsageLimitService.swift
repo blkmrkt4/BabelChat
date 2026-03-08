@@ -27,8 +27,8 @@ class UsageLimitService {
     ///   - tier: The user's subscription tier
     /// - Returns: UsageLimitResult indicating if action is allowed
     func checkLimit(for type: UsageLimitType, tier: SubscriptionTier) -> UsageLimitResult {
-        // Premium users have no limits
-        if tier == .premium {
+        // Premium and Pro users have no limits
+        if tier == .premium || tier == .pro {
             return .allowed(remaining: nil)
         }
 
@@ -79,7 +79,7 @@ class UsageLimitService {
 
     /// Get remaining count for a specific type
     func getRemainingCount(for type: UsageLimitType, tier: SubscriptionTier) -> Int? {
-        if tier == .premium {
+        if tier == .premium || tier == .pro {
             return nil // Unlimited
         }
 
@@ -171,6 +171,39 @@ class UsageLimitService {
     @discardableResult
     func incrementProfileView() -> Int {
         return incrementUsage(for: .profileViews)
+    }
+
+    /// Check if user can swipe in discover
+    func canSwipe(tier: SubscriptionTier) -> UsageLimitResult {
+        return checkLimit(for: .dailySwipes, tier: tier)
+    }
+
+    /// Increment swipe count
+    @discardableResult
+    func incrementSwipe() -> Int {
+        return incrementUsage(for: .dailySwipes)
+    }
+
+    /// Check if user can send a human message
+    func canSendHumanMessage(tier: SubscriptionTier) -> UsageLimitResult {
+        return checkLimit(for: .humanMessages, tier: tier)
+    }
+
+    /// Increment human message count
+    @discardableResult
+    func incrementHumanMessage() -> Int {
+        return incrementUsage(for: .humanMessages)
+    }
+
+    /// Check if user can join a session
+    func canJoinSession(tier: SubscriptionTier) -> UsageLimitResult {
+        return checkLimit(for: .sessionJoins, tier: tier)
+    }
+
+    /// Increment session join count
+    @discardableResult
+    func incrementSessionJoin() -> Int {
+        return incrementUsage(for: .sessionJoins)
     }
 }
 

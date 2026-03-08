@@ -148,7 +148,7 @@ class MatchingService {
         let intent2 = user2.matchingPreferences.relationshipIntent
 
         // Always allow if either has the default "language practice only" intent
-        if intent1 == .languagePracticeOnly || intent2 == .languagePracticeOnly {
+        if intent1 == .languageExchange || intent2 == .languageExchange {
             return true
         }
 
@@ -480,9 +480,12 @@ class MatchingService {
         case .friendship:
             reasons.append("Both want friendship")
             return 8
-        case .languagePracticeOnly:
+        case .languageExchange:
             reasons.append("Focused on language practice")
             return 5
+        case .networking:
+            reasons.append("Both interested in networking")
+            return 7
         }
     }
 

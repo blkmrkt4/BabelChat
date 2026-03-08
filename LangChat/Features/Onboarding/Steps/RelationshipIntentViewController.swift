@@ -4,7 +4,7 @@ class RelationshipIntentViewController: BaseOnboardingViewController {
 
     // MARK: - UI Components
     private let stackView = UIStackView()
-    private var selectedIntent: RelationshipIntent = .languagePracticeOnly
+    private var selectedIntent: RelationshipIntent = .languageExchange
     private var intentButtons: [UIButton] = []
 
     // Privacy options container (shown when languagePracticeOnly is selected)
@@ -53,7 +53,7 @@ class RelationshipIntentViewController: BaseOnboardingViewController {
             stackView.addArrangedSubview(button)
 
             // Add privacy container after languagePracticeOnly button
-            if intent == .languagePracticeOnly {
+            if intent == .languageExchange {
                 stackView.addArrangedSubview(privacyContainer)
             }
         }
@@ -281,7 +281,7 @@ class RelationshipIntentViewController: BaseOnboardingViewController {
 
     private func updatePrivacyVisibility(animated: Bool) {
         // Show privacy options only when languagePracticeOnly is selected
-        let showPrivacy = selectedIntent == .languagePracticeOnly
+        let showPrivacy = selectedIntent == .languageExchange
         let targetHeight: CGFloat = showPrivacy ? 200 : 0
 
         if animated {

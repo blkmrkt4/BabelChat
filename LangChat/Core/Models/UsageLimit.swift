@@ -11,6 +11,9 @@ import Foundation
 enum UsageLimitType: String, Codable {
     case aiMessages = "ai_messages"
     case profileViews = "profile_views"
+    case dailySwipes = "daily_swipes"
+    case humanMessages = "human_messages"
+    case sessionJoins = "session_joins"
 
     var displayName: String {
         switch self {
@@ -18,6 +21,12 @@ enum UsageLimitType: String, Codable {
             return "AI Messages"
         case .profileViews:
             return "Profile Views"
+        case .dailySwipes:
+            return "Discover Swipes"
+        case .humanMessages:
+            return "Messages"
+        case .sessionJoins:
+            return "Session Joins"
         }
     }
 
@@ -27,6 +36,12 @@ enum UsageLimitType: String, Codable {
             return 5
         case .profileViews:
             return 10
+        case .dailySwipes:
+            return 15
+        case .humanMessages:
+            return 10
+        case .sessionJoins:
+            return 3
         }
     }
 }

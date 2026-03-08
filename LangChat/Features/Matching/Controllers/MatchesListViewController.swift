@@ -4,18 +4,16 @@ import AVFoundation
 
 class MatchesListViewController: UIViewController {
 
-    private let collectionView: UICollectionView = {
-        let layout = UICollectionViewFlowLayout()
-        layout.minimumLineSpacing = 16
-        layout.minimumInteritemSpacing = 16
-        // Section insets are set per-section in insetForSectionAt delegate method
-        return UICollectionView(frame: .zero, collectionViewLayout: layout)
-    }()
+    private var collectionView: UICollectionView!
 
     private let emptyStateView = UIView()
     private let emptyStateLabel = UILabel()
 
-    private var matches: [Match] = []
+    private var allMatches: [Match] = []
+    private var filteredMatches: [Match] = []
+    private var filterCategories: [MatchFilterCategory] = []
+    private var selectedFilterIndex: Int = 0
+    private var currentUserLearningLanguages: [Language] = []
 
     override func viewDidLoad() {
         super.viewDidLoad()
@@ -28,18 +26,108 @@ class MatchesListViewController: UIViewController {
     }
 
     private func setupNavigationBar() {
-        // Hide navigation title - we'll use a custom header instead
-        navigationItem.title = ""
         navigationController?.navigationBar.prefersLargeTitles = false
+
+        let titleLabel = UILabel()
+        titleLabel.text = "matches_your_matches".localized
+        titleLabel.font = .systemFont(ofSize: 17, weight: .semibold)
+        navigationItem.titleView = titleLabel
+
+        let profileButton = UIBarButtonItem(
+            image: UIImage(systemName: "person.circle"),
+            style: .plain,
+            target: self,
+            action: #selector(profileTapped)
+        )
+        navigationItem.leftBarButtonItem = profileButton
+
+        let settingsButton = UIBarButtonItem(
+            image: UIImage(systemName: "gearshape"),
+            style: .plain,
+            target: self,
+            action: #selector(settingsTapped)
+        )
+        navigationItem.rightBarButtonItem = settingsButton
+    }
+
+    @objc private func settingsTapped() {
+        let settingsVC = SettingsViewController()
+        navigationController?.pushViewController(settingsVC, animated: true)
+    }
+
+    @objc private func profileTapped() {
+        let profileVC = ProfileViewController()
+        navigationController?.pushViewController(profileVC, animated: true)
+    }
+
+    // MARK: - Layout
+
+    private func createLayout() -> UICollectionViewCompositionalLayout {
+        return UICollectionViewCompositionalLayout { [weak self] sectionIndex, environment in
+            switch sectionIndex {
+            case 0:
+                return self?.createMuseHeaderSection()
+            case 1:
+                return self?.createFilterChipsSection()
+            case 2:
+                return self?.createMatchListSection()
+            default:
+                return self?.createMatchListSection()
+            }
+        }
+    }
+
+    private func createMuseHeaderSection() -> NSCollectionLayoutSection {
+        // Empty item (header is supplementary)
+        let itemSize = NSCollectionLayoutSize(widthDimension: .fractionalWidth(1.0), heightDimension: .absolute(1))
+        let item = NSCollectionLayoutItem(layoutSize: itemSize)
+        let groupSize = NSCollectionLayoutSize(widthDimension: .fractionalWidth(1.0), heightDimension: .absolute(1))
+        let group = NSCollectionLayoutGroup.horizontal(layoutSize: groupSize, subitems: [item])
+        let section = NSCollectionLayoutSection(group: group)
+
+        // Muse header as supplementary
+        let headerSize = NSCollectionLayoutSize(widthDimension: .fractionalWidth(1.0), heightDimension: .absolute(144))
+        let header = NSCollectionLayoutBoundarySupplementaryItem(
+            layoutSize: headerSize,
+            elementKind: UICollectionView.elementKindSectionHeader,
+            alignment: .top
+        )
+        section.boundarySupplementaryItems = [header]
+
+        return section
+    }
+
+    private func createFilterChipsSection() -> NSCollectionLayoutSection {
+        let itemSize = NSCollectionLayoutSize(widthDimension: .estimated(80), heightDimension: .absolute(34))
+        let item = NSCollectionLayoutItem(layoutSize: itemSize)
+        let groupSize = NSCollectionLayoutSize(widthDimension: .estimated(80), heightDimension: .absolute(34))
+        let group = NSCollectionLayoutGroup.horizontal(layoutSize: groupSize, subitems: [item])
+        let section = NSCollectionLayoutSection(group: group)
+        section.orthogonalScrollingBehavior = .continuous
+        section.interGroupSpacing = 8
+        section.contentInsets = NSDirectionalEdgeInsets(top: 8, leading: 16, bottom: 8, trailing: 16)
+        return section
+    }
+
+    private func createMatchListSection() -> NSCollectionLayoutSection {
+        let itemSize = NSCollectionLayoutSize(widthDimension: .fractionalWidth(1.0), heightDimension: .absolute(76))
+        let item = NSCollectionLayoutItem(layoutSize: itemSize)
+        let groupSize = NSCollectionLayoutSize(widthDimension: .fractionalWidth(1.0), heightDimension: .absolute(76))
+        let group = NSCollectionLayoutGroup.vertical(layoutSize: groupSize, subitems: [item])
+        let section = NSCollectionLayoutSection(group: group)
+        return section
     }
 
     private func setupViews() {
         view.backgroundColor = .systemBackground
 
+        collectionView = UICollectionView(frame: .zero, collectionViewLayout: createLayout())
         collectionView.backgroundColor = .systemBackground
         collectionView.delegate = self
         collectionView.dataSource = self
-        collectionView.register(MatchCollectionViewCell.self, forCellWithReuseIdentifier: "MatchCell")
+        collectionView.register(UICollectionViewCell.self, forCellWithReuseIdentifier: "EmptyCell")
+        collectionView.register(MatchFilterChipCell.self, forCellWithReuseIdentifier: "ChipCell")
+        collectionView.register(MatchListCell.self, forCellWithReuseIdentifier: "MatchListCell")
         collectionView.register(MuseHeaderView.self, forSupplementaryViewOfKind: UICollectionView.elementKindSectionHeader, withReuseIdentifier: "MuseHeader")
 
         view.addSubview(collectionView)
@@ -76,39 +164,25 @@ class MatchesListViewController: UIViewController {
         ])
     }
 
+    // MARK: - Data Loading
+
     private func loadMatches() {
-        // Load real matches from Supabase
         Task {
             do {
-                print("📥 Loading matches from Supabase...")
+                print("Loading matches from Supabase...")
                 let matchResponses = try await SupabaseService.shared.getMatches()
-                print("✅ Loaded \(matchResponses.count) matches from Supabase")
-
-                // Log all match IDs
-                for mr in matchResponses {
-                    print("  📋 Match ID from DB: \(mr.id)")
-                }
+                print("Loaded \(matchResponses.count) matches from Supabase")
 
                 guard let currentUserId = SupabaseService.shared.currentUserId?.uuidString else {
-                    print("❌ No current user ID")
+                    print("No current user ID")
                     return
                 }
 
-                // Convert MatchResponse to Match with User objects
                 var loadedMatches: [Match] = []
 
                 for matchResponse in matchResponses {
-                    print("🔍 Processing match: \(matchResponse.id)")
-                    print("   user1_id: \(matchResponse.user1Id)")
-                    print("   user2_id: \(matchResponse.user2Id)")
-                    print("   current user: \(currentUserId)")
-
-                    // Determine which user is the "other" user (not the current user)
-                    // Use case-insensitive comparison for UUIDs
                     let otherUserId = matchResponse.user1Id.lowercased() == currentUserId.lowercased() ? matchResponse.user2Id : matchResponse.user1Id
-                    print("   👉 Other user ID: \(otherUserId)")
 
-                    // Fetch the other user's profile from Supabase
                     do {
                         let profile = try await SupabaseService.shared.client.database
                             .from("profiles")
@@ -118,16 +192,8 @@ class MatchesListViewController: UIViewController {
                             .execute()
                             .value as ProfileResponse
 
-                        print("📥 Loaded profile: \(profile.firstName) (\(profile.email)) - ID: \(profile.id)")
-
-                        // Convert ProfileResponse to User
                         let user = convertProfileToUser(profile)
-                        print("👤 Converted to User: \(user.firstName) - ID: \(user.id)")
 
-                        // Create Match
-                        // Note: hasNewMessage requires last_read_at tracking in database
-                        // For proper implementation: add user1_last_read_at, user2_last_read_at to matches table
-                        // Then compare with most recent message timestamp
                         let match = Match(
                             id: matchResponse.id,
                             user: user,
@@ -137,26 +203,34 @@ class MatchesListViewController: UIViewController {
                             lastMessageTime: ISO8601DateFormatter().date(from: matchResponse.matchedAt) ?? Date()
                         )
 
-                        print("✅ Created Match object with ID: \(match.id)")
                         loadedMatches.append(match)
-                        print("✅ Loaded match with \(user.firstName)")
                     } catch {
-                        print("❌ Failed to load profile for user \(otherUserId): \(error)")
+                        print("Failed to load profile for user \(otherUserId): \(error)")
                     }
                 }
 
+                // Try to get current user for filter building
+                var currentUser: User? = nil
+                do {
+                    let profile = try await SupabaseService.shared.getCurrentProfile()
+                    currentUser = convertProfileToUser(profile)
+                } catch {
+                    print("Failed to load current profile for filters: \(error)")
+                }
+
                 await MainActor.run {
-                    self.matches = loadedMatches
+                    self.allMatches = loadedMatches
+                    self.buildFilterCategories(currentUser: currentUser)
+                    self.applyFilter()
                     self.collectionView.reloadData()
                     self.updateEmptyState()
-                    print("✅ Displayed \(loadedMatches.count) matches")
                 }
 
             } catch {
-                print("❌ Failed to load matches: \(error)")
-                // Fallback to empty state or show error
+                print("Failed to load matches: \(error)")
                 await MainActor.run {
-                    self.matches = []
+                    self.allMatches = []
+                    self.filteredMatches = []
                     self.collectionView.reloadData()
                     self.updateEmptyState()
                 }
@@ -164,23 +238,67 @@ class MatchesListViewController: UIViewController {
         }
     }
 
-    // Helper function to convert ProfileResponse to User
+    private func buildFilterCategories(currentUser: User?) {
+        filterCategories = MatchFilterCategoryBuilder.buildCategories(
+            matches: allMatches,
+            currentUser: currentUser
+        )
+        selectedFilterIndex = 0
+    }
+
+    private func applyFilter() {
+        guard selectedFilterIndex < filterCategories.count else {
+            filteredMatches = allMatches
+            return
+        }
+        filteredMatches = filterCategories[selectedFilterIndex].filterFunction(allMatches)
+    }
+
+    // MARK: - Category Label Builder
+
+    private func buildCategoryLabel(for match: Match) -> String {
+        var tags: [String] = []
+
+        // Add relationship intent if not the default
+        let intent = match.user.matchingPreferences.relationshipIntent
+        if intent != .languageExchange {
+            tags.append(intent.displayName)
+        }
+
+        // Add "[Language] Learning" for native language if it's one of current user's learning languages
+        let learningLanguages = currentUserLearningLanguagesList()
+        if learningLanguages.contains(match.user.nativeLanguage.language) {
+            let langName = match.user.nativeLanguage.language.name
+            tags.append(String(format: "matches_filter_language_learning".localized, langName))
+        }
+
+        return tags.joined(separator: " - ")
+    }
+
+    private func currentUserLearningLanguagesList() -> [Language] {
+        if !currentUserLearningLanguages.isEmpty { return currentUserLearningLanguages }
+        guard let userLanguagesData = UserDefaults.standard.data(forKey: "userLanguages"),
+              let userLanguageData = try? JSONDecoder().decode(UserLanguageData.self, from: userLanguagesData) else {
+            return []
+        }
+        currentUserLearningLanguages = userLanguageData.learningLanguages.map { $0.language }
+        return currentUserLearningLanguages
+    }
+
+    // MARK: - Helpers
+
     private func convertProfileToUser(_ profile: ProfileResponse) -> User {
-        // Parse learning languages
         let learningLanguages: [UserLanguage] = (profile.learningLanguages ?? []).compactMap { langName in
             guard let language = Language.from(name: langName) else { return nil }
             return UserLanguage(language: language, proficiency: .intermediate, isNative: false)
         }
 
-        // Parse native language
         let nativeLanguage: Language = Language.from(name: profile.nativeLanguage) ?? .english
 
-        // Parse matching preferences
         let allowNonNativeMatches = profile.allowNonNativeMatches ?? false
         let minProficiencyLevel = parseProficiencyLevel(profile.minProficiencyLevel) ?? .beginner
         let maxProficiencyLevel = parseProficiencyLevel(profile.maxProficiencyLevel) ?? .advanced
 
-        // Split 7-photo array: indices 0-5 for grid, index 6 for profile
         let allPhotos = profile.profilePhotos ?? []
         let profileImageURL = allPhotos.count > 6 ? allPhotos[6] : allPhotos.first
         let gridPhotoURLs = Array(allPhotos.prefix(6))
@@ -207,19 +325,14 @@ class MatchesListViewController: UIViewController {
         )
     }
 
-    /// Check if user has been active recently (within 15 minutes = "Active now")
     private func isUserRecentlyActive(_ lastActive: String?) -> Bool {
         guard let lastActiveString = lastActive else { return false }
-
         let formatter = ISO8601DateFormatter()
         guard let lastActiveDate = formatter.date(from: lastActiveString) else { return false }
-
-        // Consider "online" if active within last 15 minutes
         let minutesSinceActive = Date().timeIntervalSince(lastActiveDate) / 60
         return minutesSinceActive < 15
     }
 
-    // Helper to parse proficiency level from database string to enum
     private func parseProficiencyLevel(_ level: String?) -> LanguageProficiency? {
         guard let level = level else { return nil }
         switch level.lowercased() {
@@ -232,30 +345,52 @@ class MatchesListViewController: UIViewController {
     }
 
     private func updateEmptyState() {
-        emptyStateView.isHidden = !matches.isEmpty
+        emptyStateView.isHidden = !allMatches.isEmpty
     }
-
 }
+
+// MARK: - UICollectionViewDataSource
 
 extension MatchesListViewController: UICollectionViewDataSource {
     func numberOfSections(in collectionView: UICollectionView) -> Int {
-        return 1
+        return 3
     }
 
     func collectionView(_ collectionView: UICollectionView, numberOfItemsInSection section: Int) -> Int {
-        return matches.count
+        switch section {
+        case 0: return 0 // Muse header (supplementary only)
+        case 1: return filterCategories.count
+        case 2: return filteredMatches.count
+        default: return 0
+        }
     }
 
     func collectionView(_ collectionView: UICollectionView, cellForItemAt indexPath: IndexPath) -> UICollectionViewCell {
-        guard let cell = collectionView.dequeueReusableCell(withReuseIdentifier: "MatchCell", for: indexPath) as? MatchCollectionViewCell else {
-            return UICollectionViewCell()
+        switch indexPath.section {
+        case 1:
+            guard let cell = collectionView.dequeueReusableCell(withReuseIdentifier: "ChipCell", for: indexPath) as? MatchFilterChipCell else {
+                return UICollectionViewCell()
+            }
+            let category = filterCategories[indexPath.item]
+            cell.configure(title: category.displayTitle, isSelected: indexPath.item == selectedFilterIndex)
+            return cell
+
+        case 2:
+            guard let cell = collectionView.dequeueReusableCell(withReuseIdentifier: "MatchListCell", for: indexPath) as? MatchListCell else {
+                return UICollectionViewCell()
+            }
+            let match = filteredMatches[indexPath.item]
+            let categoryText = buildCategoryLabel(for: match)
+            cell.configure(with: match, categoryLabel: categoryText)
+            return cell
+
+        default:
+            return collectionView.dequeueReusableCell(withReuseIdentifier: "EmptyCell", for: indexPath)
         }
-        cell.configure(with: matches[indexPath.item])
-        return cell
     }
 
     func collectionView(_ collectionView: UICollectionView, viewForSupplementaryElementOfKind kind: String, at indexPath: IndexPath) -> UICollectionReusableView {
-        if kind == UICollectionView.elementKindSectionHeader {
+        if kind == UICollectionView.elementKindSectionHeader && indexPath.section == 0 {
             guard let header = collectionView.dequeueReusableSupplementaryView(ofKind: kind, withReuseIdentifier: "MuseHeader", for: indexPath) as? MuseHeaderView else {
                 return UICollectionReusableView()
             }
@@ -268,20 +403,38 @@ extension MatchesListViewController: UICollectionViewDataSource {
     }
 }
 
+// MARK: - UICollectionViewDelegate
+
 extension MatchesListViewController: UICollectionViewDelegate {
     func collectionView(_ collectionView: UICollectionView, didSelectItemAt indexPath: IndexPath) {
-        let match = matches[indexPath.item]
-        let detailVC = UserDetailViewController()
-        detailVC.user = match.user
-        detailVC.match = match
-        detailVC.isMatched = true
+        switch indexPath.section {
+        case 1:
+            // Filter chip tapped
+            guard indexPath.item != selectedFilterIndex else { return }
+            selectedFilterIndex = indexPath.item
+            applyFilter()
+            collectionView.reloadSections(IndexSet([1, 2]))
 
-        detailVC.allUsers = matches.map { $0.user }
-        detailVC.allMatches = matches
-        detailVC.currentUserIndex = indexPath.item
+        case 2:
+            // Match row tapped
+            let match = filteredMatches[indexPath.item]
+            let detailVC = UserDetailViewController()
+            detailVC.user = match.user
+            detailVC.match = match
+            detailVC.isMatched = true
 
-        navigationController?.pushViewController(detailVC, animated: true)
+            detailVC.allUsers = filteredMatches.map { $0.user }
+            detailVC.allMatches = filteredMatches
+            detailVC.currentUserIndex = indexPath.item
+
+            navigationController?.pushViewController(detailVC, animated: true)
+
+        default:
+            break
+        }
     }
+
+    // MARK: - Muse Actions
 
     private func showBotSelection() {
         let availableMuses = getAvailableMuses()
@@ -307,15 +460,11 @@ extension MatchesListViewController: UICollectionViewDelegate {
         present(navController, animated: true)
     }
 
-    /// Get the Muses available to the user based on their language preferences
-    /// Includes: English (always), learning languages, and additional Muse languages from onboarding
     private func getAvailableMuses() -> [User] {
         var availableLanguages = Set<Language>()
 
-        // Always include English
         availableLanguages.insert(.english)
 
-        // Add learning languages from user profile
         if let userLanguagesData = UserDefaults.standard.data(forKey: "userLanguages"),
            let userLanguageData = try? JSONDecoder().decode(UserLanguageData.self, from: userLanguagesData) {
             for learning in userLanguageData.learningLanguages {
@@ -323,7 +472,6 @@ extension MatchesListViewController: UICollectionViewDelegate {
             }
         }
 
-        // Add additional Muse languages from settings/onboarding
         if let museLanguageCodes = UserDefaults.standard.array(forKey: "museLanguages") as? [String] {
             for code in museLanguageCodes {
                 if let language = Language(rawValue: code) {
@@ -332,11 +480,9 @@ extension MatchesListViewController: UICollectionViewDelegate {
             }
         }
 
-        // Get all Muses and filter to only available languages
         let allMuses = AIBotFactory.createAIBots()
         let filteredMuses = allMuses.filter { availableLanguages.contains($0.nativeLanguage.language) }
 
-        // If no languages selected yet (new user), show all Muses as fallback
         if filteredMuses.isEmpty {
             return allMuses
         }
@@ -358,178 +504,12 @@ extension MatchesListViewController: UICollectionViewDelegate {
     }
 }
 
-extension MatchesListViewController: UICollectionViewDelegateFlowLayout {
-    func collectionView(_ collectionView: UICollectionView, layout collectionViewLayout: UICollectionViewLayout, sizeForItemAt indexPath: IndexPath) -> CGSize {
-        let horizontalPadding: CGFloat = 16
-        let interItemSpacing: CGFloat = 16
-        // Match cards - 2 columns
-        let totalWidth = view.frame.width - (horizontalPadding * 2) - interItemSpacing
-        let width = totalWidth / 2
-        return CGSize(width: width, height: width * 1.3)
-    }
-
-    func collectionView(_ collectionView: UICollectionView, layout collectionViewLayout: UICollectionViewLayout, referenceSizeForHeaderInSection section: Int) -> CGSize {
-        // Header with title + Muse button
-        // Title: ~40pt, Muse button: 120pt, spacing: 20pt
-        return CGSize(width: view.frame.width, height: 200)
-    }
-
-    func collectionView(_ collectionView: UICollectionView, layout collectionViewLayout: UICollectionViewLayout, insetForSectionAt section: Int) -> UIEdgeInsets {
-        return UIEdgeInsets(top: 16, left: 16, bottom: 16, right: 16)
-    }
-
-    func collectionView(_ collectionView: UICollectionView, layout collectionViewLayout: UICollectionViewLayout, minimumLineSpacingForSectionAt section: Int) -> CGFloat {
-        return 16
-    }
-
-    func collectionView(_ collectionView: UICollectionView, layout collectionViewLayout: UICollectionViewLayout, minimumInteritemSpacingForSectionAt section: Int) -> CGFloat {
-        return 16
-    }
-}
-
-class MatchCollectionViewCell: UICollectionViewCell {
-
-    private let imageView = UIImageView()
-    private let nameLabel = UILabel()
-    private let languagesLabel = UILabel()
-    private let locationLabel = UILabel()
-    private let onlineIndicator = UIView()
-    private let newMessageBadge = UIView()
-
-    override init(frame: CGRect) {
-        super.init(frame: frame)
-        setupViews()
-    }
-
-    required init?(coder: NSCoder) {
-        super.init(coder: coder)
-        setupViews()
-    }
-
-    private func setupViews() {
-        contentView.backgroundColor = .systemBackground
-        contentView.layer.cornerRadius = 12
-        contentView.layer.shadowColor = UIColor.black.cgColor
-        contentView.layer.shadowOpacity = 0.1
-        contentView.layer.shadowOffset = CGSize(width: 0, height: 2)
-        contentView.layer.shadowRadius = 4
-
-        imageView.contentMode = .scaleAspectFill
-        imageView.clipsToBounds = true
-        imageView.layer.cornerRadius = 12
-        imageView.backgroundColor = .systemGray5
-        contentView.addSubview(imageView)
-        imageView.translatesAutoresizingMaskIntoConstraints = false
-
-        nameLabel.font = .systemFont(ofSize: 18, weight: .semibold)
-        nameLabel.textColor = .white
-        contentView.addSubview(nameLabel)
-        nameLabel.translatesAutoresizingMaskIntoConstraints = false
-
-        languagesLabel.font = .systemFont(ofSize: 14, weight: .regular)
-        languagesLabel.textColor = .white.withAlphaComponent(0.9)
-        contentView.addSubview(languagesLabel)
-        languagesLabel.translatesAutoresizingMaskIntoConstraints = false
-
-        locationLabel.font = .systemFont(ofSize: 12, weight: .regular)
-        locationLabel.textColor = .white.withAlphaComponent(0.8)
-        contentView.addSubview(locationLabel)
-        locationLabel.translatesAutoresizingMaskIntoConstraints = false
-
-        onlineIndicator.backgroundColor = .systemGreen
-        onlineIndicator.layer.cornerRadius = 6
-        onlineIndicator.layer.borderWidth = 2
-        onlineIndicator.layer.borderColor = UIColor.white.cgColor
-        contentView.addSubview(onlineIndicator)
-        onlineIndicator.translatesAutoresizingMaskIntoConstraints = false
-
-        newMessageBadge.backgroundColor = .systemRed
-        newMessageBadge.layer.cornerRadius = 4
-        contentView.addSubview(newMessageBadge)
-        newMessageBadge.translatesAutoresizingMaskIntoConstraints = false
-
-        NSLayoutConstraint.activate([
-            imageView.topAnchor.constraint(equalTo: contentView.topAnchor),
-            imageView.leadingAnchor.constraint(equalTo: contentView.leadingAnchor),
-            imageView.trailingAnchor.constraint(equalTo: contentView.trailingAnchor),
-            imageView.bottomAnchor.constraint(equalTo: contentView.bottomAnchor),
-
-            nameLabel.leadingAnchor.constraint(equalTo: contentView.leadingAnchor, constant: 12),
-            nameLabel.bottomAnchor.constraint(equalTo: languagesLabel.topAnchor, constant: -2),
-            nameLabel.trailingAnchor.constraint(equalTo: contentView.trailingAnchor, constant: -12),
-
-            languagesLabel.leadingAnchor.constraint(equalTo: contentView.leadingAnchor, constant: 12),
-            languagesLabel.bottomAnchor.constraint(equalTo: locationLabel.topAnchor, constant: -2),
-            languagesLabel.trailingAnchor.constraint(equalTo: contentView.trailingAnchor, constant: -12),
-
-            locationLabel.leadingAnchor.constraint(equalTo: contentView.leadingAnchor, constant: 12),
-            locationLabel.bottomAnchor.constraint(equalTo: contentView.bottomAnchor, constant: -12),
-            locationLabel.trailingAnchor.constraint(equalTo: contentView.trailingAnchor, constant: -12),
-
-            onlineIndicator.topAnchor.constraint(equalTo: contentView.topAnchor, constant: 12),
-            onlineIndicator.trailingAnchor.constraint(equalTo: contentView.trailingAnchor, constant: -12),
-            onlineIndicator.widthAnchor.constraint(equalToConstant: 12),
-            onlineIndicator.heightAnchor.constraint(equalToConstant: 12),
-
-            newMessageBadge.topAnchor.constraint(equalTo: contentView.topAnchor, constant: 8),
-            newMessageBadge.leadingAnchor.constraint(equalTo: contentView.leadingAnchor, constant: 8),
-            newMessageBadge.widthAnchor.constraint(equalToConstant: 8),
-            newMessageBadge.heightAnchor.constraint(equalToConstant: 8)
-        ])
-    }
-
-    override func layoutSubviews() {
-        super.layoutSubviews()
-        if let gradientLayer = imageView.layer.sublayers?.first as? CAGradientLayer {
-            gradientLayer.frame = imageView.bounds
-        }
-    }
-
-    func configure(with match: Match) {
-        nameLabel.text = match.user.firstName
-
-        let languages = [match.user.nativeLanguage.displayCode] +
-            match.user.learningLanguages.map { $0.displayCode }
-        languagesLabel.text = languages.joined(separator: " • ")
-
-        // Display location based on user's privacy setting
-        locationLabel.text = match.user.displayLocation ?? ""
-
-        onlineIndicator.isHidden = !match.user.isOnline
-        newMessageBadge.isHidden = !match.hasNewMessage
-
-        // Add gradient overlay for text readability
-        if imageView.layer.sublayers?.first(where: { $0 is CAGradientLayer }) == nil {
-            let gradientLayer = CAGradientLayer()
-            gradientLayer.colors = [
-                UIColor.clear.cgColor,
-                UIColor.black.withAlphaComponent(0.6).cgColor
-            ]
-            gradientLayer.locations = [0.5, 1.0]
-            imageView.layer.addSublayer(gradientLayer)
-        }
-
-        // Load profile image
-        if let profileImageURL = match.user.profileImageURL {
-            ImageService.shared.loadImage(
-                from: profileImageURL,
-                into: imageView,
-                placeholder: UIImage(systemName: "person.fill")
-            )
-        } else {
-            imageView.image = UIImage(systemName: "person.fill")
-            imageView.tintColor = .systemGray3
-        }
-    }
-}
-
 // MARK: - Muse Header View with Looping Video
 
 class MuseHeaderView: UICollectionReusableView {
 
     var onMuseTapped: (() -> Void)?
 
-    private let titleLabel = UILabel()
     private let videoContainerView = UIView()
     private var player: AVPlayer?
     private var playerLayer: AVPlayerLayer?
@@ -551,17 +531,6 @@ class MuseHeaderView: UICollectionReusableView {
     private func setupViews() {
         backgroundColor = .systemBackground
 
-        // Centered title
-        titleLabel.text = "matches_your_matches".localized
-        titleLabel.font = .systemFont(ofSize: 34, weight: .bold)
-        titleLabel.textColor = .label
-        titleLabel.textAlignment = .center
-        titleLabel.setContentHuggingPriority(.required, for: .vertical)
-        titleLabel.setContentCompressionResistancePriority(.required, for: .vertical)
-        addSubview(titleLabel)
-        titleLabel.translatesAutoresizingMaskIntoConstraints = false
-
-        // Video container (tappable)
         videoContainerView.backgroundColor = .clear
         videoContainerView.layer.cornerRadius = 60
         videoContainerView.clipsToBounds = true
@@ -573,12 +542,7 @@ class MuseHeaderView: UICollectionReusableView {
         videoContainerView.isUserInteractionEnabled = true
 
         NSLayoutConstraint.activate([
-            titleLabel.topAnchor.constraint(equalTo: topAnchor, constant: 16),
-            titleLabel.leadingAnchor.constraint(equalTo: leadingAnchor, constant: 16),
-            titleLabel.trailingAnchor.constraint(equalTo: trailingAnchor, constant: -16),
-            titleLabel.heightAnchor.constraint(greaterThanOrEqualToConstant: 40),
-
-            videoContainerView.topAnchor.constraint(equalTo: titleLabel.bottomAnchor, constant: 16),
+            videoContainerView.topAnchor.constraint(equalTo: topAnchor, constant: 12),
             videoContainerView.centerXAnchor.constraint(equalTo: centerXAnchor),
             videoContainerView.widthAnchor.constraint(equalToConstant: 120),
             videoContainerView.heightAnchor.constraint(equalToConstant: 120)
@@ -587,7 +551,7 @@ class MuseHeaderView: UICollectionReusableView {
 
     private func setupVideo() {
         guard let videoURL = Bundle.main.url(forResource: "MusePulse", withExtension: "mp4") else {
-            print("❌ MusePulse.mp4 not found in bundle - showing fallback image")
+            print("MusePulse.mp4 not found in bundle - showing fallback image")
             showFallbackImage()
             return
         }
@@ -596,7 +560,6 @@ class MuseHeaderView: UICollectionReusableView {
         queuePlayer = AVQueuePlayer(playerItem: playerItem)
         queuePlayer?.isMuted = true
 
-        // Create looper for seamless looping
         if let player = queuePlayer {
             playerLooper = AVPlayerLooper(player: player, templateItem: playerItem)
         }
@@ -613,7 +576,6 @@ class MuseHeaderView: UICollectionReusableView {
     }
 
     private func showFallbackImage() {
-        // Show MuseButton image as fallback if video not available
         let imageView = UIImageView(image: UIImage(named: "MuseButton"))
         imageView.contentMode = .scaleAspectFill
         imageView.clipsToBounds = true
@@ -671,7 +633,6 @@ class MuseSelectionSheetViewController: UIViewController {
     private func setupViews() {
         view.backgroundColor = .systemBackground
 
-        // Header with title and edit pill
         let headerView = UIView()
         headerView.backgroundColor = .systemBackground
 
@@ -682,7 +643,6 @@ class MuseSelectionSheetViewController: UIViewController {
         headerView.addSubview(titleLabel)
         titleLabel.translatesAutoresizingMaskIntoConstraints = false
 
-        // Edit pill button
         let editPill = UIButton(type: .system)
         editPill.setTitle(" " + "common_edit".localized, for: .normal)
         editPill.setImage(UIImage(systemName: "pencil"), for: .normal)
@@ -699,7 +659,6 @@ class MuseSelectionSheetViewController: UIViewController {
         view.addSubview(headerView)
         headerView.translatesAutoresizingMaskIntoConstraints = false
 
-        // Table view for muses
         tableView.delegate = self
         tableView.dataSource = self
         tableView.register(MuseOptionCell.self, forCellReuseIdentifier: "MuseCell")

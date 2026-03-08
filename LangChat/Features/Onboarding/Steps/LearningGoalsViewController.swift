@@ -12,11 +12,8 @@ class LearningGoalsViewController: BaseOnboardingViewController {
     private var learningStyles: [(id: String, emoji: String, title: String, description: String)] {
         return [
             ("formal", "👔", "goal_formal_title".localized, "goal_formal_desc".localized),
-            ("casual", "😊", "goal_casual_title".localized, "goal_casual_desc".localized),
             ("academic", "📚", "goal_academic_title".localized, "goal_academic_desc".localized),
-            ("slang", "🔥", "goal_slang_title".localized, "goal_slang_desc".localized),
-            ("travel", "✈️", "goal_travel_title".localized, "goal_travel_desc".localized),
-            ("technical", "💻", "goal_technical_title".localized, "goal_technical_desc".localized)
+            ("casual", "😊", "goal_casual_title".localized, "goal_casual_desc".localized)
         ]
     }
 

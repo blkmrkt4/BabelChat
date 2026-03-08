@@ -38995,8 +38995,8 @@
         },
         "en": {
           "stringUnit": {
-            "state": "needs_review",
-            "value": "Academic & Study"
+            "state": "translated",
+            "value": "Academic"
           }
         },
         "fi": {
@@ -39559,8 +39559,8 @@
         },
         "en": {
           "stringUnit": {
-            "state": "needs_review",
-            "value": "Casual & Everyday"
+            "state": "translated",
+            "value": "Casual / Social"
           }
         },
         "nl": {
@@ -39979,8 +39979,8 @@
         },
         "en": {
           "stringUnit": {
-            "state": "needs_review",
-            "value": "Formal & Business"
+            "state": "translated",
+            "value": "Formal / Business"
           }
         },
         "es": {
@@ -74846,13 +74846,13 @@
       }
     },
     "onboarding_goals_title": {
-      "comment": "Learning goals step title",
+      "comment": "Language style priorities step title",
       "extractionState": "manual",
       "localizations": {
         "en": {
           "stringUnit": {
             "state": "translated",
-            "value": "What are your goals?"
+            "value": "Language Style Priorities"
           }
         },
         "es": {
@@ -95918,7 +95918,7 @@
       }
     },
     "profile_field_learning_goals": {
-      "comment": "Profile Settings - Learning Goals field",
+      "comment": "Profile Settings - Language Style Priorities field",
       "extractionState": "manual",
       "localizations": {
         "fr": {
@@ -96043,8 +96043,8 @@
         },
         "en": {
           "stringUnit": {
-            "state": "needs_review",
-            "value": "Learning Goals"
+            "state": "translated",
+            "value": "Language Style Priorities"
           }
         },
         "es": {
@@ -101852,7 +101852,7 @@
       }
     },
     "profile_placeholder_learning_goals": {
-      "comment": "Profile Settings - Learning Goals placeholder",
+      "comment": "Profile Settings - Language Style Priorities placeholder",
       "extractionState": "manual",
       "localizations": {
         "fr": {
@@ -101977,8 +101977,8 @@
         },
         "en": {
           "stringUnit": {
-            "state": "needs_review",
-            "value": "Select your learning goals"
+            "state": "translated",
+            "value": "Select your style priorities"
           }
         },
         "es": {
@@ -109575,6 +109575,18 @@
           "stringUnit": {
             "state": "needs_review",
             "value": "Report Submitted"
+          }
+        }
+      }
+    },
+    "report_or_block_title": {
+      "comment": "Title for report or block action sheet",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Report or Block"
           }
         }
       }
@@ -143241,6 +143253,1081 @@
           "stringUnit": {
             "state": "needs_review",
             "value": "Najlepszym sposobem nauki są autentyczne rozmowy z inspirującymi ludźmi."
+          }
+        }
+      }
+    },
+    "pricing_continue_free": {
+      "comment": "Button to continue with free tier",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Continue with Free"
+          }
+        }
+      }
+    },
+    "tier_free_name": {
+      "comment": "Free tier name on pricing screen",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Free"
+          }
+        }
+      }
+    },
+    "upgrade_swipe_limit_title": {
+      "comment": "Title when daily swipe limit is reached",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Daily Swipe Limit Reached"
+          }
+        }
+      }
+    },
+    "upgrade_swipe_limit_message": {
+      "comment": "Message when daily swipe limit is reached",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "You've used all 15 discover swipes for today. Upgrade to Premium for unlimited swipes and find your perfect language partner!"
+          }
+        }
+      }
+    },
+    "upgrade_message_limit_title": {
+      "comment": "Title when daily message limit is reached",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Daily Message Limit Reached"
+          }
+        }
+      }
+    },
+    "upgrade_message_limit_message": {
+      "comment": "Message when daily message limit is reached",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "You've sent all 10 messages for today. Upgrade to Premium for unlimited messaging with your language partners!"
+          }
+        }
+      }
+    },
+    "tab_sessions": {
+      "comment": "Sessions tab",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Sessions"
+          }
+        }
+      }
+    },
+    "sessions_live_now": {
+      "comment": "Sessions section header",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Live Now"
+          }
+        }
+      }
+    },
+    "sessions_filter_next_hour": {
+      "comment": "Sessions filter chip for next hour",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Next Hour"
+          }
+        }
+      }
+    },
+    "sessions_filter_today": {
+      "comment": "Sessions filter chip for today",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Today"
+          }
+        }
+      }
+    },
+    "sessions_upcoming": {
+      "comment": "Sessions section header",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Upcoming"
+          }
+        }
+      }
+    },
+    "sessions_your_invites": {
+      "comment": "Sessions section header",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Your Invites"
+          }
+        }
+      }
+    },
+    "sessions_empty_state": {
+      "comment": "Sessions empty state message",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "No sessions available. Create one or wait for matches to start a session."
+          }
+        }
+      }
+    },
+    "session_create_title": {
+      "comment": "Create session screen title",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Create Session"
+          }
+        }
+      }
+    },
+    "session_language_pair": {
+      "comment": "Session language pair label",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Language Pair"
+          }
+        }
+      }
+    },
+    "session_open_toggle": {
+      "comment": "Session open toggle label",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Open Session"
+          }
+        }
+      }
+    },
+    "session_open_description": {
+      "comment": "Open session description",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Allow anyone with matching languages to join"
+          }
+        }
+      }
+    },
+    "session_schedule": {
+      "comment": "Session schedule label",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Schedule"
+          }
+        }
+      }
+    },
+    "session_now": {
+      "comment": "Start session now option",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Now"
+          }
+        }
+      }
+    },
+    "session_join": {
+      "comment": "Join session button",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Join Session"
+          }
+        }
+      }
+    },
+    "session_end": {
+      "comment": "End session button",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "End Session"
+          }
+        }
+      }
+    },
+    "session_leave": {
+      "comment": "Leave session button",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Leave"
+          }
+        }
+      }
+    },
+    "session_participants": {
+      "comment": "Participants label",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "participants"
+          }
+        }
+      }
+    },
+    "session_invite": {
+      "comment": "Session invite label",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Invite"
+          }
+        }
+      }
+    },
+    "session_invite_pending": {
+      "comment": "Invite pending status",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Invite pending"
+          }
+        }
+      }
+    },
+    "session_invite_accept": {
+      "comment": "Accept invite button",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Accept"
+          }
+        }
+      }
+    },
+    "session_invite_decline": {
+      "comment": "Decline invite button",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Decline"
+          }
+        }
+      }
+    },
+    "session_invite_accept_message": {
+      "comment": "Invite accept dialog message",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Would you like to accept this session invite?"
+          }
+        }
+      }
+    },
+    "session_title_label": {
+      "comment": "Session title field label",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Title (Optional)"
+          }
+        }
+      }
+    },
+    "session_title_placeholder": {
+      "comment": "Session title placeholder",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "e.g., French Conversation Practice"
+          }
+        }
+      }
+    },
+    "session_goal_label": {
+      "comment": "Session goal field label",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Goal"
+          }
+        }
+      }
+    },
+    "session_goal_placeholder": {
+      "comment": "Session goal placeholder text",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Set a goal for this session..."
+          }
+        }
+      }
+    },
+    "session_invite_participants": {
+      "comment": "Section label for inviting participants",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Invite Participants (Optional)"
+          }
+        }
+      }
+    },
+    "session_add_participant": {
+      "comment": "Button to add a participant",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Add Participant"
+          }
+        }
+      }
+    },
+    "session_max_participants_error": {
+      "comment": "Error when max participants reached",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "You can invite up to 3 participants."
+          }
+        }
+      }
+    },
+    "session_select_role": {
+      "comment": "Title for role selection",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Select Role"
+          }
+        }
+      }
+    },
+    "session_select_role_message": {
+      "comment": "Message for role selection with user name",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Choose a role for %@"
+          }
+        }
+      }
+    },
+    "session_select_participant": {
+      "comment": "Title for participant selection screen",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Select Participant"
+          }
+        }
+      }
+    },
+    "session_search_matches": {
+      "comment": "Search bar placeholder for matches",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Search matches..."
+          }
+        }
+      }
+    },
+    "session_room_title": {
+      "comment": "Navigation title for session room",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Session Room"
+          }
+        }
+      }
+    },
+    "session_edit_goal_title": {
+      "comment": "Title for edit goal dialog",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Edit Goal"
+          }
+        }
+      }
+    },
+    "session_select_native": {
+      "comment": "Select native language",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Select native language"
+          }
+        }
+      }
+    },
+    "session_select_learning": {
+      "comment": "Select learning language",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Select learning language"
+          }
+        }
+      }
+    },
+    "session_select_language": {
+      "comment": "Select language dialog title",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Select Language"
+          }
+        }
+      }
+    },
+    "session_select_languages_error": {
+      "comment": "Languages not selected error",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Please select both languages for the session."
+          }
+        }
+      }
+    },
+    "session_create_button": {
+      "comment": "Create session button",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Create Session"
+          }
+        }
+      }
+    },
+    "session_error_title": {
+      "comment": "Session error title",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Error"
+          }
+        }
+      }
+    },
+    "session_resume": {
+      "comment": "Resume session button",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Resume"
+          }
+        }
+      }
+    },
+    "session_start": {
+      "comment": "Start session button",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Start Session"
+          }
+        }
+      }
+    },
+    "session_chat_placeholder": {
+      "comment": "Session chat input placeholder",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Type a message..."
+          }
+        }
+      }
+    },
+    "session_ending_soon": {
+      "comment": "Session ending warning",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Session ending in 5 minutes"
+          }
+        }
+      }
+    },
+    "session_end_confirm_title": {
+      "comment": "End session confirmation title",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "End Session?"
+          }
+        }
+      }
+    },
+    "session_end_confirm_message": {
+      "comment": "End session confirmation message",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "This will end the session for all participants."
+          }
+        }
+      }
+    },
+    "session_ended_title": {
+      "comment": "Session ended title",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Session Ended"
+          }
+        }
+      }
+    },
+    "session_ended_message": {
+      "comment": "Session ended message",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "This session has ended."
+          }
+        }
+      }
+    },
+    "session_hand_raise_queue": {
+      "comment": "Hand raise queue title",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Hand Raise Queue"
+          }
+        }
+      }
+    },
+    "session_no_raised_hands": {
+      "comment": "No raised hands message",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "No one has raised their hand yet."
+          }
+        }
+      }
+    },
+    "session_promote": {
+      "comment": "Promote to speaker button",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Promote"
+          }
+        }
+      }
+    },
+    "session_role_host": {
+      "comment": "Host role label",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Host"
+          }
+        }
+      }
+    },
+    "session_role_co_speaker": {
+      "comment": "Co-host role label",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Co-Host"
+          }
+        }
+      }
+    },
+    "session_role_cohost_desc": {
+      "comment": "Description of co-host role in role picker",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Can mute/unmute + add participants to camera"
+          }
+        }
+      }
+    },
+    "session_role_speaker_desc": {
+      "comment": "Description of participant role in role picker",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "On video, but no controls"
+          }
+        }
+      }
+    },
+    "session_role_speaker": {
+      "comment": "Participant role label",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Participant"
+          }
+        }
+      }
+    },
+    "session_role_listener": {
+      "comment": "Listener role label",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Listener"
+          }
+        }
+      }
+    },
+    "upgrade_session_host_title": {
+      "comment": "Upgrade prompt for hosting sessions",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Host Live Sessions"
+          }
+        }
+      }
+    },
+    "upgrade_session_host_message": {
+      "comment": "Upgrade prompt message for hosting",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Upgrade to Premium to host live video/audio practice sessions with your matches."
+          }
+        }
+      }
+    },
+    "upgrade_session_join_limit_title": {
+      "comment": "Session join limit title",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Session Limit Reached"
+          }
+        }
+      }
+    },
+    "upgrade_session_join_limit_message": {
+      "comment": "Session join limit message",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Free accounts can join up to 3 sessions per day. Upgrade for unlimited access."
+          }
+        }
+      }
+    },
+    "discover_row_top_picks": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Top Matches for You"
+          }
+        }
+      }
+    },
+    "discover_row_online_now": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Online Now"
+          }
+        }
+      }
+    },
+    "discover_row_local": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Local to You"
+          }
+        }
+      }
+    },
+    "discover_row_traveling": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Traveling Soon"
+          }
+        }
+      }
+    },
+    "discover_row_lives_in": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Lives in %@"
+          }
+        }
+      }
+    },
+    "discover_row_friendship": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Looking for Friendship"
+          }
+        }
+      }
+    },
+    "discover_row_dating": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Open to Dating"
+          }
+        }
+      }
+    },
+    "discover_row_networking": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Networking"
+          }
+        }
+      }
+    },
+    "discover_row_business": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Business & Professional"
+          }
+        }
+      }
+    },
+    "discover_row_academic": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Academic"
+          }
+        }
+      }
+    },
+    "discover_row_casual": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Casual & Social"
+          }
+        }
+      }
+    },
+    "discover_row_session_hosts": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Regular Session Hosts"
+          }
+        }
+      }
+    },
+    "discover_row_third_country": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Global Connections"
+          }
+        }
+      }
+    },
+    "discover_row_proficiency_single": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%@ Speakers"
+          }
+        }
+      }
+    },
+    "discover_row_proficiency_range": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%@ to %@"
+          }
+        }
+      }
+    },
+    "intent_language_exchange": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Language Exchange"
+          }
+        }
+      }
+    },
+    "intent_networking_desc": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Connect with professionals in your field"
+          }
+        }
+      }
+    },
+    "matches_filter_most_talked": {
+      "comment": "Matches filter chip - Most Talked To",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Most Talked To"
+          }
+        }
+      }
+    },
+    "matches_filter_latest": {
+      "comment": "Matches filter chip - Latest Matches",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Latest Matches"
+          }
+        }
+      }
+    },
+    "matches_filter_local": {
+      "comment": "Matches filter chip - Local",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Local"
+          }
+        }
+      }
+    },
+    "matches_filter_language_learning": {
+      "comment": "Matches filter chip - Language Learning (format: %@ Learning)",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%@ Learning"
+          }
+        }
+      }
+    },
+    "matches_filter_all_matches": {
+      "comment": "Matches filter chip - All Matches",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "All Matches"
+          }
+        }
+      }
+    },
+    "matches_filter_potential_dating": {
+      "comment": "Matches filter chip - Potential Dating",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Potential Dating"
           }
         }
       }

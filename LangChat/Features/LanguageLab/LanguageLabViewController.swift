@@ -19,6 +19,8 @@ class LanguageLabViewController: UIViewController {
     private let scrollView = UIScrollView()
     private let contentView = UIView()
     private let headerView = UIView()
+    private let profileButton = UIButton(type: .system)
+    private let settingsButton = UIButton(type: .system)
     private let titleLabel = UILabel()
     private let subtitleLabel = UILabel()
     private lazy var segmentedControl = UISegmentedControl(items: [
@@ -118,6 +120,22 @@ class LanguageLabViewController: UIViewController {
         contentView.addSubview(headerView)
         headerView.backgroundColor = .clear
 
+        // Profile button in header
+        profileButton.setImage(UIImage(systemName: "person.circle")?.withConfiguration(
+            UIImage.SymbolConfiguration(pointSize: 24, weight: .medium)
+        ), for: .normal)
+        profileButton.tintColor = .white
+        profileButton.addTarget(self, action: #selector(profileTapped), for: .touchUpInside)
+        headerView.addSubview(profileButton)
+
+        // Settings button in header
+        settingsButton.setImage(UIImage(systemName: "gearshape")?.withConfiguration(
+            UIImage.SymbolConfiguration(pointSize: 24, weight: .medium)
+        ), for: .normal)
+        settingsButton.tintColor = .white
+        settingsButton.addTarget(self, action: #selector(settingsTapped), for: .touchUpInside)
+        headerView.addSubview(settingsButton)
+
         // Title with gradient effect
         titleLabel.text = "lab_title".localized
         titleLabel.font = .systemFont(ofSize: 32, weight: .bold)
@@ -144,6 +162,8 @@ class LanguageLabViewController: UIViewController {
         scrollView.translatesAutoresizingMaskIntoConstraints = false
         contentView.translatesAutoresizingMaskIntoConstraints = false
         headerView.translatesAutoresizingMaskIntoConstraints = false
+        profileButton.translatesAutoresizingMaskIntoConstraints = false
+        settingsButton.translatesAutoresizingMaskIntoConstraints = false
         titleLabel.translatesAutoresizingMaskIntoConstraints = false
         subtitleLabel.translatesAutoresizingMaskIntoConstraints = false
         segmentedControl.translatesAutoresizingMaskIntoConstraints = false
@@ -165,8 +185,18 @@ class LanguageLabViewController: UIViewController {
             headerView.leadingAnchor.constraint(equalTo: contentView.leadingAnchor, constant: 20),
             headerView.trailingAnchor.constraint(equalTo: contentView.trailingAnchor, constant: -20),
 
+            profileButton.topAnchor.constraint(equalTo: headerView.topAnchor),
+            profileButton.leadingAnchor.constraint(equalTo: headerView.leadingAnchor),
+            profileButton.widthAnchor.constraint(equalToConstant: 36),
+            profileButton.heightAnchor.constraint(equalToConstant: 36),
+
+            settingsButton.topAnchor.constraint(equalTo: headerView.topAnchor),
+            settingsButton.trailingAnchor.constraint(equalTo: headerView.trailingAnchor),
+            settingsButton.widthAnchor.constraint(equalToConstant: 36),
+            settingsButton.heightAnchor.constraint(equalToConstant: 36),
+
             titleLabel.topAnchor.constraint(equalTo: headerView.topAnchor),
-            titleLabel.leadingAnchor.constraint(equalTo: headerView.leadingAnchor),
+            titleLabel.leadingAnchor.constraint(equalTo: profileButton.trailingAnchor, constant: 12),
 
             subtitleLabel.topAnchor.constraint(equalTo: titleLabel.bottomAnchor, constant: 4),
             subtitleLabel.leadingAnchor.constraint(equalTo: headerView.leadingAnchor),
@@ -256,6 +286,16 @@ class LanguageLabViewController: UIViewController {
         if let gradientLayer = view.layer.sublayers?.first as? CAGradientLayer {
             gradientLayer.frame = view.bounds
         }
+    }
+
+    @objc private func profileTapped() {
+        let profileVC = ProfileViewController()
+        navigationController?.pushViewController(profileVC, animated: true)
+    }
+
+    @objc private func settingsTapped() {
+        let settingsVC = SettingsViewController()
+        navigationController?.pushViewController(settingsVC, animated: true)
     }
 }
 

@@ -34,7 +34,7 @@ enum OnboardingStep: Int, CaseIterable {
         case .languageProficiency: return "Language Skills"
         case .proficiencyRange: return "Match Preferences"
         case .museLanguages: return "Muse Languages"
-        case .learningGoals: return "Learning Goals"
+        case .learningGoals: return "Language Style Priorities"
         case .profilePhoto: return "Add Photos"
         case .bio: return "About You"
         case .ageRange: return "Age Preference"
@@ -242,6 +242,28 @@ class OnboardingCoordinator {
             }
         }
 
+        // Skip museLanguages — auto-derive from native + learning languages
+        if nextStep == .museLanguages {
+            print("📍 OnboardingCoordinator: Skipping museLanguages (auto-derived from native + learning)")
+            // Auto-populate muse languages from native language + learning languages
+            var museLanguages: [Language] = []
+            if let native = userData.nativeLanguage {
+                museLanguages.append(native)
+            }
+            museLanguages.append(contentsOf: userData.learningLanguages)
+            // Ensure English is always included
+            if !museLanguages.contains(.english) {
+                museLanguages.insert(.english, at: 0)
+            }
+            userData.museLanguages = museLanguages
+            if let skipToStep = OnboardingStep(rawValue: nextStep.rawValue + 1) {
+                nextStep = skipToStep
+            } else {
+                completeOnboarding()
+                return
+            }
+        }
+
         // Skip datingPreferences if user didn't select "Open to dating"
         if nextStep == .datingPreferences {
             let isOpenToDating = userData.relationshipIntent == .openToDating
@@ -259,7 +281,7 @@ class OnboardingCoordinator {
 
         // Skip privacyPreferences if user selected "Language Practice Only" (they already saw privacy options)
         if nextStep == .privacyPreferences {
-            let hasLanguagePracticeOnly = userData.relationshipIntent == .languagePracticeOnly
+            let hasLanguagePracticeOnly = userData.relationshipIntent == .languageExchange
             if hasLanguagePracticeOnly {
                 print("📍 OnboardingCoordinator: Skipping privacyPreferences (already shown with language practice)")
                 if let skipToStep = OnboardingStep(rawValue: nextStep.rawValue + 1) {
@@ -292,6 +314,13 @@ class OnboardingCoordinator {
             }
         }
 
+        // Skip museLanguages when going back (auto-derived, not shown)
+        if previousStep == .museLanguages {
+            if let skipToStep = OnboardingStep(rawValue: previousStep.rawValue - 1) {
+                previousStep = skipToStep
+            }
+        }
+
         // Skip datingPreferences when going back if user didn't select "Open to dating"
         if previousStep == .datingPreferences {
             let isOpenToDating = userData.relationshipIntent == .openToDating
@@ -304,7 +333,7 @@ class OnboardingCoordinator {
 
         // Skip privacyPreferences when going back if user selected "Language Practice Only"
         if previousStep == .privacyPreferences {
-            let hasLanguagePracticeOnly = userData.relationshipIntent == .languagePracticeOnly
+            let hasLanguagePracticeOnly = userData.relationshipIntent == .languageExchange
             if hasLanguagePracticeOnly {
                 if let skipToStep = OnboardingStep(rawValue: previousStep.rawValue - 1) {
                     previousStep = skipToStep
@@ -599,7 +628,7 @@ struct OnboardingUserData {
     var preferredCountries: [String]? // For specificCountries option
     var excludedCountries: [String]?  // For excludeCountries option
     var travelDestination: TravelDestination?
-    var relationshipIntent: RelationshipIntent = .languagePracticeOnly
+    var relationshipIntent: RelationshipIntent = .languageExchange
     var matchProficiencyRange: ProficiencyRange = .all
 
     // Privacy preferences
@@ -665,9 +694,9 @@ extension OnboardingCoordinator: PricingViewControllerDelegate {
     private func syncAndTransition() {
         Task {
             do {
-                // Sync profile data to Supabase
-                print("📤 Syncing onboarding data to Supabase...")
-                try await SupabaseService.shared.syncOnboardingDataToSupabase()
+                // Sync all profile data to Supabase
+                print("📤 Syncing all onboarding data to Supabase...")
+                try await SupabaseService.shared.syncAllOnboardingDataToSupabase()
 
                 // Upload photos if any were selected
                 if !userData.profilePhotos.isEmpty {

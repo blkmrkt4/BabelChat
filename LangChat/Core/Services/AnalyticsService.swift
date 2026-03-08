@@ -127,6 +127,13 @@ enum AnalyticsEvent: String {
     case usageLimitReached = "usage_limit_reached"
     case upgradePromptShown = "upgrade_prompt_shown"
 
+    // Sessions
+    case sessionCreated = "session_created"
+    case sessionJoined = "session_joined"
+    case sessionEnded = "session_ended"
+    case handRaised = "hand_raised"
+    case speakerPromoted = "speaker_promoted"
+
     // Errors
     case errorOccurred = "error_occurred"
     case networkError = "network_error"

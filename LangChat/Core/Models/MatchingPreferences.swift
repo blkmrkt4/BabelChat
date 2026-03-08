@@ -120,31 +120,48 @@ enum LocationPreference: String, CaseIterable, Codable {
 // MARK: - Relationship Intent
 
 enum RelationshipIntent: String, CaseIterable, Codable {
-    case languagePracticeOnly = "language_practice_only"
+    case languageExchange = "language_exchange"
     case friendship = "friendship"
     case openToDating = "open_to_dating"
+    case networking = "networking"
 
     var displayName: String {
         switch self {
-        case .languagePracticeOnly: return "intent_practice_only".localized
+        case .languageExchange: return "intent_language_exchange".localized
         case .friendship: return "intent_friendship".localized
         case .openToDating: return "intent_dating".localized
+        case .networking: return "intent_networking".localized
         }
     }
 
     var subtitle: String {
         switch self {
-        case .languagePracticeOnly: return "intent_practice_only_desc".localized
+        case .languageExchange: return "intent_practice_only_desc".localized
         case .friendship: return "intent_friendship_desc".localized
         case .openToDating: return "intent_dating_desc".localized
+        case .networking: return "intent_networking_desc".localized
         }
     }
 
     var icon: String {
         switch self {
-        case .languagePracticeOnly: return "book.fill"
+        case .languageExchange: return "book.fill"
         case .friendship: return "person.2.fill"
         case .openToDating: return "heart.fill"
+        case .networking: return "briefcase.fill"
+        }
+    }
+
+    init(from decoder: Decoder) throws {
+        let container = try decoder.singleValueContainer()
+        let rawValue = try container.decode(String.self)
+        // Support legacy value
+        if rawValue == "language_practice_only" {
+            self = .languageExchange
+        } else if let value = RelationshipIntent(rawValue: rawValue) {
+            self = value
+        } else {
+            self = .languageExchange
         }
     }
 }
@@ -153,31 +170,22 @@ enum RelationshipIntent: String, CaseIterable, Codable {
 
 enum LearningContext: String, CaseIterable, Codable {
     case formal = "formal"
-    case casual = "casual"
     case academic = "academic"
-    case slang = "slang"
-    case travel = "travel"
-    case technical = "technical"
+    case casual = "casual"
 
     var displayName: String {
         switch self {
         case .formal: return "goal_formal_title".localized
-        case .casual: return "goal_casual_title".localized
         case .academic: return "goal_academic_title".localized
-        case .slang: return "goal_slang_title".localized
-        case .travel: return "goal_travel_title".localized
-        case .technical: return "goal_technical_title".localized
+        case .casual: return "goal_casual_title".localized
         }
     }
 
     var icon: String {
         switch self {
         case .formal: return "briefcase.fill"
-        case .casual: return "face.smiling.fill"
         case .academic: return "book.fill"
-        case .slang: return "flame.fill"
-        case .travel: return "airplane"
-        case .technical: return "laptopcomputer"
+        case .casual: return "face.smiling.fill"
         }
     }
 }
@@ -298,7 +306,7 @@ struct MatchingPreferences: Codable {
         excludedCountries: [String]? = nil,
         customMaxDistanceKm: Int? = nil,
         travelDestination: TravelDestination? = nil,
-        relationshipIntent: RelationshipIntent = .languagePracticeOnly,
+        relationshipIntent: RelationshipIntent = .languageExchange,
         learningContexts: [LearningContext] = [],  // Empty = open to all styles
         allowNonNativeMatches: Bool = false,
         minProficiencyLevel: LanguageProficiency = .beginner,
@@ -342,7 +350,7 @@ struct MatchingPreferences: Codable {
 
     /// Check if user is open to any form of social connection beyond language practice
     var openToSocializing: Bool {
-        return relationshipIntent == .friendship || relationshipIntent == .openToDating
+        return relationshipIntent == .friendship || relationshipIntent == .openToDating || relationshipIntent == .networking
     }
 }
 

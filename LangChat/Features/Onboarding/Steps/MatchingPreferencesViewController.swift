@@ -36,13 +36,7 @@ class MatchingPreferencesViewController: UIViewController {
 
     // Looking For (Relationship Intent)
     private var lookingForButtons: [UIButton] = []
-    private var lookingForOptions: [String] {
-        ["matching_intent_friendship".localized,
-         "matching_intent_language_exchange".localized,
-         "matching_intent_dating".localized,
-         "matching_intent_networking".localized,
-         "matching_intent_travel_buddy".localized]
-    }
+    private let lookingForIntents = RelationshipIntent.allCases
 
     // Save confirmation
     private let saveConfirmationLabel = UILabel()
@@ -86,7 +80,7 @@ class MatchingPreferencesViewController: UIViewController {
         blurPhotosUntilMatch = UserDefaults.standard.bool(forKey: "blurPhotosUntilMatch")
 
         // Gender & preference
-        if let genderRaw = UserDefaults.standard.string(forKey: "userGender"),
+        if let genderRaw = UserDefaults.standard.string(forKey: "gender"),
            let gender = Gender(rawValue: genderRaw) {
             selectedGender = gender
         }
@@ -104,7 +98,7 @@ class MatchingPreferencesViewController: UIViewController {
            let locPref = LocationPreference(rawValue: locPrefRaw) {
             selectedLocationPreference = locPref
         }
-        selectedDistance = UserDefaults.standard.integer(forKey: "maxDistanceKm")
+        selectedDistance = UserDefaults.standard.integer(forKey: "customDistanceKm")
         if selectedDistance == 0 { selectedDistance = 50 }
 
         if let countries = UserDefaults.standard.array(forKey: "preferredCountries") as? [String] {
@@ -341,7 +335,7 @@ class MatchingPreferencesViewController: UIViewController {
 
         // Create rows of 2 buttons each
         var rowStack: UIStackView?
-        for (index, option) in lookingForOptions.enumerated() {
+        for (index, intent) in lookingForIntents.enumerated() {
             if index % 2 == 0 {
                 rowStack = UIStackView()
                 rowStack?.axis = .horizontal
@@ -350,19 +344,19 @@ class MatchingPreferencesViewController: UIViewController {
                 optionsStack.addArrangedSubview(rowStack!)
             }
 
-            let button = createLookingForButton(title: option, tag: index)
+            let button = createLookingForButton(title: intent.displayName, tag: index)
             lookingForButtons.append(button)
             rowStack?.addArrangedSubview(button)
 
-            // Highlight if selected
-            if selectedRelationshipIntents.contains(option) {
+            // Highlight if selected (match by raw value)
+            if selectedRelationshipIntents.contains(intent.rawValue) {
                 button.layer.borderColor = UIColor.systemBlue.cgColor
                 button.backgroundColor = UIColor.systemBlue.withAlphaComponent(0.1)
             }
         }
 
         // Add empty view if odd number of options
-        if lookingForOptions.count % 2 != 0 {
+        if lookingForIntents.count % 2 != 0 {
             let spacer = UIView()
             rowStack?.addArrangedSubview(spacer)
         }
@@ -398,14 +392,14 @@ class MatchingPreferencesViewController: UIViewController {
     }
 
     @objc private func lookingForButtonTapped(_ sender: UIButton) {
-        let option = lookingForOptions[sender.tag]
+        let intent = lookingForIntents[sender.tag]
 
-        if selectedRelationshipIntents.contains(option) {
-            selectedRelationshipIntents.remove(option)
+        if selectedRelationshipIntents.contains(intent.rawValue) {
+            selectedRelationshipIntents.remove(intent.rawValue)
             sender.layer.borderColor = UIColor.clear.cgColor
             sender.backgroundColor = .tertiarySystemBackground
         } else {
-            selectedRelationshipIntents.insert(option)
+            selectedRelationshipIntents.insert(intent.rawValue)
             sender.layer.borderColor = UIColor.systemBlue.cgColor
             sender.backgroundColor = UIColor.systemBlue.withAlphaComponent(0.1)
         }
@@ -975,7 +969,7 @@ class MatchingPreferencesViewController: UIViewController {
 
     private func saveGenderPreferences() {
         if let gender = selectedGender {
-            UserDefaults.standard.set(gender.rawValue, forKey: "userGender")
+            UserDefaults.standard.set(gender.rawValue, forKey: "gender")
         }
         UserDefaults.standard.set(selectedGenderPreference.rawValue, forKey: "genderPreference")
 
@@ -985,7 +979,7 @@ class MatchingPreferencesViewController: UIViewController {
 
     private func saveLocationPreferences() {
         UserDefaults.standard.set(selectedLocationPreference.rawValue, forKey: "locationPreference")
-        UserDefaults.standard.set(selectedDistance, forKey: "maxDistanceKm")
+        UserDefaults.standard.set(selectedDistance, forKey: "customDistanceKm")
 
         // Clear both arrays first
         UserDefaults.standard.removeObject(forKey: "preferredCountries")

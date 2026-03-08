@@ -87,6 +87,16 @@ struct Config {
         return nil
     }()
 
+    // MARK: - LiveKit
+
+    static let livekitURL: String = {
+        guard let url = infoPlistValue(for: "LIVEKIT_URL") else {
+            print("⚠️ LIVEKIT_URL not found in Info.plist. LiveKit sessions will not work.")
+            return ""
+        }
+        return url
+    }()
+
     // MARK: - App Store
 
     /// App Store ID - Update this after first App Store submission

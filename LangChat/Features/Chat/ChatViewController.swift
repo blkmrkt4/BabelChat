@@ -930,6 +930,22 @@ class ChatViewController: UIViewController {
     @objc private func sendButtonTapped() {
         guard let text = inputTextField.text, !text.isEmpty else { return }
 
+        // Check usage limits for free tier users
+        let tier = SubscriptionService.shared.currentStatus.tier
+        if user.isAI {
+            let aiCheck = UsageLimitService.shared.canSendAIMessage(tier: tier)
+            if case .limitReached(let type, _, let resetDate) = aiCheck {
+                UpgradePromptViewController.present(for: type, resetDate: resetDate, from: self)
+                return
+            }
+        } else {
+            let humanCheck = UsageLimitService.shared.canSendHumanMessage(tier: tier)
+            if case .limitReached(let type, _, let resetDate) = humanCheck {
+                UpgradePromptViewController.present(for: type, resetDate: resetDate, from: self)
+                return
+            }
+        }
+
         // Content filter check (Apple Guideline 1.2 compliance)
         let contentCheck = ContentFilterService.shared.checkContent(text)
         if contentCheck.shouldBlock {
@@ -984,6 +1000,13 @@ class ChatViewController: UIViewController {
         sendButton.isEnabled = false
 
         // Track message sent
+        // Increment usage counter
+        if user.isAI {
+            UsageLimitService.shared.incrementAIMessage()
+        } else {
+            UsageLimitService.shared.incrementHumanMessage()
+        }
+
         AnalyticsService.shared.trackMessageSent(
             conversationId: conversationId,
             isAI: user.isAI,

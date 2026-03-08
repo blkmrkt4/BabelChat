@@ -29,6 +29,9 @@ struct User: Codable {
     let blurPhotosUntilMatch: Bool // Photos blurred in discovery until matched (legacy global setting)
     let photoBlurSettings: [Bool] // Per-photo blur settings (index matches photoURLs)
 
+    // Session hosting activity
+    var sessionsHostedCount: Int
+
     // Matching preferences (new comprehensive preferences model)
     let matchingPreferences: MatchingPreferences
 
@@ -101,6 +104,7 @@ struct User: Codable {
          strictlyPlatonic: Bool = false,
          blurPhotosUntilMatch: Bool = false,
          photoBlurSettings: [Bool] = [],
+         sessionsHostedCount: Int = 0,
          matchingPreferences: MatchingPreferences? = nil,
          // Deprecated parameters (for backwards compatibility)
          allowNonNativeMatches: Bool = false,
@@ -130,6 +134,7 @@ struct User: Codable {
         self.strictlyPlatonic = strictlyPlatonic
         self.blurPhotosUntilMatch = blurPhotosUntilMatch
         self.photoBlurSettings = photoBlurSettings
+        self.sessionsHostedCount = sessionsHostedCount
 
         // Use provided matchingPreferences or create default from old parameters
         if let matchingPreferences = matchingPreferences {

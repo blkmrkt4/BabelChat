@@ -28,7 +28,7 @@ class ProfileSettingsViewController: UIViewController {
             case .languages:
                 return [.nativeLanguage, .learningLanguages]
             case .preferences:
-                return [.learningGoals]
+                return [.learningGoals, .relationshipIntent, .strictlyPlatonic]
             }
         }
     }
@@ -192,13 +192,10 @@ class ProfileSettingsViewController: UIViewController {
         case .relationshipIntent:
             // Try plural key first, then singular key (onboarding stores singular)
             if let intents = UserDefaults.standard.array(forKey: "relationshipIntents") as? [String], !intents.isEmpty {
-                return intents.joined(separator: ", ")
+                let displayNames = intents.compactMap { intentRawToDisplayName($0) }
+                return displayNames.isEmpty ? intents.joined(separator: ", ") : displayNames.joined(separator: ", ")
             } else if let intent = UserDefaults.standard.string(forKey: "relationshipIntent"), !intent.isEmpty {
-                // Convert raw value to display value if needed
-                if let intentEnum = RelationshipIntent(rawValue: intent) {
-                    return intentEnum.displayName
-                }
-                return intent
+                return intentRawToDisplayName(intent) ?? intent
             }
             return ""
 
@@ -477,24 +474,24 @@ class ProfileSettingsViewController: UIViewController {
     }
 
     private func showRelationshipIntentPicker() {
-        let options = [
-            "profile_intent_friendship".localized,
-            "profile_intent_language_exchange".localized,
-            "profile_intent_dating".localized,
-            "profile_intent_networking".localized,
-            "profile_intent_travel_buddy".localized
-        ]
+        // Build options from the canonical enum
+        let allIntents = RelationshipIntent.allCases
+        let options = allIntents.map { $0.displayName }
 
-        // Try to get from plural key first, then singular key (onboarding stores singular)
-        var currentIntents: [String] = []
+        // Read stored canonical values
+        var currentRawIntents: [String] = []
         if let intents = UserDefaults.standard.array(forKey: "relationshipIntents") as? [String], !intents.isEmpty {
-            currentIntents = intents
+            currentRawIntents = intents
         } else if let singleIntent = UserDefaults.standard.string(forKey: "relationshipIntent"), !singleIntent.isEmpty {
-            currentIntents = [singleIntent]
+            currentRawIntents = [singleIntent]
         }
 
-        // Convert stored values to display values for picker
-        let displayIntents = currentIntents.map { convertToIntentDisplayName($0, options: options) }
+        // Convert stored raw values to display names for pre-selection
+        let displayIntents = currentRawIntents.compactMap { raw -> String? in
+            // Handle legacy value
+            let normalized = raw == "language_practice_only" ? "language_exchange" : raw
+            return RelationshipIntent(rawValue: normalized)?.displayName
+        }
 
         let vc = MultiSelectPickerViewController(
             title: "profile_field_looking_for".localized,
@@ -502,7 +499,13 @@ class ProfileSettingsViewController: UIViewController {
             selectedOptions: displayIntents
         )
         vc.onSave = { [weak self] selected in
-            UserDefaults.standard.set(selected, forKey: "relationshipIntents")
+            // Convert display names back to canonical enum raw values
+            let rawValues = selected.compactMap { displayName -> String? in
+                return allIntents.first(where: { $0.displayName == displayName })?.rawValue
+            }
+            UserDefaults.standard.set(rawValues, forKey: "relationshipIntents")
+            // Also update singular key for backward compatibility
+            UserDefaults.standard.set(rawValues.first, forKey: "relationshipIntent")
             self?.saveToSupabase()
             self?.tableView.reloadData()
         }
@@ -510,47 +513,18 @@ class ProfileSettingsViewController: UIViewController {
         present(nav, animated: true)
     }
 
-    /// Convert stored relationship intent value to display name
-    private func convertToIntentDisplayName(_ stored: String, options: [String]) -> String {
-        // If it's already a display value, return as-is
-        if options.contains(stored) {
-            return stored
-        }
-
-        // Map RelationshipIntent raw values to profile intent display names
-        switch stored.lowercased() {
-        case "language_practice_only":
-            return "profile_intent_language_exchange".localized
-        case "friendship":
-            return "profile_intent_friendship".localized
-        case "open_to_dating":
-            return "profile_intent_dating".localized
-        default:
-            // Try to find a matching option
-            for option in options {
-                if option.lowercased().contains(stored.lowercased()) ||
-                   stored.lowercased().contains(option.lowercased().replacingOccurrences(of: "_", with: " ")) {
-                    return option
-                }
-            }
-            return stored
-        }
-    }
-
     private func showLearningGoalsPicker() {
-        let options = [
-            "profile_goal_conversation".localized,
-            "profile_goal_grammar".localized,
-            "profile_goal_pronunciation".localized,
-            "profile_goal_cultural".localized,
-            "profile_goal_professional".localized,
-            "profile_goal_travel".localized,
-            "profile_goal_academic".localized
-        ]
+        // Build options from the canonical enum
+        let allContexts = LearningContext.allCases
+        let options = allContexts.map { $0.displayName }
+
+        // Read stored canonical raw values
         let currentGoals = UserDefaults.standard.array(forKey: "learningContexts") as? [String] ?? []
 
-        // Convert stored values to display values for picker
-        let displayGoals = currentGoals.map { convertToGoalDisplayName($0, options: options) }
+        // Convert stored raw values to display names for pre-selection
+        let displayGoals = currentGoals.compactMap { raw -> String? in
+            return LearningContext(rawValue: raw)?.displayName
+        }
 
         let vc = MultiSelectPickerViewController(
             title: "profile_field_learning_goals".localized,
@@ -558,7 +532,11 @@ class ProfileSettingsViewController: UIViewController {
             selectedOptions: displayGoals
         )
         vc.onSave = { [weak self] selected in
-            UserDefaults.standard.set(selected, forKey: "learningContexts")
+            // Convert display names back to canonical enum raw values
+            let rawValues = selected.compactMap { displayName -> String? in
+                return allContexts.first(where: { $0.displayName == displayName })?.rawValue
+            }
+            UserDefaults.standard.set(rawValues, forKey: "learningContexts")
             self?.saveToSupabase()
             self?.tableView.reloadData()
         }
@@ -566,43 +544,19 @@ class ProfileSettingsViewController: UIViewController {
         present(nav, animated: true)
     }
 
-    /// Convert stored learning goal value to display name
-    /// Maps raw enum values (casual, formal, etc.) to localized display strings
-    private func convertToGoalDisplayName(_ stored: String, options: [String]) -> String {
-        // If it's already a display value (contains the stored value), return as-is
-        if options.contains(stored) {
-            return stored
-        }
-
-        // Map LearningContext raw values to profile goal display names
-        switch stored.lowercased() {
-        case "casual":
-            return "profile_goal_conversation".localized
-        case "formal":
-            return "profile_goal_professional".localized
-        case "academic":
-            return "profile_goal_academic".localized
-        case "travel":
-            return "profile_goal_travel".localized
-        case "slang":
-            return "profile_goal_conversation".localized  // Map slang to conversation
-        case "technical":
-            return "profile_goal_professional".localized  // Map technical to professional
-        default:
-            // Try to find a matching option by partial match
-            for option in options {
-                if option.lowercased().contains(stored.lowercased()) ||
-                   stored.lowercased().contains(option.lowercased()) {
-                    return option
-                }
-            }
-            return stored
-        }
-    }
-
     private func toggleStrictlyPlatonic(_ isOn: Bool) {
         UserDefaults.standard.set(isOn, forKey: "strictlyPlatonic")
         saveToSupabase()
+    }
+
+    /// Convert a stored relationship intent raw value to its display name,
+    /// handling both current canonical values and legacy values.
+    private func intentRawToDisplayName(_ raw: String) -> String? {
+        // Handle legacy value
+        if raw == "language_practice_only" {
+            return RelationshipIntent.languageExchange.displayName
+        }
+        return RelationshipIntent(rawValue: raw)?.displayName
     }
 
     private func showError(_ message: String) {
@@ -651,8 +605,72 @@ class ProfileSettingsViewController: UIViewController {
             update.learningLanguages = learningLanguages
         }
 
-        // Preferences
+        // Privacy preferences
         update.strictlyPlatonic = UserDefaults.standard.bool(forKey: "strictlyPlatonic")
+        update.blurPhotosUntilMatch = UserDefaults.standard.bool(forKey: "blurPhotosUntilMatch")
+        if UserDefaults.standard.object(forKey: "showCityInProfile") != nil {
+            update.showCityInProfile = UserDefaults.standard.bool(forKey: "showCityInProfile")
+        }
+
+        // Gender & age preferences
+        if let gender = UserDefaults.standard.string(forKey: "gender") {
+            update.gender = gender
+        }
+        if let genderPref = UserDefaults.standard.string(forKey: "genderPreference") {
+            update.genderPreference = genderPref
+        }
+        let minAge = UserDefaults.standard.integer(forKey: "minAge")
+        let maxAge = UserDefaults.standard.integer(forKey: "maxAge")
+        if minAge > 0 { update.minAge = minAge }
+        if maxAge > 0 { update.maxAge = maxAge }
+
+        // Location preferences
+        if let locationPref = UserDefaults.standard.string(forKey: "locationPreference") {
+            update.locationPreference = locationPref
+        }
+        if let preferredCountries = UserDefaults.standard.stringArray(forKey: "preferredCountries") {
+            update.preferredCountries = preferredCountries
+        }
+        if let excludedCountries = UserDefaults.standard.stringArray(forKey: "excludedCountries") {
+            update.excludedCountries = excludedCountries
+        }
+
+        // Travel destination
+        if let travelData = UserDefaults.standard.data(forKey: "travelDestination"),
+           let travelDestination = try? JSONDecoder().decode(TravelDestination.self, from: travelData) {
+            update.travelDestination = TravelDestinationDB(
+                city: travelDestination.city,
+                country: travelDestination.country,
+                countryName: travelDestination.countryName,
+                startDate: travelDestination.startDate.map { ISO8601DateFormatter().string(from: $0) },
+                endDate: travelDestination.endDate.map { ISO8601DateFormatter().string(from: $0) }
+            )
+        }
+
+        // Relationship intent
+        if let intents = UserDefaults.standard.array(forKey: "relationshipIntents") as? [String], !intents.isEmpty {
+            update.relationshipIntents = intents
+        } else if let intent = UserDefaults.standard.string(forKey: "relationshipIntent"), !intent.isEmpty {
+            update.relationshipIntents = [intent]
+        }
+
+        // Learning contexts
+        if let learningContexts = UserDefaults.standard.stringArray(forKey: "learningContexts") {
+            update.learningContexts = learningContexts
+        }
+
+        // Proficiency levels
+        if let minProf = UserDefaults.standard.string(forKey: "minProficiencyLevel") {
+            update.minProficiencyLevel = minProf
+        }
+        if let maxProf = UserDefaults.standard.string(forKey: "maxProficiencyLevel") {
+            update.maxProficiencyLevel = maxProf
+        }
+
+        // Muse languages
+        if let museLanguages = UserDefaults.standard.stringArray(forKey: "museLanguages") {
+            update.museLanguages = museLanguages
+        }
 
         // Sync to Supabase
         Task {

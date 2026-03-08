@@ -161,6 +161,32 @@ enum Language: String, CaseIterable, Codable, Equatable {
         }
     }
 
+    var associatedCountries: [String] {
+        switch self {
+        case .english: return ["United States", "United Kingdom", "Canada", "Australia"]
+        case .french: return ["France", "Belgium", "Switzerland", "Canada"]
+        case .spanish: return ["Spain", "Mexico", "Argentina", "Colombia"]
+        case .german: return ["Germany", "Austria", "Switzerland"]
+        case .japanese: return ["Japan"]
+        case .korean: return ["Korea", "South Korea"]
+        case .italian: return ["Italy"]
+        case .portuguese: return ["Brazil"]
+        case .portuguesePortugal: return ["Portugal"]
+        case .chinese: return ["China", "Taiwan"]
+        case .russian: return ["Russia"]
+        case .hindi: return ["India"]
+        case .dutch: return ["Netherlands", "Belgium"]
+        case .polish: return ["Poland"]
+        case .indonesian: return ["Indonesia"]
+        case .filipino: return ["Philippines"]
+        case .swedish: return ["Sweden"]
+        case .danish: return ["Denmark"]
+        case .finnish: return ["Finland"]
+        case .norwegian: return ["Norway"]
+        case .arabic: return ["Saudi Arabia", "Egypt", "Morocco", "UAE"]
+        }
+    }
+
     /// Languages available for Muse (AI language tutors)
     static var museLanguages: [Language] {
         return [

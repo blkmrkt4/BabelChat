@@ -193,18 +193,36 @@ class UserDetailViewController: UIViewController, PhotoGridViewDelegate {
         // Keep title as just the name
         title = user.firstName
 
-        // Right bar button items
+        // Left bar button items - profile button
+        var leftItems: [UIBarButtonItem] = []
+        let profileButton = UIBarButtonItem(
+            image: UIImage(systemName: "person.circle"),
+            style: .plain,
+            target: self,
+            action: #selector(profileTapped)
+        )
+        leftItems.append(profileButton)
+
+        // Right bar button items - settings gear always first
         var rightItems: [UIBarButtonItem] = []
 
-        // Add more options menu (ellipsis) for reporting/blocking - only for non-AI users
+        let settingsButton = UIBarButtonItem(
+            image: UIImage(systemName: "gearshape"),
+            style: .plain,
+            target: self,
+            action: #selector(settingsTapped)
+        )
+        rightItems.append(settingsButton)
+
+        // Add report/block button for non-AI users (to the left of settings)
         if !user.isAI {
-            let moreButton = UIBarButtonItem(
-                image: UIImage(systemName: "ellipsis"),
+            let reportBlockButton = UIBarButtonItem(
+                image: UIImage(systemName: "shield.lefthalf.filled"),
                 style: .plain,
                 target: self,
                 action: #selector(showMoreOptions)
             )
-            rightItems.append(moreButton)
+            rightItems.append(reportBlockButton)
         }
 
         if isMatched {
@@ -218,23 +236,17 @@ class UserDetailViewController: UIViewController, PhotoGridViewDelegate {
             rightItems.append(chatButton)
         }
 
-        navigationItem.rightBarButtonItems = rightItems.isEmpty ? nil : rightItems
-
-        // Left side - star (if pinned) and platonic badge (if strictly platonic)
+        // Add star/platonic badges to left items if applicable
         let pinnedProfiles = UserDefaults.standard.stringArray(forKey: "pinnedProfileIds") ?? []
         let isPinned = pinnedProfiles.contains(user.id)
 
-        let showStar = isPinned
-        let showPlatonic = user.strictlyPlatonic
+        if isPinned || user.strictlyPlatonic {
+            let badgeStack = UIStackView()
+            badgeStack.axis = .horizontal
+            badgeStack.alignment = .center
+            badgeStack.spacing = 6
 
-        if showStar || showPlatonic {
-            let leftStack = UIStackView()
-            leftStack.axis = .horizontal
-            leftStack.alignment = .center
-            leftStack.spacing = 6
-
-            // Star indicator (same StarButton image at 50% size = ~17x17)
-            if showStar {
+            if isPinned {
                 let starImageView = UIImageView()
                 if let starImage = UIImage(named: "StarButton") {
                     starImageView.image = starImage
@@ -245,20 +257,19 @@ class UserDetailViewController: UIViewController, PhotoGridViewDelegate {
                     starImageView.widthAnchor.constraint(equalToConstant: 18),
                     starImageView.heightAnchor.constraint(equalToConstant: 18)
                 ])
-                leftStack.addArrangedSubview(starImageView)
+                badgeStack.addArrangedSubview(starImageView)
             }
 
-            // Platonic badge with text
-            if showPlatonic {
+            if user.strictlyPlatonic {
                 let platonicBadge = UIView()
                 platonicBadge.backgroundColor = .systemTeal
                 platonicBadge.layer.cornerRadius = 8
 
-                let badgeStack = UIStackView()
-                badgeStack.axis = .horizontal
-                badgeStack.alignment = .center
-                badgeStack.spacing = 3
-                badgeStack.translatesAutoresizingMaskIntoConstraints = false
+                let innerStack = UIStackView()
+                innerStack.axis = .horizontal
+                innerStack.alignment = .center
+                innerStack.spacing = 3
+                innerStack.translatesAutoresizingMaskIntoConstraints = false
 
                 let iconView = UIImageView(image: UIImage(systemName: "person.2.fill"))
                 iconView.tintColor = .white
@@ -274,26 +285,26 @@ class UserDetailViewController: UIViewController, PhotoGridViewDelegate {
                 label.font = .systemFont(ofSize: 9, weight: .semibold)
                 label.textColor = .white
 
-                badgeStack.addArrangedSubview(iconView)
-                badgeStack.addArrangedSubview(label)
+                innerStack.addArrangedSubview(iconView)
+                innerStack.addArrangedSubview(label)
 
-                platonicBadge.addSubview(badgeStack)
+                platonicBadge.addSubview(innerStack)
                 NSLayoutConstraint.activate([
-                    badgeStack.leadingAnchor.constraint(equalTo: platonicBadge.leadingAnchor, constant: 5),
-                    badgeStack.trailingAnchor.constraint(equalTo: platonicBadge.trailingAnchor, constant: -5),
-                    badgeStack.topAnchor.constraint(equalTo: platonicBadge.topAnchor, constant: 3),
-                    badgeStack.bottomAnchor.constraint(equalTo: platonicBadge.bottomAnchor, constant: -3)
+                    innerStack.leadingAnchor.constraint(equalTo: platonicBadge.leadingAnchor, constant: 5),
+                    innerStack.trailingAnchor.constraint(equalTo: platonicBadge.trailingAnchor, constant: -5),
+                    innerStack.topAnchor.constraint(equalTo: platonicBadge.topAnchor, constant: 3),
+                    innerStack.bottomAnchor.constraint(equalTo: platonicBadge.bottomAnchor, constant: -3)
                 ])
 
-                leftStack.addArrangedSubview(platonicBadge)
+                badgeStack.addArrangedSubview(platonicBadge)
             }
 
-            let leftBarItem = UIBarButtonItem(customView: leftStack)
-            navigationItem.leftBarButtonItem = leftBarItem
-        } else if isFromDiscover {
-            // No left button when from discover and nothing to show
-            navigationItem.leftBarButtonItem = nil
+            let badgeItem = UIBarButtonItem(customView: badgeStack)
+            leftItems.append(badgeItem)
         }
+
+        navigationItem.leftBarButtonItems = leftItems
+        navigationItem.rightBarButtonItems = rightItems.isEmpty ? nil : rightItems
     }
 
     private func setupViews() {
@@ -1050,6 +1061,14 @@ class UserDetailViewController: UIViewController, PhotoGridViewDelegate {
         // Send match request - commit to matching
         guard let user = user else { return }
 
+        // Check swipe limit for free tier users
+        let tier = SubscriptionService.shared.currentStatus.tier
+        let swipeCheck = UsageLimitService.shared.canSwipe(tier: tier)
+        if case .limitReached(let type, _, let resetDate) = swipeCheck {
+            UpgradePromptViewController.present(for: type, resetDate: resetDate, from: self)
+            return
+        }
+
         // Validate that user ID is a proper UUID (required for database operations)
         let uuidPattern = "^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$"
         let isValidUUID = user.id.range(of: uuidPattern, options: .regularExpression) != nil
@@ -1062,6 +1081,9 @@ class UserDetailViewController: UIViewController, PhotoGridViewDelegate {
         }
 
         print("Match request sent to \(user.firstName)")
+
+        // Increment swipe usage
+        UsageLimitService.shared.incrementSwipe()
 
         // Record swipe in Supabase and check for mutual match
         Task {
@@ -1284,6 +1306,16 @@ class UserDetailViewController: UIViewController, PhotoGridViewDelegate {
         }
     }
 
+    @objc private func profileTapped() {
+        let profileVC = ProfileViewController()
+        navigationController?.pushViewController(profileVC, animated: true)
+    }
+
+    @objc private func settingsTapped() {
+        let settingsVC = SettingsViewController()
+        navigationController?.pushViewController(settingsVC, animated: true)
+    }
+
     @objc private func chatTapped() {
         guard let user = user else { return }
 
@@ -1464,7 +1496,7 @@ class UserDetailViewController: UIViewController, PhotoGridViewDelegate {
         guard let user = user else { return }
 
         let alertController = UIAlertController(
-            title: nil,
+            title: "report_or_block_title".localized,
             message: nil,
             preferredStyle: .actionSheet
         )

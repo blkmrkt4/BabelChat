@@ -17,17 +17,51 @@ class ChatsListViewController: UIViewController {
     }
 
     private func setupNavigationBar() {
-        title = "tab_chats".localized
-        navigationController?.navigationBar.prefersLargeTitles = true
+        navigationController?.navigationBar.prefersLargeTitles = false
 
-        // Add "New Chat" button
-        let newChatButton = UIBarButtonItem(
-            image: UIImage(systemName: "square.and.pencil"),
+        // Custom title view with "Chats" label + new chat pencil button
+        let titleStack = UIStackView()
+        titleStack.axis = .horizontal
+        titleStack.spacing = 8
+        titleStack.alignment = .center
+
+        let titleLabel = UILabel()
+        titleLabel.text = "tab_chats".localized
+        titleLabel.font = .systemFont(ofSize: 17, weight: .semibold)
+        titleStack.addArrangedSubview(titleLabel)
+
+        let newChatButton = UIButton(type: .system)
+        newChatButton.setImage(UIImage(systemName: "square.and.pencil"), for: .normal)
+        newChatButton.addTarget(self, action: #selector(newChatTapped), for: .touchUpInside)
+        titleStack.addArrangedSubview(newChatButton)
+
+        navigationItem.titleView = titleStack
+
+        let profileButton = UIBarButtonItem(
+            image: UIImage(systemName: "person.circle"),
             style: .plain,
             target: self,
-            action: #selector(newChatTapped)
+            action: #selector(profileTapped)
         )
-        navigationItem.rightBarButtonItem = newChatButton
+        navigationItem.leftBarButtonItem = profileButton
+
+        let settingsButton = UIBarButtonItem(
+            image: UIImage(systemName: "gearshape"),
+            style: .plain,
+            target: self,
+            action: #selector(settingsTapped)
+        )
+        navigationItem.rightBarButtonItem = settingsButton
+    }
+
+    @objc private func profileTapped() {
+        let profileVC = ProfileViewController()
+        navigationController?.pushViewController(profileVC, animated: true)
+    }
+
+    @objc private func settingsTapped() {
+        let settingsVC = SettingsViewController()
+        navigationController?.pushViewController(settingsVC, animated: true)
     }
 
     @objc private func newChatTapped() {

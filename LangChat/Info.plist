@@ -59,6 +59,8 @@
 	<string>$(GOOGLE_CLOUD_API_KEY)</string>
 	<key>SENTRY_DSN</key>
 	<string>$(SENTRY_DSN)</string>
+	<key>LIVEKIT_URL</key>
+	<string>$(LIVEKIT_URL)</string>
 
 	<!-- Deep Linking / URL Schemes -->
 	<key>CFBundleURLTypes</key>

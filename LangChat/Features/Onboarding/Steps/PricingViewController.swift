@@ -47,26 +47,22 @@ class PricingViewController: UIViewController {
     private let proFeatureStack = UIStackView()
     private let proButton = UIButton(type: .system)
 
-    // Paywall footer buttons (restore + sign out)
-    private let paywallFooterStack = UIStackView()
+    // Footer button
     private let restorePurchasesButton = UIButton(type: .system)
-    private let signOutButton = UIButton(type: .system)
 
     // MARK: - Properties
     weak var delegate: PricingViewControllerDelegate?
     private let subscriptionService = SubscriptionService.shared
     private var pricingConfig: PricingConfig = PricingConfig.defaultConfig
 
-    /// When true, this is shown as a forced paywall after trial expiry (cannot dismiss, free option hidden)
-    var isModalPaywall: Bool = false
-
     // MARK: - Lifecycle
     override func viewDidLoad() {
         super.viewDidLoad()
         setupViews()
         setupConstraints()
+        setupRestorePurchasesFooter()
         loadPricingConfig()
-        configureForPaywallMode()
+        setupCloseButtonIfNeeded()
 
         // Debug logging for currency detection
         #if DEBUG
@@ -76,30 +72,19 @@ class PricingViewController: UIViewController {
         #endif
     }
 
-    private func configureForPaywallMode() {
-        if isModalPaywall {
-            // Hide free option - trial expired, must subscribe
-            freeCard.isHidden = true
-
-            // Update title for expired trial
-            titleLabel.text = "pricing_trial_ended".localized
-            subtitleLabel.text = "pricing_subscribe_continue".localized
-
-            // Hide navigation items
-            navigationItem.hidesBackButton = true
-            navigationItem.leftBarButtonItem = nil
-
-            // Add footer with Restore Purchases and Sign Out
-            setupPaywallFooter()
-        } else {
-            // Normal onboarding - show free trial info
-            let daysRemaining = subscriptionService.daysRemainingInFreeTrial
-            if daysRemaining < 7 && daysRemaining > 0 {
-                freeTierLabel.text = "Trial (\(daysRemaining) days left)"
-            } else {
-                freeTierLabel.text = "tier_trial_name".localized
-            }
+    private func setupCloseButtonIfNeeded() {
+        // Show close button when presented modally (not in onboarding)
+        if delegate == nil {
+            navigationItem.rightBarButtonItem = UIBarButtonItem(
+                barButtonSystemItem: .close,
+                target: self,
+                action: #selector(closeTapped)
+            )
         }
+    }
+
+    @objc private func closeTapped() {
+        dismiss(animated: true)
     }
 
     // MARK: - Setup
@@ -181,12 +166,12 @@ class PricingViewController: UIViewController {
         headerStack.alignment = .firstBaseline
         cardStack.addArrangedSubview(headerStack)
 
-        freeTierLabel.text = "tier_trial_name".localized
+        freeTierLabel.text = "tier_free_name".localized
         freeTierLabel.font = .systemFont(ofSize: 20, weight: .bold)
         freeTierLabel.textColor = .white
         headerStack.addArrangedSubview(freeTierLabel)
 
-        freePriceLabel.text = "tier_trial_price".localized
+        freePriceLabel.text = "Free"
         freePriceLabel.font = .systemFont(ofSize: 20, weight: .heavy)
         freePriceLabel.textColor = .systemGreen
         headerStack.addArrangedSubview(freePriceLabel)
@@ -198,7 +183,7 @@ class PricingViewController: UIViewController {
         cardStack.addArrangedSubview(freeFeatureStack)
 
         // Start Trial button
-        freeButton.setTitle("pricing_start_trial".localized, for: .normal)
+        freeButton.setTitle("pricing_continue_free".localized, for: .normal)
         freeButton.titleLabel?.font = .systemFont(ofSize: 16, weight: .bold)
         freeButton.setTitleColor(.white, for: .normal)
         freeButton.backgroundColor = .white.withAlphaComponent(0.2)
@@ -394,31 +379,13 @@ class PricingViewController: UIViewController {
         ])
     }
 
-    // MARK: - Paywall Footer
-    private func setupPaywallFooter() {
-        paywallFooterStack.axis = .vertical
-        paywallFooterStack.spacing = 12
-        paywallFooterStack.alignment = .center
-        contentStack.addArrangedSubview(paywallFooterStack)
-
-        // Spacer
-        let spacer = UIView()
-        spacer.heightAnchor.constraint(equalToConstant: 8).isActive = true
-        paywallFooterStack.addArrangedSubview(spacer)
-
-        // Restore Purchases button
+    // MARK: - Restore Purchases Footer
+    private func setupRestorePurchasesFooter() {
         restorePurchasesButton.setTitle("pricing_restore_purchases".localized, for: .normal)
         restorePurchasesButton.titleLabel?.font = .systemFont(ofSize: 15, weight: .medium)
         restorePurchasesButton.setTitleColor(.systemBlue, for: .normal)
         restorePurchasesButton.addTarget(self, action: #selector(restorePurchasesTapped), for: .touchUpInside)
-        paywallFooterStack.addArrangedSubview(restorePurchasesButton)
-
-        // Sign Out button
-        signOutButton.setTitle("pricing_sign_out".localized, for: .normal)
-        signOutButton.titleLabel?.font = .systemFont(ofSize: 15, weight: .medium)
-        signOutButton.setTitleColor(.white.withAlphaComponent(0.6), for: .normal)
-        signOutButton.addTarget(self, action: #selector(signOutTapped), for: .touchUpInside)
-        paywallFooterStack.addArrangedSubview(signOutButton)
+        contentStack.addArrangedSubview(restorePurchasesButton)
     }
 
     @objc private func restorePurchasesTapped() {
@@ -433,8 +400,7 @@ class PricingViewController: UIViewController {
                 switch result {
                 case .success(let status):
                     if status.tier != .free && status.isActive {
-                        // Subscription restored, dismiss paywall
-                        self?.dismiss(animated: true)
+                        self?.handlePurchaseSuccess()
                     } else {
                         let alert = UIAlertController(
                             title: "pricing_no_subscription_found".localized,
@@ -449,38 +415,6 @@ class PricingViewController: UIViewController {
                 }
             }
         }
-    }
-
-    @objc private func signOutTapped() {
-        let alert = UIAlertController(
-            title: "settings_sign_out".localized,
-            message: "pricing_sign_out_confirm".localized,
-            preferredStyle: .alert
-        )
-        alert.addAction(UIAlertAction(title: "common_cancel".localized, style: .cancel))
-        alert.addAction(UIAlertAction(title: "settings_sign_out".localized, style: .destructive) { [weak self] _ in
-            Task {
-                try? await SupabaseService.shared.signOut()
-
-                await MainActor.run {
-                    // Navigate to landing screen
-                    if let windowScene = UIApplication.shared.connectedScenes.first as? UIWindowScene,
-                       let window = windowScene.windows.first {
-                        let landingVC = LandingViewController()
-                        let navController = UINavigationController(rootViewController: landingVC)
-                        navController.setNavigationBarHidden(true, animated: false)
-                        window.rootViewController = navController
-
-                        UIView.transition(with: window,
-                                        duration: 0.5,
-                                        options: .transitionCrossDissolve,
-                                        animations: nil,
-                                        completion: nil)
-                    }
-                }
-            }
-        })
-        present(alert, animated: true)
     }
 
     // MARK: - Data Loading
@@ -654,16 +588,21 @@ class PricingViewController: UIViewController {
     }
 
     @objc private func freeTapped() {
-        delegate?.didSelectFreeTier()
+        if let delegate = delegate {
+            delegate.didSelectFreeTier()
+        } else {
+            // Presented modally — dismiss
+            dismiss(animated: true)
+        }
     }
 
     private func handlePurchaseSuccess() {
-        if isModalPaywall {
-            // Dismiss the paywall and return to the app
-            dismiss(animated: true)
+        if let delegate = delegate {
+            // Onboarding flow - notify delegate
+            delegate.didSelectPremiumTier()
         } else {
-            // Normal onboarding flow - notify delegate
-            delegate?.didSelectPremiumTier()
+            // Presented modally - dismiss
+            dismiss(animated: true)
         }
     }
 
