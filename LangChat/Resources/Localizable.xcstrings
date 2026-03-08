@@ -103921,6 +103921,174 @@
         }
       }
     },
+    "profile_completion_title": {
+      "comment": "Profile completion screen title",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Finish Your Profile"
+          }
+        }
+      }
+    },
+    "profile_completion_subtitle": {
+      "comment": "Profile completion screen subtitle",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Complete your profile to get better matches and show others who you are."
+          }
+        }
+      }
+    },
+    "profile_completion_progress": {
+      "comment": "Profile completion progress label - %d completed, %d total",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%d of %d completed"
+          }
+        }
+      }
+    },
+    "profile_completion_complete": {
+      "comment": "Profile completion percentage suffix",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "complete"
+          }
+        }
+      }
+    },
+    "profile_completion_birth_date": {
+      "comment": "Profile completion item - birth date",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Add your birth date"
+          }
+        }
+      }
+    },
+    "profile_completion_location": {
+      "comment": "Profile completion item - location",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Set your location"
+          }
+        }
+      }
+    },
+    "profile_completion_learning_goals": {
+      "comment": "Profile completion item - learning goals",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Choose learning goals"
+          }
+        }
+      }
+    },
+    "profile_completion_bio": {
+      "comment": "Profile completion item - bio",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Write a bio"
+          }
+        }
+      }
+    },
+    "profile_completion_photos": {
+      "comment": "Profile completion item - photos",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Add photos"
+          }
+        }
+      }
+    },
+    "profile_completion_travel_plans": {
+      "comment": "Profile completion item - travel plans",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Set travel plans"
+          }
+        }
+      }
+    },
+    "profile_completion_relationship": {
+      "comment": "Profile completion item - relationship intent",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "What you're looking for"
+          }
+        }
+      }
+    },
+    "profile_completion_privacy": {
+      "comment": "Profile completion item - privacy settings",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Privacy settings"
+          }
+        }
+      }
+    },
+    "profile_completion_notifications": {
+      "comment": "Profile completion item - notifications",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Enable notifications"
+          }
+        }
+      }
+    },
+    "settings_complete_profile": {
+      "comment": "Settings - Complete your profile row",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Finish Your Profile"
+          }
+        }
+      }
+    },
     "profile_section_basic_info": {
       "comment": "Profile Settings - Basic Info section",
       "extractionState": "manual",
@@ -144102,6 +144270,17 @@
           "stringUnit": {
             "state": "translated",
             "value": "Local to You"
+          }
+        }
+      }
+    },
+    "discover_row_preferred_countries": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "In Your Preferred Countries"
           }
         }
       }

@@ -104,17 +104,17 @@ class MatchingService {
             }
         }
 
+        // Use a fixed locale for country name resolution to avoid locale-dependent matching
+        let enUSLocale = Locale(identifier: "en_US")
+
         // Check specific country preferences
-        // OPTIMIZATION: Pre-compute lowercased strings to avoid repeated work in loops
         if prefs1.locationPreference == .specificCountries,
            let preferredCountries1 = prefs1.preferredCountries,
            let user2Location = user2.location {
-            // Pre-compute lowercased location and country names once
             let locationLower = user2Location.lowercased()
             let countryNames = preferredCountries1.compactMap { code -> String? in
-                Locale.current.localizedString(forRegionCode: code)?.lowercased()
+                enUSLocale.localizedString(forRegionCode: code)?.lowercased()
             }
-            // Check if location contains any preferred country name
             let matchesCountry = countryNames.contains { locationLower.contains($0) }
             if !matchesCountry {
                 return false
@@ -124,14 +124,37 @@ class MatchingService {
         if prefs2.locationPreference == .specificCountries,
            let preferredCountries2 = prefs2.preferredCountries,
            let user1Location = user1.location {
-            // Pre-compute lowercased location and country names once
             let locationLower = user1Location.lowercased()
             let countryNames = preferredCountries2.compactMap { code -> String? in
-                Locale.current.localizedString(forRegionCode: code)?.lowercased()
+                enUSLocale.localizedString(forRegionCode: code)?.lowercased()
             }
-            // Check if location contains any preferred country name
             let matchesCountry = countryNames.contains { locationLower.contains($0) }
             if !matchesCountry {
+                return false
+            }
+        }
+
+        // Check excluded countries
+        if prefs1.locationPreference == .excludeCountries,
+           let excludedCountries1 = prefs1.excludedCountries,
+           let user2Location = user2.location {
+            let locationLower = user2Location.lowercased()
+            let countryNames = excludedCountries1.compactMap { code -> String? in
+                enUSLocale.localizedString(forRegionCode: code)?.lowercased()
+            }
+            if countryNames.contains(where: { locationLower.contains($0) }) {
+                return false
+            }
+        }
+
+        if prefs2.locationPreference == .excludeCountries,
+           let excludedCountries2 = prefs2.excludedCountries,
+           let user1Location = user1.location {
+            let locationLower = user1Location.lowercased()
+            let countryNames = excludedCountries2.compactMap { code -> String? in
+                enUSLocale.localizedString(forRegionCode: code)?.lowercased()
+            }
+            if countryNames.contains(where: { locationLower.contains($0) }) {
                 return false
             }
         }

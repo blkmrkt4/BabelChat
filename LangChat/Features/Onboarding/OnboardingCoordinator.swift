@@ -47,8 +47,17 @@ enum OnboardingStep: Int, CaseIterable {
         }
     }
 
+    /// Steps required during onboarding (the rest are optional, completed post-onboarding)
+    static let requiredSteps: [OnboardingStep] = [
+        .interfaceLanguage, .termsAcceptance, .name, .nativeLanguage, .learningLanguages
+    ]
+
     var progress: Float {
-        return Float(self.rawValue + 1) / Float(OnboardingStep.allCases.count)
+        if let index = OnboardingStep.requiredSteps.firstIndex(of: self) {
+            return Float(index + 1) / Float(OnboardingStep.requiredSteps.count)
+        }
+        // For optional steps shown outside onboarding, show full progress
+        return 1.0
     }
 }
 
@@ -186,24 +195,24 @@ class OnboardingCoordinator {
 
     func nextStep() {
         print("📍 OnboardingCoordinator: nextStep() called from step \(currentStep)")
-        guard var nextStep = OnboardingStep(rawValue: currentStep.rawValue + 1) else {
-            print("📍 OnboardingCoordinator: No more steps, completing onboarding")
+        let required = OnboardingStep.requiredSteps
+
+        guard let currentIndex = required.firstIndex(of: currentStep) else {
+            print("📍 OnboardingCoordinator: Current step not in required list, completing")
+            autoDeriveMuse()
             completeOnboarding()
             return
         }
 
-        // Skip name step if user signed in with Apple.
-        // Apple provides name only on the FIRST sign-in ever. On reinstalls or new devices,
-        // the cached name may be gone. We must skip the name step regardless, using either
-        // the cached Apple name, the Supabase profile name, or a fallback.
-        // Showing the name input after Apple Sign In violates Guideline 4.0.
-        if nextStep == .name {
+        var nextIndex = currentIndex + 1
+
+        // Skip name step for Apple Sign In users (Guideline 4.0)
+        if nextIndex < required.count && required[nextIndex] == .name {
             let isAppleUser = SupabaseService.shared.isAppleSignInUser
             let appleFirstName = UserDefaults.standard.string(forKey: "appleProvidedFirstName") ?? ""
             let profileFirstName = UserDefaults.standard.string(forKey: "firstName") ?? ""
 
-            if isAppleUser {
-                // Use Apple-cached name first, then profile name, then fallback
+            if isAppleUser || !appleFirstName.isEmpty {
                 let firstName: String
                 let lastName: String
                 if !appleFirstName.isEmpty {
@@ -213,136 +222,64 @@ class OnboardingCoordinator {
                     firstName = profileFirstName
                     lastName = UserDefaults.standard.string(forKey: "lastName") ?? ""
                 } else {
-                    // Edge case: Apple user with no cached name at all.
-                    // Use the email prefix or a placeholder — never show the name input.
                     firstName = UserDefaults.standard.string(forKey: "email")?.components(separatedBy: "@").first ?? "User"
                     lastName = ""
                 }
                 print("📍 OnboardingCoordinator: Skipping name step for Apple user (name: \(firstName) \(lastName))")
                 userData.firstName = firstName
                 userData.lastName = lastName
-                if let skipToStep = OnboardingStep(rawValue: nextStep.rawValue + 1) {
-                    nextStep = skipToStep
-                } else {
-                    completeOnboarding()
-                    return
-                }
-            } else if !appleFirstName.isEmpty {
-                // Non-Apple user but Apple name cached (shouldn't happen, but handle gracefully)
-                let appleLastName = UserDefaults.standard.string(forKey: "appleProvidedLastName") ?? ""
-                print("📍 OnboardingCoordinator: Skipping name step (Apple provided: \(appleFirstName) \(appleLastName))")
-                userData.firstName = appleFirstName
-                userData.lastName = appleLastName
-                if let skipToStep = OnboardingStep(rawValue: nextStep.rawValue + 1) {
-                    nextStep = skipToStep
-                } else {
-                    completeOnboarding()
-                    return
-                }
+                nextIndex += 1
             }
         }
 
-        // Skip museLanguages — auto-derive from native + learning languages
-        if nextStep == .museLanguages {
-            print("📍 OnboardingCoordinator: Skipping museLanguages (auto-derived from native + learning)")
-            // Auto-populate muse languages from native language + learning languages
-            var museLanguages: [Language] = []
-            if let native = userData.nativeLanguage {
-                museLanguages.append(native)
-            }
-            museLanguages.append(contentsOf: userData.learningLanguages)
-            // Ensure English is always included
-            if !museLanguages.contains(.english) {
-                museLanguages.insert(.english, at: 0)
-            }
-            userData.museLanguages = museLanguages
-            if let skipToStep = OnboardingStep(rawValue: nextStep.rawValue + 1) {
-                nextStep = skipToStep
-            } else {
-                completeOnboarding()
-                return
-            }
-        }
-
-        // Skip datingPreferences if user didn't select "Open to dating"
-        if nextStep == .datingPreferences {
-            let isOpenToDating = userData.relationshipIntent == .openToDating
-            if !isOpenToDating {
-                print("📍 OnboardingCoordinator: Skipping datingPreferences (not open to dating)")
-                // Skip to next step after datingPreferences
-                if let skipToStep = OnboardingStep(rawValue: nextStep.rawValue + 1) {
-                    nextStep = skipToStep
-                } else {
-                    completeOnboarding()
-                    return
-                }
-            }
-        }
-
-        // Skip privacyPreferences if user selected "Language Practice Only" (they already saw privacy options)
-        if nextStep == .privacyPreferences {
-            let hasLanguagePracticeOnly = userData.relationshipIntent == .languageExchange
-            if hasLanguagePracticeOnly {
-                print("📍 OnboardingCoordinator: Skipping privacyPreferences (already shown with language practice)")
-                if let skipToStep = OnboardingStep(rawValue: nextStep.rawValue + 1) {
-                    nextStep = skipToStep
-                } else {
-                    completeOnboarding()
-                    return
-                }
-            }
-        }
-
-        print("📍 OnboardingCoordinator: Moving to step \(nextStep)")
-        showStep(nextStep)
-    }
-
-    func previousStep() {
-        guard currentStep.rawValue > 0,
-              var previousStep = OnboardingStep(rawValue: currentStep.rawValue - 1) else {
+        // All required steps done — auto-derive muse languages and complete
+        guard nextIndex < required.count else {
+            print("📍 OnboardingCoordinator: All required steps done, completing onboarding")
+            autoDeriveMuse()
+            completeOnboarding()
             return
         }
 
-        // Skip name step when going back if user is an Apple Sign In user
-        if previousStep == .name {
+        let next = required[nextIndex]
+        print("📍 OnboardingCoordinator: Moving to step \(next)")
+        showStep(next)
+    }
+
+    /// Auto-derive Muse languages from native + learning languages
+    private func autoDeriveMuse() {
+        var museLanguages: [Language] = []
+        if let native = userData.nativeLanguage {
+            museLanguages.append(native)
+        }
+        museLanguages.append(contentsOf: userData.learningLanguages)
+        if !museLanguages.contains(.english) {
+            museLanguages.insert(.english, at: 0)
+        }
+        userData.museLanguages = museLanguages
+        print("📍 OnboardingCoordinator: Auto-derived muse languages: \(museLanguages.map { $0.rawValue })")
+    }
+
+    func previousStep() {
+        let required = OnboardingStep.requiredSteps
+
+        guard let currentIndex = required.firstIndex(of: currentStep), currentIndex > 0 else {
+            return
+        }
+
+        var prevIndex = currentIndex - 1
+
+        // Skip name step when going back for Apple Sign In users
+        if required[prevIndex] == .name {
             let isAppleUser = SupabaseService.shared.isAppleSignInUser
             let appleFirstName = UserDefaults.standard.string(forKey: "appleProvidedFirstName") ?? ""
             if isAppleUser || !appleFirstName.isEmpty {
-                if let skipToStep = OnboardingStep(rawValue: previousStep.rawValue - 1) {
-                    previousStep = skipToStep
-                }
-            }
-        }
-
-        // Skip museLanguages when going back (auto-derived, not shown)
-        if previousStep == .museLanguages {
-            if let skipToStep = OnboardingStep(rawValue: previousStep.rawValue - 1) {
-                previousStep = skipToStep
-            }
-        }
-
-        // Skip datingPreferences when going back if user didn't select "Open to dating"
-        if previousStep == .datingPreferences {
-            let isOpenToDating = userData.relationshipIntent == .openToDating
-            if !isOpenToDating {
-                if let skipToStep = OnboardingStep(rawValue: previousStep.rawValue - 1) {
-                    previousStep = skipToStep
-                }
-            }
-        }
-
-        // Skip privacyPreferences when going back if user selected "Language Practice Only"
-        if previousStep == .privacyPreferences {
-            let hasLanguagePracticeOnly = userData.relationshipIntent == .languageExchange
-            if hasLanguagePracticeOnly {
-                if let skipToStep = OnboardingStep(rawValue: previousStep.rawValue - 1) {
-                    previousStep = skipToStep
-                }
+                guard prevIndex > 0 else { return }
+                prevIndex -= 1
             }
         }
 
         navigationController?.popViewController(animated: true)
-        currentStep = previousStep
+        currentStep = required[prevIndex]
     }
 
     private func completeOnboarding() {

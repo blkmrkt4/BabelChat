@@ -10,7 +10,13 @@ class SettingsViewController: UIViewController {
     private var devMenuTapCount = 0
     private var devMenuTapResetTimer: Timer?
 
+    /// Whether to show the "Complete Your Profile" section at the top
+    private var shouldShowProfileCompletion: Bool {
+        ProfileCompletionViewController.isProfileIncomplete
+    }
+
     private enum SettingSection: Int, CaseIterable {
+        case profileCompletion
         case profileSettings
         case matchingSettings
         case museSettings
@@ -23,6 +29,7 @@ class SettingsViewController: UIViewController {
 
         var title: String? {
             switch self {
+            case .profileCompletion: return nil
             case .profileSettings: return nil  // No header for single profile item
             case .matchingSettings: return nil  // No header for single matching item
             case .museSettings: return "settings_section_ai_muse".localized
@@ -37,6 +44,10 @@ class SettingsViewController: UIViewController {
 
         var items: [(title: String, icon: String)] {
             switch self {
+            case .profileCompletion:
+                return [
+                    ("settings_complete_profile".localized, "person.crop.circle.badge.exclamationmark")
+                ]
             case .profileSettings:
                 return [
                     ("settings_profile_settings".localized, "person.circle")
@@ -87,9 +98,23 @@ class SettingsViewController: UIViewController {
         }
     }
 
+    /// Visible sections, excluding profileCompletion when profile is already complete
+    private var visibleSections: [SettingSection] {
+        if shouldShowProfileCompletion {
+            return SettingSection.allCases
+        } else {
+            return SettingSection.allCases.filter { $0 != .profileCompletion }
+        }
+    }
+
     override func viewDidLoad() {
         super.viewDidLoad()
         setupViews()
+    }
+
+    override func viewWillAppear(_ animated: Bool) {
+        super.viewWillAppear(animated)
+        tableView.reloadData()
     }
 
     private func setupViews() {
@@ -245,9 +270,13 @@ class SettingsViewController: UIViewController {
     #endif
 
     private func handleSettingSelection(section: Int, row: Int) {
-        guard let settingSection = SettingSection(rawValue: section) else { return }
+        guard section < visibleSections.count else { return }
+        let settingSection = visibleSections[section]
 
         switch settingSection {
+        case .profileCompletion:
+            showProfileCompletion()
+
         case .profileSettings:
             showProfileSettings()
 
@@ -368,6 +397,11 @@ class SettingsViewController: UIViewController {
     }
 
     // MARK: - Setting Actions
+    private func showProfileCompletion() {
+        let completionVC = ProfileCompletionViewController()
+        navigationController?.pushViewController(completionVC, animated: true)
+    }
+
     private func showProfileSettings() {
         let profileSettingsVC = ProfileSettingsViewController()
         navigationController?.pushViewController(profileSettingsVC, animated: true)
@@ -1040,25 +1074,42 @@ class LegalDocumentViewController: UIViewController {
 // MARK: - UITableViewDataSource
 extension SettingsViewController: UITableViewDataSource {
     func numberOfSections(in tableView: UITableView) -> Int {
-        return SettingSection.allCases.count
+        return visibleSections.count
     }
 
     func tableView(_ tableView: UITableView, numberOfRowsInSection section: Int) -> Int {
-        guard let settingSection = SettingSection(rawValue: section) else { return 0 }
-        return settingSection.items.count
+        guard section < visibleSections.count else { return 0 }
+        return visibleSections[section].items.count
     }
 
     func tableView(_ tableView: UITableView, titleForHeaderInSection section: Int) -> String? {
-        guard let settingSection = SettingSection(rawValue: section) else { return nil }
-        return settingSection.title  // Returns nil for profile and matchingSettings sections
+        guard section < visibleSections.count else { return nil }
+        return visibleSections[section].title
     }
 
     func tableView(_ tableView: UITableView, cellForRowAt indexPath: IndexPath) -> UITableViewCell {
-        guard let settingSection = SettingSection(rawValue: indexPath.section) else {
+        guard indexPath.section < visibleSections.count else {
             return UITableViewCell()
         }
 
+        let settingSection = visibleSections[indexPath.section]
         let item = settingSection.items[indexPath.row]
+
+        // Profile completion cell with progress badge
+        if settingSection == .profileCompletion {
+            let cell = tableView.dequeueReusableCell(withIdentifier: "SettingCell", for: indexPath)
+            var config = cell.defaultContentConfiguration()
+            config.text = item.title
+            config.image = UIImage(systemName: item.icon)
+            config.imageProperties.tintColor = .systemOrange
+            config.textProperties.color = .systemOrange
+            config.textProperties.font = .systemFont(ofSize: 17, weight: .medium)
+            let pct = ProfileCompletionViewController.completionPercentage
+            config.secondaryText = "\(pct)% " + "profile_completion_complete".localized
+            cell.accessoryType = .disclosureIndicator
+            cell.contentConfiguration = config
+            return cell
+        }
 
         // Use switch cell for specific settings
         if settingSection == .privacy {

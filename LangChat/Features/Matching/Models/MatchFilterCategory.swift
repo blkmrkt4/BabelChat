@@ -71,14 +71,17 @@ class MatchFilterCategoryBuilder {
             }
         }
 
-        // Read intents from UserDefaults
+        // Read intents from UserDefaults (stored as raw enum values)
         let storedIntents = UserDefaults.standard.stringArray(forKey: "relationshipIntents") ?? []
+        let storedEnumIntents = storedIntents.compactMap { RelationshipIntent(rawValue: $0) }
         let currentIntent = currentUser?.matchingPreferences.relationshipIntent
+        var allIntents = Set(storedEnumIntents)
+        if let currentIntent = currentIntent {
+            allIntents.insert(currentIntent)
+        }
 
         // 5. Friendship
-        let wantsFriendship = currentIntent == .friendship ||
-            storedIntents.contains { $0.lowercased().contains("friend") }
-        if wantsFriendship {
+        if allIntents.contains(.friendship) {
             let hasMatch = matches.contains { $0.user.matchingPreferences.relationshipIntent == .friendship }
             if hasMatch {
                 categories.append(MatchFilterCategory(
@@ -92,9 +95,7 @@ class MatchFilterCategoryBuilder {
         }
 
         // 6. Dating
-        let wantsDating = currentIntent == .openToDating ||
-            storedIntents.contains { $0.lowercased().contains("dating") }
-        if wantsDating {
+        if allIntents.contains(.openToDating) {
             let hasMatch = matches.contains { $0.user.matchingPreferences.relationshipIntent == .openToDating }
             if hasMatch {
                 categories.append(MatchFilterCategory(
@@ -108,9 +109,7 @@ class MatchFilterCategoryBuilder {
         }
 
         // 7. Networking
-        let wantsNetworking = currentIntent == .networking ||
-            storedIntents.contains { $0.lowercased().contains("network") }
-        if wantsNetworking {
+        if allIntents.contains(.networking) {
             let hasMatch = matches.contains { $0.user.matchingPreferences.relationshipIntent == .networking }
             if hasMatch {
                 categories.append(MatchFilterCategory(

@@ -15,40 +15,55 @@ class DiscoverCategoryBuilder {
     ) -> [DiscoverCategory] {
         var categories: [DiscoverCategory] = []
 
+        // Apply hard filters before building rows
+        var filteredProfiles = scoredProfiles
+
+        // Exclude countries the user has blocked
+        if currentUser.matchingPreferences.locationPreference == .excludeCountries,
+           let excluded = currentUser.matchingPreferences.excludedCountries, !excluded.isEmpty {
+            let excludedNames = excluded.compactMap { code in
+                Locale(identifier: "en_US").localizedString(forRegionCode: code)?.lowercased()
+            }
+            filteredProfiles = filteredProfiles.filter { profile in
+                guard let location = profile.user.location?.lowercased() else { return true }
+                return !excludedNames.contains { location.contains($0) }
+            }
+        }
+
         // 1. Top Picks
-        if let cat = buildTopPicks(from: scoredProfiles) {
+        if let cat = buildTopPicks(from: filteredProfiles) {
             categories.append(cat)
         }
 
         // 2. Online Now
-        if let cat = buildOnlineNow(from: scoredProfiles) {
+        if let cat = buildOnlineNow(from: filteredProfiles) {
             categories.append(cat)
         }
 
         // 3. Local to You
-        if let cat = buildLocal(from: scoredProfiles, currentUser: currentUser) {
+        if let cat = buildLocal(from: filteredProfiles, currentUser: currentUser) {
             categories.append(cat)
         }
 
         // 4. Traveling Soon
-        if let cat = buildTravelingSoon(from: scoredProfiles, currentUser: currentUser) {
+        if let cat = buildTravelingSoon(from: filteredProfiles, currentUser: currentUser) {
             categories.append(cat)
         }
 
         // 5. Lives in [Country] (target language countries)
-        categories.append(contentsOf: buildTargetCountryRows(from: scoredProfiles, currentUser: currentUser))
+        categories.append(contentsOf: buildTargetCountryRows(from: filteredProfiles, currentUser: currentUser))
 
         // 6. Intent-based rows
-        categories.append(contentsOf: buildIntentRows(from: scoredProfiles, currentUser: currentUser))
+        categories.append(contentsOf: buildIntentRows(from: filteredProfiles, currentUser: currentUser))
 
         // 7. Proficiency rows
-        if let cat = buildProficiencyRow(from: scoredProfiles, currentUser: currentUser) {
+        if let cat = buildProficiencyRow(from: filteredProfiles, currentUser: currentUser) {
             categories.append(cat)
         }
 
         // 8. Formal/Business
         if let cat = buildLearningContextRow(
-            from: scoredProfiles,
+            from: filteredProfiles,
             contexts: [.formal],
             id: "business",
             titleKey: "discover_row_business"
@@ -58,7 +73,7 @@ class DiscoverCategoryBuilder {
 
         // 9. Academic
         if let cat = buildLearningContextRow(
-            from: scoredProfiles,
+            from: filteredProfiles,
             contexts: [.academic],
             id: "academic",
             titleKey: "discover_row_academic"
@@ -68,7 +83,7 @@ class DiscoverCategoryBuilder {
 
         // 10. Casual/Social
         if let cat = buildLearningContextRow(
-            from: scoredProfiles,
+            from: filteredProfiles,
             contexts: [.casual],
             id: "casual",
             titleKey: "discover_row_casual"
@@ -77,12 +92,12 @@ class DiscoverCategoryBuilder {
         }
 
         // 11. Regular Session Hosts
-        if let cat = buildRegularSessionHosts(from: scoredProfiles) {
+        if let cat = buildRegularSessionHosts(from: filteredProfiles) {
             categories.append(cat)
         }
 
         // 12. Global Connections
-        if let cat = buildGlobalConnections(from: scoredProfiles, currentUser: currentUser) {
+        if let cat = buildGlobalConnections(from: filteredProfiles, currentUser: currentUser) {
             categories.append(cat)
         }
 
@@ -137,7 +152,8 @@ class DiscoverCategoryBuilder {
             let otherPrefs = profile.user.matchingPreferences
             guard let otherLat = otherPrefs.latitude, let otherLon = otherPrefs.longitude else { continue }
             let dist = MatchingPreferences.calculateDistance(from: myLat, lon1: myLon, to: otherLat, lon2: otherLon)
-            if dist <= 100 {
+            let maxDistance = Double(currentPrefs.maxDistanceKm ?? 100)
+            if dist <= maxDistance {
                 localProfiles.append((profile.user, profile.score, profile.reasons, dist))
             }
         }
@@ -188,8 +204,51 @@ class DiscoverCategoryBuilder {
         from profiles: [(user: User, score: Int, reasons: [String])],
         currentUser: User
     ) -> [DiscoverCategory] {
+        // When user has explicitly set preferred countries, show rows for those
+        if currentUser.matchingPreferences.locationPreference == .specificCountries,
+           let preferredCountries = currentUser.matchingPreferences.preferredCountries,
+           !preferredCountries.isEmpty {
+            return buildPreferredCountryRows(from: profiles, countryCodes: preferredCountries)
+        }
+
+        // Fallback: language→country association rows for discovery
+        return buildLanguageCountryRows(from: profiles, currentUser: currentUser)
+    }
+
+    /// Build individual "Lives in [Country]" rows for user's preferred countries (up to 3)
+    private static func buildPreferredCountryRows(
+        from profiles: [(user: User, score: Int, reasons: [String])],
+        countryCodes: [String]
+    ) -> [DiscoverCategory] {
         var rows: [DiscoverCategory] = []
 
+        for code in countryCodes.prefix(3) {
+            guard let countryName = Locale(identifier: "en_US").localizedString(forRegionCode: code) else { continue }
+            let countryLower = countryName.lowercased()
+
+            let matching = profiles.filter { profile in
+                guard let location = profile.user.location?.lowercased() else { return false }
+                return location.contains(countryLower)
+            }.sorted { $0.score > $1.score }
+
+            guard !matching.isEmpty else { continue }
+
+            rows.append(DiscoverCategory(
+                id: "preferred_country_\(code)",
+                titleKey: String(format: "discover_row_lives_in".localized, countryName),
+                subtitle: nil,
+                users: matching
+            ))
+        }
+
+        return rows
+    }
+
+    /// Fallback: build country rows based on learning language → country associations
+    private static func buildLanguageCountryRows(
+        from profiles: [(user: User, score: Int, reasons: [String])],
+        currentUser: User
+    ) -> [DiscoverCategory] {
         for learningLang in currentUser.learningLanguages {
             let countries = learningLang.language.associatedCountries
             guard !countries.isEmpty else { continue }
@@ -202,7 +261,6 @@ class DiscoverCategoryBuilder {
 
             guard !matching.isEmpty else { continue }
 
-            // Use the first country for the title (most representative)
             let countryName = countries[0]
             return [DiscoverCategory(
                 id: "target_country_\(learningLang.language.code)",
@@ -212,7 +270,7 @@ class DiscoverCategoryBuilder {
             )]
         }
 
-        return rows
+        return []
     }
 
     private static func buildIntentRows(
@@ -221,14 +279,14 @@ class DiscoverCategoryBuilder {
     ) -> [DiscoverCategory] {
         var rows: [DiscoverCategory] = []
 
-        // Read intents from UserDefaults (stored as localized display strings)
+        // Read intents from UserDefaults (stored as raw enum values)
         let storedIntents = UserDefaults.standard.stringArray(forKey: "relationshipIntents") ?? []
+        let storedEnumIntents = storedIntents.compactMap { RelationshipIntent(rawValue: $0) }
         let currentIntent = currentUser.matchingPreferences.relationshipIntent
+        let allIntents = Set([currentIntent] + storedEnumIntents)
 
         // Check friendship
-        let wantsFriendship = currentIntent == .friendship ||
-            storedIntents.contains { $0.lowercased().contains("friend") }
-        if wantsFriendship {
+        if allIntents.contains(.friendship) {
             let matching = profiles.filter {
                 $0.user.matchingPreferences.relationshipIntent == .friendship
             }.sorted { $0.score > $1.score }
@@ -243,9 +301,7 @@ class DiscoverCategoryBuilder {
         }
 
         // Check dating
-        let wantsDating = currentIntent == .openToDating ||
-            storedIntents.contains { $0.lowercased().contains("dating") }
-        if wantsDating {
+        if allIntents.contains(.openToDating) {
             let matching = profiles.filter {
                 $0.user.matchingPreferences.relationshipIntent == .openToDating
             }.sorted { $0.score > $1.score }
@@ -260,9 +316,7 @@ class DiscoverCategoryBuilder {
         }
 
         // Check networking
-        let wantsNetworking = currentIntent == .networking ||
-            storedIntents.contains { $0.lowercased().contains("network") }
-        if wantsNetworking {
+        if allIntents.contains(.networking) {
             let matching = profiles.filter {
                 $0.user.matchingPreferences.relationshipIntent == .networking
             }.sorted { $0.score > $1.score }
