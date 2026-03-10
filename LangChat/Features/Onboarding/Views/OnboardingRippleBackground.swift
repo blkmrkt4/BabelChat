@@ -235,7 +235,7 @@ extension Color {
         VStack(spacing: 40) {
             Spacer()
 
-            Text("Welcome to Fluenca")
+            Text("Welcome to Language Match")
                 .font(.system(size: 42, weight: .bold))
                 .foregroundColor(.white)
                 .multilineTextAlignment(.center)

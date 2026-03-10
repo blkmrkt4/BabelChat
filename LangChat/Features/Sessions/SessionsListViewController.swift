@@ -5,14 +5,17 @@ class SessionsListViewController: UIViewController {
     // MARK: - Filter
 
     private enum SessionFilter: Equatable {
+        case mySessions
         case liveNow
         case nextHour
         case today
         case futureDay(Date) // specific future date
+        case pastSessions
         case invites
 
         var title: String {
             switch self {
+            case .mySessions: return "sessions_my_sessions".localized
             case .liveNow: return "sessions_live_now".localized
             case .nextHour: return "sessions_filter_next_hour".localized
             case .today: return "sessions_filter_today".localized
@@ -20,6 +23,7 @@ class SessionsListViewController: UIViewController {
                 let formatter = DateFormatter()
                 formatter.dateFormat = "EEE, MMM d"
                 return formatter.string(from: date)
+            case .pastSessions: return "sessions_past_sessions".localized
             case .invites: return "sessions_your_invites".localized
             }
         }
@@ -34,6 +38,7 @@ class SessionsListViewController: UIViewController {
     // MARK: - Data
     private var allSessions: [Session] = []
     private var filteredSessions: [Session] = []
+    private var pastSessions: [Session] = []
     private var invites: [SessionInvite] = []
     private var filters: [SessionFilter] = []
     private var selectedFilterIndex = 0
@@ -174,30 +179,60 @@ class SessionsListViewController: UIViewController {
 
     private func loadSessions() {
         Task {
-            do {
-                async let discoverableResult = SessionService.shared.getDiscoverableSessions()
-                async let mySessionsResult = SessionService.shared.getMySessions()
-                async let invitesResult = SessionService.shared.getMyInvites()
+            // Fetch each source independently so one failure doesn't block the others
+            var discoverable: [Session] = []
+            var mySessions: [Session] = []
+            var fetchedInvites: [SessionInvite] = []
+            var fetchedPastSessions: [Session] = []
 
-                let (discoverable, mySessions, fetchedInvites) = try await (discoverableResult, mySessionsResult, invitesResult)
-
-                // Merge and deduplicate (my sessions may already be in discoverable)
-                var sessionMap: [String: Session] = [:]
-                for session in discoverable { sessionMap[session.id] = session }
-                for session in mySessions { sessionMap[session.id] = session }
-
-                await MainActor.run {
-                    self.allSessions = Array(sessionMap.values)
-                    self.invites = fetchedInvites
-                    self.buildFilters()
-                    self.applyFilter()
-                    self.refreshControl.endRefreshing()
+            async let discoverableTask: Void = {
+                do {
+                    discoverable = try await SessionService.shared.getDiscoverableSessions()
+                } catch {
+                    print("Failed to load discoverable sessions: \(error)")
                 }
-            } catch {
-                await MainActor.run {
-                    self.refreshControl.endRefreshing()
-                    print("Failed to load sessions: \(error)")
+            }()
+
+            async let mySessionsTask: Void = {
+                do {
+                    mySessions = try await SessionService.shared.getMySessions()
+                } catch {
+                    print("Failed to load my sessions: \(error)")
                 }
+            }()
+
+            async let invitesTask: Void = {
+                do {
+                    fetchedInvites = try await SessionService.shared.getMyInvites()
+                } catch {
+                    print("Failed to load invites: \(error)")
+                }
+            }()
+
+            async let pastSessionsTask: Void = {
+                do {
+                    fetchedPastSessions = try await SessionService.shared.getMyPastSessions()
+                } catch {
+                    print("Failed to load past sessions: \(error)")
+                }
+            }()
+
+            // Wait for all to complete (none will throw)
+            _ = await (discoverableTask, mySessionsTask, invitesTask, pastSessionsTask)
+
+            // Merge and deduplicate (my sessions may already be in discoverable)
+            var sessionMap: [String: Session] = [:]
+            for session in discoverable { sessionMap[session.id] = session }
+            for session in mySessions { sessionMap[session.id] = session }
+
+            await MainActor.run {
+                self.allSessions = Array(sessionMap.values)
+                self.invites = fetchedInvites
+                self.pastSessions = fetchedPastSessions
+                self.buildFilters()
+                self.autoSelectBestFilter()
+                self.applyFilter()
+                self.refreshControl.endRefreshing()
             }
         }
     }
@@ -207,7 +242,10 @@ class SessionsListViewController: UIViewController {
     private func buildFilters() {
         var newFilters: [SessionFilter] = []
 
-        // Live Now always first
+        // "My Sessions" always first — shows everything the user hosts or participates in
+        newFilters.append(.mySessions)
+
+        // Live Now
         newFilters.append(.liveNow)
         newFilters.append(.nextHour)
         newFilters.append(.today)
@@ -231,6 +269,9 @@ class SessionsListViewController: UIViewController {
             newFilters.append(.futureDay(day))
         }
 
+        // Past sessions tab — always shown so users know it exists
+        newFilters.append(.pastSessions)
+
         // Invites tab if any pending
         if !invites.isEmpty {
             newFilters.append(.invites)
@@ -246,6 +287,34 @@ class SessionsListViewController: UIViewController {
         chipCollectionView.reloadData()
     }
 
+    /// Auto-select the most relevant filter based on available data
+    private func autoSelectBestFilter() {
+        let currentUserId = SupabaseService.shared.currentUserId?.uuidString.lowercased() ?? ""
+
+        // If user has any sessions (hosting or participating), default to "My Sessions"
+        let mySessionCount = allSessions.filter { session in
+            session.hostId.lowercased() == currentUserId || session.status == .live || session.status == .scheduled
+        }.count
+        if mySessionCount > 0 {
+            if let myIndex = filters.firstIndex(of: .mySessions) {
+                selectedFilterIndex = myIndex
+                return
+            }
+        }
+
+        // If there are live sessions, show those
+        let liveCount = allSessions.filter { $0.status == .live }.count
+        if liveCount > 0 {
+            if let liveIndex = filters.firstIndex(of: .liveNow) {
+                selectedFilterIndex = liveIndex
+                return
+            }
+        }
+
+        // Default to "My Sessions"
+        selectedFilterIndex = 0
+    }
+
     private func applyFilter() {
         guard selectedFilterIndex < filters.count else {
             filteredSessions = []
@@ -256,10 +325,21 @@ class SessionsListViewController: UIViewController {
         let filter = filters[selectedFilterIndex]
         let calendar = Calendar.current
         let now = Date()
+        let currentUserId = SupabaseService.shared.currentUserId?.uuidString.lowercased() ?? ""
 
         switch filter {
+        case .mySessions:
+            // Show all sessions the user hosts or is a participant in, sorted by date
+            // Exclude expired sessions whose duration has been exceeded
+            filteredSessions = allSessions.filter { session in
+                guard !session.isExpired else { return false }
+                return session.hostId.lowercased() == currentUserId ||
+                    session.status == .live ||
+                    session.status == .scheduled
+            }
+
         case .liveNow:
-            filteredSessions = allSessions.filter { $0.status == .live }
+            filteredSessions = allSessions.filter { $0.status == .live && !$0.isExpired }
 
         case .nextHour:
             let oneHourLater = calendar.date(byAdding: .hour, value: 1, to: now)!
@@ -281,21 +361,30 @@ class SessionsListViewController: UIViewController {
                 return scheduledAt >= day && scheduledAt < dayEnd
             }
 
+        case .pastSessions:
+            filteredSessions = pastSessions
+
         case .invites:
             filteredSessions = []
         }
 
-        // Sort by scheduled time
-        filteredSessions.sort { ($0.scheduledAt ?? $0.createdAt) < ($1.scheduledAt ?? $1.createdAt) }
+        // Sort: live first, then by scheduled time
+        filteredSessions.sort { s1, s2 in
+            if s1.status == .live && s2.status != .live { return true }
+            if s1.status != .live && s2.status == .live { return false }
+            return (s1.scheduledAt ?? s1.createdAt) < (s2.scheduledAt ?? s2.createdAt)
+        }
 
         updateUI()
     }
 
     private func updateUI() {
-        let currentFilter = filters.indices.contains(selectedFilterIndex) ? filters[selectedFilterIndex] : .liveNow
+        let currentFilter = filters.indices.contains(selectedFilterIndex) ? filters[selectedFilterIndex] : .mySessions
         let isEmpty: Bool
         if currentFilter == .invites {
             isEmpty = invites.isEmpty
+        } else if currentFilter == .pastSessions {
+            isEmpty = pastSessions.isEmpty
         } else {
             isEmpty = filteredSessions.isEmpty
         }
@@ -314,13 +403,36 @@ class SessionsListViewController: UIViewController {
                 message: "upgrade_session_host_message".localized,
                 preferredStyle: .alert
             )
-            alert.addAction(UIAlertAction(title: "button_upgrade_premium".localized, style: .default) { [weak self] _ in
+            alert.addAction(UIAlertAction(title: "button_upgrade_pro".localized, style: .default) { [weak self] _ in
                 let pricingVC = PricingViewController()
                 let nav = UINavigationController(rootViewController: pricingVC)
                 nav.modalPresentationStyle = .pageSheet
                 self?.present(nav, animated: true)
             })
             alert.addAction(UIAlertAction(title: "button_maybe_later".localized, style: .cancel))
+            present(alert, animated: true)
+            return
+        }
+
+        // Check monthly hosting limit
+        let hostResult = UsageLimitService.shared.canHostSession(tier: tier)
+        if !hostResult.isAllowed {
+            let limit = tier.monthlySessionHostLimit ?? 0
+            let used = UsageLimitService.shared.getMonthlyHostCount()
+            let alert = UIAlertController(
+                title: "session_host_limit_title".localized,
+                message: String(format: "session_host_limit_message".localized, used, limit),
+                preferredStyle: .alert
+            )
+            if tier == .pro {
+                alert.addAction(UIAlertAction(title: "button_upgrade_broadcaster".localized, style: .default) { [weak self] _ in
+                    let pricingVC = PricingViewController()
+                    let nav = UINavigationController(rootViewController: pricingVC)
+                    nav.modalPresentationStyle = .pageSheet
+                    self?.present(nav, animated: true)
+                })
+            }
+            alert.addAction(UIAlertAction(title: "common_ok".localized, style: .cancel))
             present(alert, animated: true)
             return
         }
@@ -352,11 +464,17 @@ extension SessionsListViewController: UICollectionViewDataSource, UICollectionVi
         let filter = filters[indexPath.item]
         var title = filter.title
 
-        // Show count badge for live and invites
+        // Show count badge for certain filters
         switch filter {
+        case .mySessions:
+            let currentUserId = SupabaseService.shared.currentUserId?.uuidString.lowercased() ?? ""
+            let count = allSessions.filter { $0.hostId.lowercased() == currentUserId || $0.status == .live || $0.status == .scheduled }.count
+            if count > 0 { title += " (\(count))" }
         case .liveNow:
             let count = allSessions.filter { $0.status == .live }.count
             if count > 0 { title += " (\(count))" }
+        case .pastSessions:
+            if !pastSessions.isEmpty { title += " (\(pastSessions.count))" }
         case .invites:
             if !invites.isEmpty { title += " (\(invites.count))" }
         default:
@@ -382,7 +500,7 @@ extension SessionsListViewController: UITableViewDataSource {
     }
 
     func tableView(_ tableView: UITableView, numberOfRowsInSection section: Int) -> Int {
-        let currentFilter = filters.indices.contains(selectedFilterIndex) ? filters[selectedFilterIndex] : .liveNow
+        let currentFilter = filters.indices.contains(selectedFilterIndex) ? filters[selectedFilterIndex] : .mySessions
         if currentFilter == .invites {
             return invites.count
         }
@@ -394,7 +512,7 @@ extension SessionsListViewController: UITableViewDataSource {
             return UITableViewCell()
         }
 
-        let currentFilter = filters.indices.contains(selectedFilterIndex) ? filters[selectedFilterIndex] : .liveNow
+        let currentFilter = filters.indices.contains(selectedFilterIndex) ? filters[selectedFilterIndex] : .mySessions
         if currentFilter == .invites {
             cell.configureForInvite(with: invites[indexPath.row])
         } else {
@@ -411,7 +529,7 @@ extension SessionsListViewController: UITableViewDelegate {
     func tableView(_ tableView: UITableView, didSelectRowAt indexPath: IndexPath) {
         tableView.deselectRow(at: indexPath, animated: true)
 
-        let currentFilter = filters.indices.contains(selectedFilterIndex) ? filters[selectedFilterIndex] : .liveNow
+        let currentFilter = filters.indices.contains(selectedFilterIndex) ? filters[selectedFilterIndex] : .mySessions
         if currentFilter == .invites {
             let invite = invites[indexPath.row]
             showInviteResponse(invite)
@@ -422,8 +540,13 @@ extension SessionsListViewController: UITableViewDelegate {
     }
 
     private func showSessionDetail(_ session: Session) {
-        let detailVC = SessionDetailViewController(session: session)
-        navigationController?.pushViewController(detailVC, animated: true)
+        if session.status == .ended {
+            let pastVC = PastSessionViewController(session: session)
+            navigationController?.pushViewController(pastVC, animated: true)
+        } else {
+            let detailVC = SessionDetailViewController(session: session)
+            navigationController?.pushViewController(detailVC, animated: true)
+        }
     }
 
     private func showInviteResponse(_ invite: SessionInvite) {
@@ -457,51 +580,51 @@ extension SessionsListViewController: CreateSessionDelegate {
             let sessionVC = SessionViewController(session: session)
             navigationController?.pushViewController(sessionVC, animated: true)
         } else {
-            // Scheduled session — switch to the right filter after loading
+            // Scheduled session — reload and show in "My Sessions"
             selectFilterForSession(session)
         }
     }
 
     private func selectFilterForSession(_ session: Session) {
         Task {
-            do {
-                async let discoverableResult = SessionService.shared.getDiscoverableSessions()
-                async let mySessionsResult = SessionService.shared.getMySessions()
-                async let invitesResult = SessionService.shared.getMyInvites()
+            // Fetch each source independently
+            var discoverable: [Session] = []
+            var mySessions: [Session] = []
+            var fetchedInvites: [SessionInvite] = []
 
-                let (discoverable, mySessions, fetchedInvites) = try await (discoverableResult, mySessionsResult, invitesResult)
+            do { discoverable = try await SessionService.shared.getDiscoverableSessions() } catch { }
+            do { mySessions = try await SessionService.shared.getMySessions() } catch { }
+            do { fetchedInvites = try await SessionService.shared.getMyInvites() } catch { }
 
-                var sessionMap: [String: Session] = [:]
-                for s in discoverable { sessionMap[s.id] = s }
-                for s in mySessions { sessionMap[s.id] = s }
+            var sessionMap: [String: Session] = [:]
+            for s in discoverable { sessionMap[s.id] = s }
+            for s in mySessions { sessionMap[s.id] = s }
 
-                await MainActor.run {
-                    self.allSessions = Array(sessionMap.values)
-                    self.invites = fetchedInvites
-                    self.buildFilters()
+            await MainActor.run {
+                self.allSessions = Array(sessionMap.values)
+                self.invites = fetchedInvites
+                self.buildFilters()
 
-                    // Find the right filter for this session's date
-                    if let scheduledAt = session.scheduledAt {
-                        let calendar = Calendar.current
-                        if calendar.isDateInToday(scheduledAt) {
-                            // Select "Today" filter
-                            if let todayIndex = self.filters.firstIndex(of: .today) {
-                                self.selectedFilterIndex = todayIndex
-                            }
-                        } else {
-                            // Select the matching future day filter
-                            let dayStart = calendar.startOfDay(for: scheduledAt)
-                            if let dayIndex = self.filters.firstIndex(of: .futureDay(dayStart)) {
-                                self.selectedFilterIndex = dayIndex
-                            }
+                // Default to "My Sessions" so the newly created session is visible
+                if let myIndex = self.filters.firstIndex(of: .mySessions) {
+                    self.selectedFilterIndex = myIndex
+                } else if let scheduledAt = session.scheduledAt {
+                    // Fallback: find the right date filter
+                    let calendar = Calendar.current
+                    if calendar.isDateInToday(scheduledAt) {
+                        if let todayIndex = self.filters.firstIndex(of: .today) {
+                            self.selectedFilterIndex = todayIndex
+                        }
+                    } else {
+                        let dayStart = calendar.startOfDay(for: scheduledAt)
+                        if let dayIndex = self.filters.firstIndex(of: .futureDay(dayStart)) {
+                            self.selectedFilterIndex = dayIndex
                         }
                     }
-
-                    self.chipCollectionView.reloadData()
-                    self.applyFilter()
                 }
-            } catch {
-                print("Failed to load sessions: \(error)")
+
+                self.chipCollectionView.reloadData()
+                self.applyFilter()
             }
         }
     }

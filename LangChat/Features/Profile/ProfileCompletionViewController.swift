@@ -59,10 +59,12 @@ class ProfileCompletionViewController: UIViewController {
                 let bio = defaults.string(forKey: "bio") ?? ""
                 return !bio.isEmpty
             case .photos:
-                // Check if user has uploaded any photos
+                // Require at least 2 photos total (profile + grid)
                 let photoURLs = defaults.stringArray(forKey: "photoURLs") ?? []
+                let nonEmptyPhotos = photoURLs.filter { !$0.isEmpty }
                 let profilePhoto = defaults.string(forKey: "profilePhotoURL") ?? ""
-                return !photoURLs.isEmpty || !profilePhoto.isEmpty
+                let totalPhotos = nonEmptyPhotos.count + (profilePhoto.isEmpty ? 0 : 1)
+                return totalPhotos >= 2
             case .travelPlans:
                 return defaults.data(forKey: "travelDestination") != nil
             case .relationshipIntent:

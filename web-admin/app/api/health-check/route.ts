@@ -86,8 +86,8 @@ async function testModel(config: any) {
       headers: {
         'Authorization': `Bearer ${OPENROUTER_API_KEY}`,
         'Content-Type': 'application/json',
-        'HTTP-Referer': 'https://fluenca.app',
-        'X-Title': 'Fluenca Health Check'
+        'HTTP-Referer': 'https://languagematch.app',
+        'X-Title': 'Language Match Health Check'
       },
       body: JSON.stringify({
         model: config.model_id,
@@ -215,7 +215,7 @@ async function sendAlert(config: any, service: string, modelId: string, failureC
   const formattedModelName = formatModelName(modelId)
 
   // Build the message
-  const smsMessage = `Fluenca: ${formattedModelName} is ${modelRole} and it's down (${failureCount} failures).`
+  const smsMessage = `Language Match: ${formattedModelName} is ${modelRole} and it's down (${failureCount} failures).`
 
   try {
     // Send SMS via Twilio

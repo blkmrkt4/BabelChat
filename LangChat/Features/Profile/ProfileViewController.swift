@@ -645,45 +645,30 @@ class ProfileViewController: UIViewController, PhotoGridViewDelegate {
     }
 
     @objc private func profileImageTapped() {
-        // Show options for the circular profile photo (stored at index 6)
-        let alertController = UIAlertController(
-            title: "profile_photo_title".localized,
-            message: "profile_photo_message".localized,
-            preferredStyle: .actionSheet
-        )
+        // Check if there's already a profile photo
+        let hasProfilePhoto: Bool = {
+            guard let profile = currentProfile,
+                  let photos = profile.profilePhotos,
+                  photos.count > 6,
+                  !photos[6].isEmpty else { return false }
+            return true
+        }()
 
-        alertController.addAction(UIAlertAction(title: "profile_change_photo".localized, style: .default) { [weak self] _ in
-            self?.changeProfilePhoto()
-        })
-
-        // Check if there's already a profile photo at index 6
-        if let profile = currentProfile,
-           let photos = profile.profilePhotos,
-           photos.count > 6,
-           !photos[6].isEmpty {
-
-            // Blur Until Match option for profile photo (index 6)
-            let isBlurred = currentPhotoBlurSettings.count > 6 ? currentPhotoBlurSettings[6] : false
-            let blurTitle = isBlurred ? "✓ " + "profile_blur_until_match".localized : "profile_blur_until_match".localized
-
-            alertController.addAction(UIAlertAction(title: blurTitle, style: .default) { [weak self] _ in
-                self?.togglePhotoBlur(at: 6)
-            })
-
-            alertController.addAction(UIAlertAction(title: "profile_remove_photo".localized, style: .destructive) { [weak self] _ in
-                self?.removeProfilePhoto()
-            })
+        if hasProfilePhoto {
+            // Open full-screen photo viewer (same pattern as grid photos)
+            let profilePhotoURL = currentProfile?.profilePhotos?[6] ?? ""
+            let photoDetailVC = PhotoDetailViewController(
+                photoURLs: [profilePhotoURL],
+                captions: [nil],
+                startingIndex: 0,
+                reportableUserId: nil,
+                isOwnProfile: true
+            )
+            present(photoDetailVC, animated: true)
+        } else {
+            // No profile photo yet — go straight to photo picker
+            changeProfilePhoto()
         }
-
-        alertController.addAction(UIAlertAction(title: "common_cancel".localized, style: .cancel))
-
-        // For iPad support
-        if let popoverController = alertController.popoverPresentationController {
-            popoverController.sourceView = profileImageView
-            popoverController.sourceRect = profileImageView.bounds
-        }
-
-        present(alertController, animated: true)
     }
 
     private func changeProfilePhoto() {

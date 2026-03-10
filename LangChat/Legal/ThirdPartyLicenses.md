@@ -1,6 +1,6 @@
 # Third-Party Licenses
 
-Fluenca uses the following open source libraries. We are grateful to the developers and contributors of these projects.
+Language Match uses the following open source libraries. We are grateful to the developers and contributors of these projects.
 
 ---
 

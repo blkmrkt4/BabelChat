@@ -116,6 +116,9 @@ class AIConfigurationManager {
 
         let prompt = fillPromptTemplate(config.promptTemplate, learningLanguage: learningLanguage, nativeLanguage: nativeLanguage)
 
+        // Instrumentation log (non-PII)
+        print("🌐 [translate] source=\(learningLanguage) target=\(nativeLanguage) model=\(config.modelName) textLen=\(text.count)")
+
         let messages = [
             ChatMessage(role: "system", content: prompt),
             ChatMessage(role: "user", content: text)

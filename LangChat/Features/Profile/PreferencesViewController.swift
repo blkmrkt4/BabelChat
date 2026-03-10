@@ -31,6 +31,15 @@ class PreferencesViewController: UIViewController {
         navigationItem.largeTitleDisplayMode = .never
         view.backgroundColor = .systemGroupedBackground
 
+        // Cancel button for modal presentation
+        if presentingViewController != nil {
+            navigationItem.leftBarButtonItem = UIBarButtonItem(
+                barButtonSystemItem: .cancel,
+                target: self,
+                action: #selector(cancelTapped)
+            )
+        }
+
         navigationItem.rightBarButtonItem = UIBarButtonItem(
             barButtonSystemItem: .save,
             target: self,
@@ -60,9 +69,21 @@ class PreferencesViewController: UIViewController {
         tableView.reloadData()
     }
 
+    @objc private func cancelTapped() {
+        if presentingViewController != nil {
+            dismiss(animated: true)
+        } else {
+            navigationController?.popViewController(animated: true)
+        }
+    }
+
     @objc private func saveTapped() {
         preferences.save()
-        navigationController?.popViewController(animated: true)
+        if presentingViewController != nil {
+            dismiss(animated: true)
+        } else {
+            navigationController?.popViewController(animated: true)
+        }
     }
 }
 

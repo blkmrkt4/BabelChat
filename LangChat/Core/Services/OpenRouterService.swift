@@ -89,7 +89,7 @@ class OpenRouterService {
         request.setValue("Bearer \(apiKey)", forHTTPHeaderField: "Authorization")
         request.setValue("application/json", forHTTPHeaderField: "Content-Type")
         request.setValue("https://ByZyB.ai", forHTTPHeaderField: "HTTP-Referer")
-        request.setValue("Fluenca iOS", forHTTPHeaderField: "X-Title")
+        request.setValue("Language Match iOS", forHTTPHeaderField: "X-Title")
 
         // Explicit request-level timeout as safety net
         request.timeoutInterval = Self.requestTimeout

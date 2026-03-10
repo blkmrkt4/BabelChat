@@ -48,10 +48,10 @@ class SceneDelegate: UIResponder, UIWindowSceneDelegate {
         print("🔗 Received URL: \(url)")
 
         // Parse invite code from URL
-        // Supports: fluenca://invite?code=FLU-ABC123
-        // Or: fluenca://invite/FLU-ABC123
+        // Supports: language-match://invite?code=FLU-ABC123
+        // Or: language-match://invite/FLU-ABC123
 
-        guard url.scheme == "fluenca" else {
+        guard url.scheme == "language-match" else {
             print("⚠️ Unknown URL scheme: \(url.scheme ?? "nil")")
             return
         }
@@ -59,13 +59,13 @@ class SceneDelegate: UIResponder, UIWindowSceneDelegate {
         var inviteCode: String?
 
         if url.host == "invite" {
-            // Check path component: fluenca://invite/FLU-ABC123
+            // Check path component: language-match://invite/FLU-ABC123
             let pathComponents = url.pathComponents.filter { $0 != "/" }
             if let code = pathComponents.first {
                 inviteCode = code
             }
 
-            // Check query parameter: fluenca://invite?code=FLU-ABC123
+            // Check query parameter: language-match://invite?code=FLU-ABC123
             if inviteCode == nil, let queryItems = URLComponents(url: url, resolvingAgainstBaseURL: false)?.queryItems {
                 inviteCode = queryItems.first(where: { $0.name == "code" })?.value
             }

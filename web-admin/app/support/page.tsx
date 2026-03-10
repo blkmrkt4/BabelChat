@@ -6,7 +6,7 @@ export default function SupportPage() {
       <div className="max-w-4xl mx-auto px-4 py-12">
         <div className="bg-white rounded-lg shadow-sm p-8">
           <h1 className="text-3xl font-bold text-gray-900 mb-2">Support</h1>
-          <p className="text-gray-600 mb-8">We're here to help you get the most out of Fluenca.</p>
+          <p className="text-gray-600 mb-8">We're here to help you get the most out of Language Match.</p>
 
           <div className="space-y-8">
             {/* Contact Section */}
@@ -18,8 +18,8 @@ export default function SupportPage() {
                 </p>
                 <p className="text-lg">
                   <strong>Email:</strong>{' '}
-                  <a href="mailto:support@painkillerlabs.com" className="text-blue-600 hover:underline">
-                    support@painkillerlabs.com
+                  <a href="mailto:Support-LM@byzyb.ai" className="text-blue-600 hover:underline">
+                    Support-LM@byzyb.ai
                   </a>
                 </p>
                 <p className="text-gray-500 text-sm mt-2">
@@ -44,7 +44,7 @@ export default function SupportPage() {
                   <h3 className="font-medium text-gray-900">How do I cancel my subscription?</h3>
                   <p className="text-gray-600 mt-1">
                     Subscriptions are managed through the App Store. Go to your iPhone Settings &gt; Apple ID &gt;
-                    Subscriptions &gt; Fluenca to cancel or modify your subscription.
+                    Subscriptions &gt; Language Match to cancel or modify your subscription.
                   </p>
                 </div>
 
@@ -59,7 +59,7 @@ export default function SupportPage() {
                 <div className="border-b pb-4">
                   <h3 className="font-medium text-gray-900">What languages are supported?</h3>
                   <p className="text-gray-600 mt-1">
-                    Fluenca supports 21 languages: English, Spanish, French, German, Portuguese (Brazilian &amp; European),
+                    Language Match supports 21 languages: English, Spanish, French, German, Portuguese (Brazilian &amp; European),
                     Italian, Japanese, Korean, Mandarin Chinese, Dutch, Russian, Polish, Hindi, Indonesian, Filipino,
                     Swedish, Danish, Finnish, Norwegian, and Arabic.
                   </p>
@@ -96,7 +96,7 @@ export default function SupportPage() {
               <h2 className="text-xl font-semibold text-gray-900 mb-4">About Us</h2>
               <div className="bg-gray-50 rounded-lg p-6">
                 <p className="text-gray-700 mb-4">
-                  Fluenca is developed by PainKiller Labs, based in Toronto, Canada.
+                  Language Match is developed by PainKiller Labs, based in Toronto, Canada.
                 </p>
                 <p className="text-gray-600">
                   <strong>PainKiller Labs</strong><br />

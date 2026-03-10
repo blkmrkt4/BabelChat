@@ -47,7 +47,7 @@ class AboutViewController: UIViewController {
 
         // App name
         let nameLabel = UILabel()
-        nameLabel.text = "Fluenca"
+        nameLabel.text = "Language Match"
         nameLabel.font = .systemFont(ofSize: 28, weight: .bold)
         nameLabel.textAlignment = .center
         contentView.addSubview(nameLabel)
@@ -101,7 +101,7 @@ class AboutViewController: UIViewController {
 
         // Copyright
         let copyrightLabel = UILabel()
-        copyrightLabel.text = "auto_2025_fluenca_all_rights_reserved".localized
+        copyrightLabel.text = "auto_2026_language_match_all_rights_reserved".localized
         copyrightLabel.font = .systemFont(ofSize: 14)
         copyrightLabel.textColor = .tertiaryLabel
         copyrightLabel.textAlignment = .center
@@ -159,7 +159,7 @@ class AboutViewController: UIViewController {
     @objc private func showAcknowledgments() {
         let alert = UIAlertController(
             title: "Acknowledgments",
-            message: "Fluenca uses the following open source libraries:\n\n• Supabase Swift SDK\n• RevenueCat Purchases SDK",
+            message: "Language Match uses the following open source libraries:\n\n• Supabase Swift SDK\n• RevenueCat Purchases SDK",
             preferredStyle: .alert
         )
         alert.addAction(UIAlertAction(title: "common_ok".localized, style: .default))

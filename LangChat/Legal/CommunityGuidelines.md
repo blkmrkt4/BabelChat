@@ -1,8 +1,8 @@
-# Fluenca Community Guidelines
+# Language Match Community Guidelines
 
 Last updated: January 2025
 
-Welcome to Fluenca! Our community is built on the foundation of language learning and cultural exchange. These guidelines help ensure Fluenca remains a safe, respectful, and positive environment for everyone.
+Welcome to Language Match! Our community is built on the foundation of language learning and cultural exchange. These guidelines help ensure Language Match remains a safe, respectful, and positive environment for everyone.
 
 ## Our Core Values
 
@@ -51,7 +51,7 @@ Welcome to Fluenca! Our community is built on the foundation of language learnin
 - Respect boundaries when others say no
 
 ### Misuse of the Platform
-- Don't use Fluenca for commercial purposes or advertising
+- Don't use Language Match for commercial purposes or advertising
 - Don't solicit money or financial information
 - Don't attempt to circumvent our safety features
 - Don't use automated systems or bots
@@ -79,7 +79,7 @@ We review all reports within 24 hours and take appropriate action, which may inc
 - Consider keeping conversations within the app initially
 
 ### Meeting in Person
-If you choose to meet someone from Fluenca in person:
+If you choose to meet someone from Language Match in person:
 - Meet in a public place
 - Tell someone you trust about your plans
 - Arrange your own transportation
@@ -87,7 +87,7 @@ If you choose to meet someone from Fluenca in person:
 
 ## Content Moderation
 
-Fluenca uses a combination of automated systems and human review to:
+Language Match uses a combination of automated systems and human review to:
 - Filter potentially harmful content
 - Review reported content and users
 - Ensure compliance with these guidelines
@@ -105,12 +105,12 @@ Severe violations may be reported to law enforcement.
 
 ## Updates to Guidelines
 
-We may update these guidelines periodically. Continued use of Fluenca indicates acceptance of any updates.
+We may update these guidelines periodically. Continued use of Language Match indicates acceptance of any updates.
 
 ## Questions?
 
-If you have questions about these guidelines, please contact us at support@fluenca.app
+If you have questions about these guidelines, please contact us at Support-LM@byzyb.ai
 
 ---
 
-Thank you for being part of our community and helping make Fluenca a welcoming place for language learners worldwide!
+Thank you for being part of our community and helping make Language Match a welcoming place for language learners worldwide!

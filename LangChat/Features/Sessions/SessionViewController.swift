@@ -27,6 +27,7 @@ class SessionViewController: UIViewController {
     private let cameraButton = UIButton(type: .system)
     private let handRaiseButton = UIButton(type: .system)
     private let manageButton = UIButton(type: .system)
+    private let addParticipantButton = UIButton(type: .system)
 
     private let chatView: SessionChatView
 
@@ -34,11 +35,30 @@ class SessionViewController: UIViewController {
     private var isMicOn = false
     private var isCameraOn = false
     private var isHandRaised = false
+    private var hasVideoAccess = false
+    private var videoSlotsChannel: RealtimeChannel?
+    /// Speakers currently shown in the 4 video slots (by index)
+    private var slotSpeakers: [SessionParticipant?] = [nil, nil, nil, nil]
 
     // MARK: - Init
     init(session: Session) {
         self.session = session
-        self.chatView = SessionChatView(sessionId: session.id)
+
+        // Determine language context from session's language pair
+        let learning = Language.from(name: session.languagePair.learning) ?? .english
+        let native: Language
+        if let data = UserDefaults.standard.data(forKey: "userLanguages"),
+           let decoded = try? JSONDecoder().decode(UserLanguageData.self, from: data) {
+            native = decoded.nativeLanguage.language
+        } else {
+            native = Language.from(name: session.languagePair.native) ?? .english
+        }
+
+        self.chatView = SessionChatView(
+            sessionId: session.id,
+            learningLanguage: learning,
+            nativeLanguage: native
+        )
         super.init(nibName: nil, bundle: nil)
     }
 
@@ -51,20 +71,24 @@ class SessionViewController: UIViewController {
     override func viewDidLoad() {
         super.viewDidLoad()
         setupViews()
+        chatView.delegate = self
         determineRole()
         connectToSession()
         startTimer()
+        Task { try? await SessionService.shared.incrementViewerCount(sessionId: session.id) }
     }
 
     override func viewWillDisappear(_ animated: Bool) {
         super.viewWillDisappear(animated)
         if isMovingFromParent {
+            Task { try? await SessionService.shared.decrementViewerCount(sessionId: session.id) }
             leaveSession()
         }
     }
 
     deinit {
         sessionTimer?.invalidate()
+        videoSlotsChannel?.unsubscribe()
         SessionService.shared.unsubscribeAll()
         LiveKitService.shared.disconnect()
     }
@@ -139,6 +163,18 @@ class SessionViewController: UIViewController {
 
         for i in 0..<4 {
             let videoView = VideoParticipantView()
+            videoView.onEmptySlotTapped = { [weak self] in
+                guard let self, self.myRole.canPromote else { return }
+                self.addParticipantToSlot(slotIndex: i)
+            }
+            videoView.onOccupiedSlotTapped = { [weak self] in
+                guard let self, let participant = self.slotSpeakers[i] else { return }
+                self.showSlotOptions(for: participant, at: i)
+            }
+            videoView.onParticipantLongPressed = { [weak self] in
+                guard let self, let participant = self.slotSpeakers[i] else { return }
+                self.showSlotOptions(for: participant, at: i)
+            }
             videoViews.append(videoView)
             if i < 2 {
                 topRow.addArrangedSubview(videoView)
@@ -162,12 +198,15 @@ class SessionViewController: UIViewController {
         configureControlButton(cameraButton, systemName: "video.slash.fill", action: #selector(cameraTapped))
         configureControlButton(handRaiseButton, systemName: "hand.raised", action: #selector(handRaiseTapped))
         configureControlButton(manageButton, systemName: "person.2.badge.gearshape", action: #selector(manageTapped))
-        manageButton.isHidden = true // Host only
+        configureControlButton(addParticipantButton, systemName: "person.badge.plus", action: #selector(addParticipantTapped))
+        manageButton.isHidden = true // Host/co-speaker only
+        addParticipantButton.isHidden = true // Host only
 
         controlsBar.addArrangedSubview(micButton)
         controlsBar.addArrangedSubview(cameraButton)
         controlsBar.addArrangedSubview(handRaiseButton)
         controlsBar.addArrangedSubview(manageButton)
+        controlsBar.addArrangedSubview(addParticipantButton)
 
         // Chat view
         chatView.translatesAutoresizingMaskIntoConstraints = false
@@ -228,35 +267,72 @@ class SessionViewController: UIViewController {
     // MARK: - Session Logic
 
     private func determineRole() {
-        guard let currentUserId = SupabaseService.shared.currentUserId else { return }
+        guard let currentUserId = SupabaseService.shared.currentUserId else {
+            print("[Session] determineRole: no currentUserId — defaulting to listener")
+            myRole = .listener
+            updateUIForRole()
+            return
+        }
 
-        if session.hostId == currentUserId.uuidString {
+        // Use lowercased comparison — Swift UUID.uuidString is uppercase,
+        // but Supabase/PostgreSQL stores UUIDs as lowercase
+        let myId = currentUserId.uuidString.lowercased()
+
+        // Host check is authoritative — session.hostId is the source of truth
+        // and does not depend on participant data being loaded yet
+        if session.hostId.lowercased() == myId {
             myRole = .host
+        } else if let myParticipant = participants.first(where: { $0.userId.lowercased() == myId }) {
+            myRole = myParticipant.role
+        } else if !participants.isEmpty {
+            myRole = .listener
+        }
+
+        print("[Session] determineRole: userId=\(myId.prefix(8)), hostId=\(session.hostId.lowercased().prefix(8)), participants=\(participants.count), resolved=\(myRole)")
+
+        updateUIForRole()
+    }
+
+    private func updateUIForRole() {
+        switch myRole {
+        case .host:
             endButton.isHidden = false
             manageButton.isHidden = false
+            addParticipantButton.isHidden = false
             handRaiseButton.isHidden = true
             updateMediaControls(canSpeak: true)
-        } else if let myParticipant = participants.first(where: { $0.userId == currentUserId.uuidString }),
-                  myParticipant.role == .coSpeaker {
-            myRole = .coSpeaker
+            navigationItem.rightBarButtonItem = nil
+
+        case .coSpeaker:
+            endButton.isHidden = true
             manageButton.isHidden = false
+            addParticipantButton.isHidden = false
             handRaiseButton.isHidden = true
             updateMediaControls(canSpeak: true)
-        } else {
-            let tier = SubscriptionService.shared.currentStatus.tier
-            if tier.canSpeakInSession {
-                // Start as listener, can be promoted
-                updateMediaControls(canSpeak: false)
-            } else {
-                // Free tier: no media controls
-                micButton.isHidden = true
-                cameraButton.isHidden = true
-                handRaiseButton.isHidden = true
-            }
+            navigationItem.rightBarButtonItem = nil
+
+        case .rotatingSpeaker:
+            endButton.isHidden = true
+            manageButton.isHidden = true
+            addParticipantButton.isHidden = true
+            handRaiseButton.isHidden = true
+            updateMediaControls(canSpeak: true)
+            navigationItem.rightBarButtonItem = nil
+
+        case .listener:
+            endButton.isHidden = true
+            manageButton.isHidden = true
+            addParticipantButton.isHidden = true
+            navigationItem.rightBarButtonItem = nil
+            micButton.isHidden = true
+            cameraButton.isHidden = true
+            handRaiseButton.isHidden = false
         }
     }
 
     private func updateMediaControls(canSpeak: Bool) {
+        micButton.isHidden = false
+        cameraButton.isHidden = false
         micButton.isEnabled = canSpeak
         cameraButton.isEnabled = canSpeak
         micButton.alpha = canSpeak ? 1.0 : 0.5
@@ -265,9 +341,9 @@ class SessionViewController: UIViewController {
         if canSpeak {
             isMicOn = true
             isCameraOn = true
-            updateMicButtonState()
-            updateCameraButtonState()
         }
+        updateMicButtonState()
+        updateCameraButtonState()
     }
 
     private func connectToSession() {
@@ -303,33 +379,136 @@ class SessionViewController: UIViewController {
     private func connectLiveKit() {
         Task {
             do {
+                // Request camera/microphone permissions before connecting
+                let permissions = await LiveKitService.shared.requestMediaPermissions()
+                if !permissions.audio {
+                    print("[Session] Microphone permission denied — audio will not work")
+                }
+                if !permissions.video {
+                    print("[Session] Camera permission denied — video will not work")
+                }
+
+                // Configure audio session for live voice/video
+                LiveKitService.shared.configureAudioSessionForSession()
+
                 let tokenResponse = try await fetchLiveKitToken()
                 try await LiveKitService.shared.connect(
                     url: Config.livekitURL,
                     token: tokenResponse.token
                 )
-                LiveKitService.shared.applyPermissions(for: myRole)
+
+                // Determine video access based on slot status
+                await configureVideoAccess()
+
+                await MainActor.run {
+                    // Re-apply role permissions and control state after connection completes
+                    // This ensures controls are correct even if role resolved while connecting
+                    print("[Session] LiveKit connected — re-applying role: \(self.myRole)")
+                    LiveKitService.shared.applyPermissions(for: self.myRole)
+                    self.updateUIForRole()
+                }
 
                 LiveKitService.shared.onParticipantConnected = { [weak self] participantId in
-                    print("Participant connected: \(participantId)")
+                    print("[Session] Participant connected: \(participantId)")
                 }
                 LiveKitService.shared.onParticipantDisconnected = { [weak self] participantId in
-                    print("Participant disconnected: \(participantId)")
+                    print("[Session] Participant disconnected: \(participantId)")
                 }
             } catch {
-                print("LiveKit connection failed: \(error)")
+                print("[Session] LiveKit connection failed: \(error)")
             }
         }
     }
 
+    /// Configure video access based on the user's video slot status
+    private func configureVideoAccess() async {
+        let tier = SubscriptionService.shared.currentStatus.tier
+
+        // Speakers always get video
+        if myRole.canSpeak {
+            hasVideoAccess = true
+            LiveKitService.shared.setVideoSubscriptionEnabled(true)
+            return
+        }
+
+        // Free users: audio only
+        guard tier.canViewSessionVideo else {
+            hasVideoAccess = false
+            LiveKitService.shared.setVideoSubscriptionEnabled(false)
+            print("[Session] Free tier — audio-only mode")
+            return
+        }
+
+        // Check video slot status
+        do {
+            // Try to activate a confirmed slot
+            try await SessionService.shared.activateVideoSlot(sessionId: session.id)
+
+            let slotInfo = try await SessionService.shared.getVideoSlotStatus(sessionId: session.id)
+            let slotActive = slotInfo.myStatus == .active
+
+            await MainActor.run {
+                self.hasVideoAccess = slotActive
+                LiveKitService.shared.setVideoSubscriptionEnabled(slotActive)
+                if !slotActive {
+                    print("[Session] No active video slot — audio-only until promoted")
+                }
+            }
+        } catch {
+            print("[Session] Video slot check failed: \(error) — defaulting to audio-only")
+            hasVideoAccess = false
+            LiveKitService.shared.setVideoSubscriptionEnabled(false)
+        }
+
+        // Subscribe to video slot changes for real-time promotion
+        subscribeToVideoSlotChanges()
+    }
+
+    /// Listen for video slot promotions via Realtime
+    private func subscribeToVideoSlotChanges() {
+        let myUserId = SupabaseService.shared.currentUserId?.uuidString.lowercased() ?? ""
+
+        videoSlotsChannel = SessionService.shared.subscribeToVideoSlotUpdates(
+            sessionId: session.id
+        ) { [weak self] slot in
+            guard let self else { return }
+            // Check if this update is for us and we got promoted
+            if slot.userId.lowercased() == myUserId && slot.status == .active && !self.hasVideoAccess {
+                self.hasVideoAccess = true
+                LiveKitService.shared.setVideoSubscriptionEnabled(true)
+                self.showVideoGrantedToast()
+            }
+        }
+    }
+
+    /// Show a toast notification when video access is granted
+    private func showVideoGrantedToast() {
+        let banner = UILabel()
+        banner.text = "session_video_granted".localized
+        banner.font = .systemFont(ofSize: 14, weight: .semibold)
+        banner.textColor = .white
+        banner.backgroundColor = .systemGreen
+        banner.textAlignment = .center
+        banner.layer.cornerRadius = 8
+        banner.clipsToBounds = true
+        banner.frame = CGRect(x: 16, y: view.safeAreaInsets.top + 4, width: view.bounds.width - 32, height: 36)
+        view.addSubview(banner)
+
+        UIView.animate(withDuration: 0.3, delay: 3.0, options: [], animations: {
+            banner.alpha = 0
+        }) { _ in
+            banner.removeFromSuperview()
+        }
+    }
+
     private func fetchLiveKitToken() async throws -> LiveKitTokenResponse {
-        guard let userId = SupabaseService.shared.currentUserId else {
+        guard SupabaseService.shared.currentUserId != nil else {
             throw SessionError.notAuthenticated
         }
 
+        // userId is now derived from the authenticated JWT on the server side
         let params: [String: String] = [
-            "sessionId": session.id,
-            "userId": userId.uuidString
+            "sessionId": session.id
         ]
 
         let tokenResponse: LiveKitTokenResponse = try await SupabaseService.shared.client
@@ -344,43 +523,42 @@ class SessionViewController: UIViewController {
     private func handleParticipantsUpdate(_ newParticipants: [SessionParticipant]) {
         participants = newParticipants
 
-        // Update video grid
+        // Update video grid — speakers fill the 4 quadrants
         let speakers = newParticipants.filter { $0.role.canSpeak }
         for (index, videoView) in videoViews.enumerated() {
             if index < speakers.count {
                 let speaker = speakers[index]
+                slotSpeakers[index] = speaker
                 videoView.configure(
                     name: speaker.user?.firstName ?? "Speaker",
                     role: speaker.role,
                     isMuted: false,
-                    isVideoOff: false
+                    isVideoOff: false,
+                    userId: speaker.userId
                 )
             } else {
+                slotSpeakers[index] = nil
                 videoView.configureEmpty()
             }
         }
 
-        // Check if my role changed
-        if let currentUserId = SupabaseService.shared.currentUserId,
-           let myParticipant = newParticipants.first(where: { $0.userId == currentUserId.uuidString }) {
-            if myParticipant.role != myRole {
-                myRole = myParticipant.role
-                handleRoleChange()
-            }
+        // Re-evaluate my role based on current participant data
+        let previousRole = myRole
+        determineRole()
+        if previousRole != myRole {
+            handleRoleChange()
         }
     }
 
     private func handleRoleChange() {
-        let canSpeak = myRole.canSpeak
-        updateMediaControls(canSpeak: canSpeak)
-        handRaiseButton.isHidden = canSpeak || myRole == .host
-        manageButton.isHidden = !myRole.canPromote
+        // updateUIForRole() is already called by determineRole(), but call again
+        // defensively in case handleRoleChange is invoked from other paths
+        updateUIForRole()
 
-        if canSpeak {
-            LiveKitService.shared.applyPermissions(for: myRole)
-            // Reconnect with new token for publish permissions
-            connectLiveKit()
-        }
+        // Update LiveKit permissions for the new role without reconnecting
+        // (connectLiveKit already happened at session join)
+        print("[Session] Role changed to \(myRole) — updating LiveKit permissions")
+        LiveKitService.shared.applyPermissions(for: myRole)
     }
 
     private func handleSessionStatusChange(_ updatedSession: Session) {
@@ -546,7 +724,24 @@ class SessionViewController: UIViewController {
     }
 
     @objc private func leaveTapped() {
-        leaveSession()
+        if myRole == .host {
+            // Host gets both Leave and End Session options
+            let alert = UIAlertController(
+                title: "session_host_leave_title".localized,
+                message: "session_host_leave_message".localized,
+                preferredStyle: .alert
+            )
+            alert.addAction(UIAlertAction(title: "session_leave".localized, style: .default) { [weak self] _ in
+                self?.leaveSession()
+            })
+            alert.addAction(UIAlertAction(title: "session_end".localized, style: .destructive) { [weak self] _ in
+                self?.endSession()
+            })
+            alert.addAction(UIAlertAction(title: "common_cancel".localized, style: .cancel))
+            present(alert, animated: true)
+        } else {
+            leaveSession()
+        }
     }
 
     private func endSession() {
@@ -562,6 +757,10 @@ class SessionViewController: UIViewController {
         LiveKitService.shared.disconnect()
 
         Task {
+            // Release video slot to free it for next waitlisted user
+            if hasVideoAccess {
+                try? await SessionService.shared.releaseVideoSlot(sessionId: session.id)
+            }
             try? await SessionService.shared.leaveSession(sessionId: session.id)
         }
 
@@ -598,6 +797,290 @@ class SessionViewController: UIViewController {
         ), for: .normal)
         cameraButton.tintColor = isCameraOn ? .systemGreen : .systemRed
     }
+
+    // MARK: - Add Participant
+
+    @objc private func addParticipantTapped() {
+        // Find first empty slot
+        if let emptyIndex = slotSpeakers.firstIndex(where: { $0 == nil }) {
+            addParticipantToSlot(slotIndex: emptyIndex)
+        } else {
+            let alert = UIAlertController(
+                title: "session_error_title".localized,
+                message: SessionError.sessionFull.errorDescription,
+                preferredStyle: .alert
+            )
+            alert.addAction(UIAlertAction(title: "common_ok".localized, style: .default))
+            present(alert, animated: true)
+        }
+    }
+
+    private func addParticipantToSlot(slotIndex: Int) {
+        let existingSpeakerIds = slotSpeakers.compactMap { $0?.userId }
+        let existingParticipantIds = participants.map { $0.userId }
+
+        // Show options: invite from matches or promote a listener already in the session
+        let listeners = participants.filter { $0.role == .listener && $0.isActive }
+
+        let alert = UIAlertController(
+            title: "session_add_participant_title".localized,
+            message: nil,
+            preferredStyle: .actionSheet
+        )
+
+        // Option 1: Invite from matches
+        alert.addAction(UIAlertAction(title: "session_invite_from_matches".localized, style: .default) { [weak self] _ in
+            guard let self else { return }
+            let selectVC = SelectMatchViewController(excludedUserIds: existingParticipantIds)
+            selectVC.onSelectUser = { [weak self] user in
+                guard let self else { return }
+                Task {
+                    do {
+                        try await SessionService.shared.createInvite(
+                            sessionId: self.session.id,
+                            inviteeId: user.id,
+                            role: SessionRole.coSpeaker.rawValue
+                        )
+                        await MainActor.run {
+                            self.dismiss(animated: true)
+                        }
+                    } catch {
+                        print("Failed to invite participant: \(error)")
+                    }
+                }
+            }
+            let nav = UINavigationController(rootViewController: selectVC)
+            self.present(nav, animated: true)
+        })
+
+        // Option 2: Promote an existing listener to speaker
+        if !listeners.isEmpty {
+            alert.addAction(UIAlertAction(title: "session_promote_listener".localized, style: .default) { [weak self] _ in
+                self?.showListenerPicker(listeners: listeners, slotIndex: slotIndex)
+            })
+        }
+
+        alert.addAction(UIAlertAction(title: "common_cancel".localized, style: .cancel))
+
+        // iPad popover support
+        if let popover = alert.popoverPresentationController {
+            popover.sourceView = addParticipantButton
+            popover.sourceRect = addParticipantButton.bounds
+        }
+
+        present(alert, animated: true)
+    }
+
+    private func showListenerPicker(listeners: [SessionParticipant], slotIndex: Int) {
+        let alert = UIAlertController(
+            title: "session_choose_listener".localized,
+            message: nil,
+            preferredStyle: .actionSheet
+        )
+
+        for listener in listeners {
+            let name = listener.user?.firstName ?? listener.userId.prefix(8).description
+            alert.addAction(UIAlertAction(title: name, style: .default) { [weak self] _ in
+                guard let self else { return }
+                Task {
+                    try? await SessionService.shared.promoteParticipant(
+                        sessionId: self.session.id,
+                        userId: listener.userId,
+                        to: .rotatingSpeaker
+                    )
+                }
+            })
+        }
+
+        alert.addAction(UIAlertAction(title: "common_cancel".localized, style: .cancel))
+
+        // iPad popover support
+        if let popover = alert.popoverPresentationController {
+            popover.sourceView = addParticipantButton
+            popover.sourceRect = addParticipantButton.bounds
+        }
+
+        present(alert, animated: true)
+    }
+
+    // MARK: - Slot Management
+
+    private func showSlotOptions(for participant: SessionParticipant, at slotIndex: Int) {
+        let currentUserId = SupabaseService.shared.currentUserId?.uuidString.lowercased() ?? ""
+        let isSelf = participant.userId.lowercased() == currentUserId
+        let participantName = participant.user?.firstName ?? "Participant"
+
+        let alert = UIAlertController(
+            title: participantName,
+            message: participant.role.displayName,
+            preferredStyle: .actionSheet
+        )
+
+        if isSelf {
+            alert.message = String(format: "session_you_are_role".localized, myRole.displayName)
+
+            // Self-management: toggle own mic/camera
+            alert.addAction(UIAlertAction(
+                title: isMicOn ? "session_mute_self".localized : "session_unmute_self".localized,
+                style: .default
+            ) { [weak self] _ in
+                self?.micTapped()
+            })
+            alert.addAction(UIAlertAction(
+                title: isCameraOn ? "session_camera_off".localized : "session_camera_on".localized,
+                style: .default
+            ) { [weak self] _ in
+                self?.cameraTapped()
+            })
+        } else if canManageParticipant(participant) {
+            // Moderation options based on role permissions
+            alert.addAction(UIAlertAction(title: "session_mute_participant".localized, style: .default) { _ in
+                LiveKitService.shared.muteParticipant(identity: participant.userId)
+            })
+
+            alert.addAction(UIAlertAction(title: "session_disable_camera".localized, style: .default) { _ in
+                LiveKitService.shared.disableParticipantCamera(identity: participant.userId)
+            })
+
+            if participant.role.canSpeak {
+                alert.addAction(UIAlertAction(title: "session_demote_to_listener".localized, style: .default) { [weak self] _ in
+                    guard let self else { return }
+                    Task {
+                        try? await SessionService.shared.demoteParticipant(
+                            sessionId: self.session.id,
+                            userId: participant.userId
+                        )
+                    }
+                })
+            }
+
+            // Replace with another participant
+            let listeners = participants.filter { $0.role == .listener && $0.isActive }
+            if !listeners.isEmpty {
+                alert.addAction(UIAlertAction(title: "session_replace_with".localized, style: .default) { [weak self] _ in
+                    guard let self else { return }
+                    self.replaceParticipant(participant, at: slotIndex, with: listeners)
+                })
+            }
+        }
+
+        alert.addAction(UIAlertAction(title: "common_cancel".localized, style: .cancel))
+
+        // iPad popover support
+        if let popover = alert.popoverPresentationController,
+           slotIndex < videoViews.count {
+            let sourceView = videoViews[slotIndex]
+            popover.sourceView = sourceView
+            popover.sourceRect = sourceView.bounds
+        }
+
+        present(alert, animated: true)
+    }
+
+    /// Determines if the current user can manage (mute, demote, replace) the given participant
+    private func canManageParticipant(_ participant: SessionParticipant) -> Bool {
+        switch myRole {
+        case .host:
+            // Host can manage everyone except themselves
+            return true
+        case .coSpeaker:
+            // Co-host can manage rotating speakers and listeners, but NOT host or other co-hosts
+            switch participant.role {
+            case .host, .coSpeaker:
+                return false
+            case .rotatingSpeaker, .listener:
+                return true
+            }
+        case .rotatingSpeaker, .listener:
+            return false
+        }
+    }
+
+    private func replaceParticipant(_ existing: SessionParticipant, at slotIndex: Int, with listeners: [SessionParticipant]) {
+        let existingName = existing.user?.firstName ?? "Participant"
+        let alert = UIAlertController(
+            title: String(format: "session_replace_title".localized, existingName),
+            message: nil,
+            preferredStyle: .actionSheet
+        )
+
+        for listener in listeners {
+            let name = listener.user?.firstName ?? listener.userId.prefix(8).description
+            alert.addAction(UIAlertAction(title: name, style: .default) { [weak self] _ in
+                guard let self else { return }
+                Task {
+                    // Demote existing speaker to listener
+                    try? await SessionService.shared.demoteParticipant(
+                        sessionId: self.session.id,
+                        userId: existing.userId
+                    )
+                    // Promote the replacement to speaker
+                    try? await SessionService.shared.promoteParticipant(
+                        sessionId: self.session.id,
+                        userId: listener.userId,
+                        to: .rotatingSpeaker
+                    )
+                }
+            })
+        }
+
+        alert.addAction(UIAlertAction(title: "common_cancel".localized, style: .cancel))
+
+        // iPad popover support
+        if let popover = alert.popoverPresentationController,
+           slotIndex < videoViews.count {
+            let sourceView = videoViews[slotIndex]
+            popover.sourceView = sourceView
+            popover.sourceRect = sourceView.bounds
+        }
+
+        present(alert, animated: true)
+    }
+
+    /// Called from chat when a user name is tapped — promotes them to speaker if permissions allow
+    func promoteUserFromChat(userId: String) {
+        guard myRole.canPromote else { return }
+
+        // Find the participant
+        guard let participant = participants.first(where: { $0.userId == userId && $0.isActive }) else { return }
+
+        // Can only promote listeners
+        guard participant.role == .listener else {
+            // Already a speaker — show info
+            if let slotIndex = slotSpeakers.firstIndex(where: { $0?.userId == userId }) {
+                showSlotOptions(for: participant, at: slotIndex)
+            }
+            return
+        }
+
+        let name = participant.user?.firstName ?? "Participant"
+        let alert = UIAlertController(
+            title: name,
+            message: nil,
+            preferredStyle: .actionSheet
+        )
+
+        alert.addAction(UIAlertAction(title: "session_promote_to_speaker".localized, style: .default) { [weak self] _ in
+            guard let self else { return }
+            Task {
+                try? await SessionService.shared.promoteParticipant(
+                    sessionId: self.session.id,
+                    userId: userId,
+                    to: .rotatingSpeaker
+                )
+            }
+        })
+
+        alert.addAction(UIAlertAction(title: "common_cancel".localized, style: .cancel))
+
+        // iPad popover support
+        if let popover = alert.popoverPresentationController {
+            popover.sourceView = chatView
+            popover.sourceRect = chatView.bounds
+        }
+
+        present(alert, animated: true)
+    }
 }
 
 // MARK: - HandRaiseQueueDelegate
@@ -611,6 +1094,292 @@ extension SessionViewController: HandRaiseQueueDelegate {
             )
         }
     }
+}
+
+// MARK: - SessionChatViewDelegate & Muse
+
+extension SessionViewController: SessionChatViewDelegate {
+
+    func sessionChatView(_ chatView: SessionChatView, didRequestMuseWithLanguage language: Language) {
+        showMuseDialog(for: language)
+    }
+
+    func sessionChatView(_ chatView: SessionChatView, didTapUserWithId userId: String) {
+        promoteUserFromChat(userId: userId)
+    }
+
+    func sessionChatViewParentViewController(_ chatView: SessionChatView) -> UIViewController? {
+        return self
+    }
+
+    func sessionChatViewParticipants(_ chatView: SessionChatView) -> [SessionParticipant] {
+        return participants
+    }
+
+    func sessionChatViewHostId(_ chatView: SessionChatView) -> String {
+        return session.hostId
+    }
+
+    // MARK: - Muse Dialog
+
+    private var museDialogVC: UIViewController? {
+        get { objc_getAssociatedObject(self, &AssociatedKeys.museDialogVC) as? UIViewController }
+        set { objc_setAssociatedObject(self, &AssociatedKeys.museDialogVC, newValue, .OBJC_ASSOCIATION_RETAIN_NONATOMIC) }
+    }
+
+    private var museDialogObserver: NSObjectProtocol? {
+        get { objc_getAssociatedObject(self, &AssociatedKeys.museDialogObserver) as? NSObjectProtocol }
+        set { objc_setAssociatedObject(self, &AssociatedKeys.museDialogObserver, newValue, .OBJC_ASSOCIATION_RETAIN_NONATOMIC) }
+    }
+
+    private func showMuseDialog(for language: Language) {
+        let alertVC = UIViewController()
+        alertVC.modalPresentationStyle = .overCurrentContext
+        alertVC.modalTransitionStyle = .crossDissolve
+
+        // Dimmed background
+        let dimmedView = UIView()
+        dimmedView.backgroundColor = UIColor.black.withAlphaComponent(0.5)
+        dimmedView.translatesAutoresizingMaskIntoConstraints = false
+        alertVC.view.addSubview(dimmedView)
+
+        // Card container
+        let cardView = UIView()
+        cardView.backgroundColor = .systemBackground
+        cardView.layer.cornerRadius = 16
+        cardView.translatesAutoresizingMaskIntoConstraints = false
+        alertVC.view.addSubview(cardView)
+
+        // Title
+        let titleLabel = UILabel()
+        titleLabel.text = "chat_ask_muse".localized
+        titleLabel.font = .systemFont(ofSize: 18, weight: .semibold)
+        titleLabel.textAlignment = .center
+        titleLabel.translatesAutoresizingMaskIntoConstraints = false
+        cardView.addSubview(titleLabel)
+
+        // Subtitle
+        let subtitleLabel = UILabel()
+        subtitleLabel.text = "What would you like to say in \(language.name)?"
+        subtitleLabel.font = .systemFont(ofSize: 14)
+        subtitleLabel.textColor = .secondaryLabel
+        subtitleLabel.textAlignment = .center
+        subtitleLabel.numberOfLines = 0
+        subtitleLabel.translatesAutoresizingMaskIntoConstraints = false
+        cardView.addSubview(subtitleLabel)
+
+        // Text view for multi-line input
+        let textView = UITextView()
+        textView.font = .systemFont(ofSize: 16)
+        textView.layer.borderColor = UIColor.systemGray4.cgColor
+        textView.layer.borderWidth = 1
+        textView.layer.cornerRadius = 8
+        textView.textContainerInset = UIEdgeInsets(top: 10, left: 8, bottom: 10, right: 8)
+        textView.translatesAutoresizingMaskIntoConstraints = false
+        cardView.addSubview(textView)
+
+        // Placeholder label
+        let placeholderLabel = UILabel()
+        placeholderLabel.text = "chat_ask_example".localized
+        placeholderLabel.font = .systemFont(ofSize: 16)
+        placeholderLabel.textColor = .placeholderText
+        placeholderLabel.translatesAutoresizingMaskIntoConstraints = false
+        textView.addSubview(placeholderLabel)
+
+        // Button stack
+        let buttonStack = UIStackView()
+        buttonStack.axis = .horizontal
+        buttonStack.spacing = 12
+        buttonStack.distribution = .fillEqually
+        buttonStack.translatesAutoresizingMaskIntoConstraints = false
+        cardView.addSubview(buttonStack)
+
+        // Cancel button
+        let cancelButton = UIButton(type: .system)
+        cancelButton.setTitle("common_cancel".localized, for: .normal)
+        cancelButton.titleLabel?.font = .systemFont(ofSize: 16, weight: .medium)
+        cancelButton.backgroundColor = .systemGray5
+        cancelButton.setTitleColor(.label, for: .normal)
+        cancelButton.layer.cornerRadius = 10
+        buttonStack.addArrangedSubview(cancelButton)
+
+        // Ask button
+        let askButton = UIButton(type: .system)
+        askButton.setTitle("common_ask".localized, for: .normal)
+        askButton.titleLabel?.font = .systemFont(ofSize: 16, weight: .semibold)
+        askButton.backgroundColor = .systemBlue
+        askButton.setTitleColor(.white, for: .normal)
+        askButton.layer.cornerRadius = 10
+        buttonStack.addArrangedSubview(askButton)
+
+        // Constraints
+        NSLayoutConstraint.activate([
+            dimmedView.topAnchor.constraint(equalTo: alertVC.view.topAnchor),
+            dimmedView.leadingAnchor.constraint(equalTo: alertVC.view.leadingAnchor),
+            dimmedView.trailingAnchor.constraint(equalTo: alertVC.view.trailingAnchor),
+            dimmedView.bottomAnchor.constraint(equalTo: alertVC.view.bottomAnchor),
+
+            cardView.centerYAnchor.constraint(equalTo: alertVC.view.centerYAnchor),
+            cardView.leadingAnchor.constraint(equalTo: alertVC.view.leadingAnchor, constant: 24),
+            cardView.trailingAnchor.constraint(equalTo: alertVC.view.trailingAnchor, constant: -24),
+
+            titleLabel.topAnchor.constraint(equalTo: cardView.topAnchor, constant: 20),
+            titleLabel.leadingAnchor.constraint(equalTo: cardView.leadingAnchor, constant: 16),
+            titleLabel.trailingAnchor.constraint(equalTo: cardView.trailingAnchor, constant: -16),
+
+            subtitleLabel.topAnchor.constraint(equalTo: titleLabel.bottomAnchor, constant: 8),
+            subtitleLabel.leadingAnchor.constraint(equalTo: cardView.leadingAnchor, constant: 16),
+            subtitleLabel.trailingAnchor.constraint(equalTo: cardView.trailingAnchor, constant: -16),
+
+            textView.topAnchor.constraint(equalTo: subtitleLabel.bottomAnchor, constant: 16),
+            textView.leadingAnchor.constraint(equalTo: cardView.leadingAnchor, constant: 16),
+            textView.trailingAnchor.constraint(equalTo: cardView.trailingAnchor, constant: -16),
+            textView.heightAnchor.constraint(equalToConstant: 80),
+
+            placeholderLabel.topAnchor.constraint(equalTo: textView.topAnchor, constant: 10),
+            placeholderLabel.leadingAnchor.constraint(equalTo: textView.leadingAnchor, constant: 12),
+            placeholderLabel.trailingAnchor.constraint(equalTo: textView.trailingAnchor, constant: -12),
+
+            buttonStack.topAnchor.constraint(equalTo: textView.bottomAnchor, constant: 16),
+            buttonStack.leadingAnchor.constraint(equalTo: cardView.leadingAnchor, constant: 16),
+            buttonStack.trailingAnchor.constraint(equalTo: cardView.trailingAnchor, constant: -16),
+            buttonStack.bottomAnchor.constraint(equalTo: cardView.bottomAnchor, constant: -20),
+            buttonStack.heightAnchor.constraint(equalToConstant: 44)
+        ])
+
+        // Handle placeholder visibility
+        museDialogObserver = NotificationCenter.default.addObserver(forName: UITextView.textDidChangeNotification, object: textView, queue: .main) { _ in
+            placeholderLabel.isHidden = !textView.text.isEmpty
+        }
+
+        // Button actions
+        cancelButton.addAction(UIAction { [weak self] _ in
+            self?.dismissMuseDialog()
+        }, for: .touchUpInside)
+
+        askButton.addAction(UIAction { [weak self] _ in
+            guard let self = self, !textView.text.isEmpty else { return }
+            let query = textView.text ?? ""
+            self.dismissMuseDialog()
+            self.askMuse(query: query, language: language)
+        }, for: .touchUpInside)
+
+        // Dismiss on background tap
+        let tapGesture = UITapGestureRecognizer()
+        tapGesture.addTarget(self, action: #selector(dismissMuseDialogAction))
+        dimmedView.addGestureRecognizer(tapGesture)
+
+        self.museDialogVC = alertVC
+
+        present(alertVC, animated: true) {
+            textView.becomeFirstResponder()
+        }
+    }
+
+    @objc private func dismissMuseDialogAction() {
+        dismissMuseDialog()
+    }
+
+    private func dismissMuseDialog() {
+        if let observer = museDialogObserver {
+            NotificationCenter.default.removeObserver(observer)
+            museDialogObserver = nil
+        }
+        museDialogVC?.dismiss(animated: true)
+        museDialogVC = nil
+    }
+
+    private func askMuse(query: String, language: Language) {
+        let loadingAlert = UIAlertController(
+            title: "Muse is thinking...",
+            message: nil,
+            preferredStyle: .alert
+        )
+        present(loadingAlert, animated: true)
+
+        Task { [weak self] in
+            guard let self = self else { return }
+
+            do {
+                let config = try await AIConfigurationManager.shared.getConfiguration(for: .chatting)
+
+                let systemPrompt = """
+                You are a helpful language assistant called Muse. The user is practicing \(language.name) and needs help composing a message.
+
+                Respond ONLY with the phrase they need in \(language.name). Do not add explanations, translations, or extra text unless specifically asked.
+                Keep it natural and conversational.
+                """
+
+                let chatMessages = [
+                    ChatMessage(role: "system", content: systemPrompt),
+                    ChatMessage(role: "user", content: query)
+                ]
+
+                let response = try await OpenRouterService.shared.sendChatCompletion(
+                    model: config.modelId,
+                    messages: chatMessages,
+                    temperature: Double(config.temperature),
+                    maxTokens: config.maxTokens
+                )
+
+                guard let content = response.choices?.first?.content else {
+                    throw NSError(domain: "MuseError", code: -1,
+                                userInfo: [NSLocalizedDescriptionKey: "Empty response from Muse"])
+                }
+
+                let cleanedResponse = content.trimmingCharacters(in: .whitespacesAndNewlines)
+
+                await MainActor.run {
+                    loadingAlert.dismiss(animated: true) {
+                        self.showMuseResponse(cleanedResponse)
+                    }
+                }
+            } catch {
+                await MainActor.run {
+                    loadingAlert.dismiss(animated: true) {
+                        self.showMuseError(error)
+                    }
+                }
+            }
+        }
+    }
+
+    private func showMuseResponse(_ response: String) {
+        let alert = UIAlertController(
+            title: "Muse suggests:",
+            message: response,
+            preferredStyle: .alert
+        )
+
+        let useAction = UIAlertAction(title: "common_use_this".localized, style: .default) { [weak self] _ in
+            self?.chatView.insertMuseText(response)
+        }
+
+        let copyAction = UIAlertAction(title: "common_copy".localized, style: .default) { _ in
+            UIPasteboard.general.string = response
+        }
+
+        alert.addAction(useAction)
+        alert.addAction(copyAction)
+        alert.addAction(UIAlertAction(title: "common_dismiss".localized, style: .cancel))
+
+        present(alert, animated: true)
+    }
+
+    private func showMuseError(_ error: Error) {
+        let alert = UIAlertController(
+            title: "Muse couldn't help",
+            message: "Please try again. Error: \(error.localizedDescription)",
+            preferredStyle: .alert
+        )
+        alert.addAction(UIAlertAction(title: "common_ok".localized, style: .default))
+        present(alert, animated: true)
+    }
+}
+
+private enum AssociatedKeys {
+    static var museDialogVC = "museDialogVC"
+    static var museDialogObserver = "museDialogObserver"
 }
 
 // MARK: - LiveKit Token Response

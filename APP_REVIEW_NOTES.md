@@ -1,10 +1,10 @@
 # App Review Notes - User Generated Content Safety
 
-This document outlines Fluenca's content moderation and user safety features to address App Store Review Guideline 1.2 (Safety - User Generated Content).
+This document outlines Language Match's content moderation and user safety features to address App Store Review Guideline 1.2 (Safety - User Generated Content).
 
 ## Summary of Safety Features
 
-Fluenca is a language learning app that connects users for language exchange. We have implemented comprehensive safety features to protect our community.
+Language Match is a language learning app that connects users for language exchange. We have implemented comprehensive safety features to protect our community.
 
 ## 1. Terms of Service & EULA Acceptance
 

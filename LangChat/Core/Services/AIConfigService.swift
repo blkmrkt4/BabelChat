@@ -11,7 +11,12 @@ class AIConfigService {
     // Cache storage
     private var cachedConfigs: [AICategory: AIConfig] = [:]
     private var lastFetchTime: Date?
+    #if DEBUG
+    // Shorter cache in debug builds to avoid stale prompts masking updates during QA
+    private let cacheValidityDuration: TimeInterval = 5 * 60 // 5 minutes
+    #else
     private let cacheValidityDuration: TimeInterval = 24 * 60 * 60 // 24 hours
+    #endif
 
     // MARK: - Public API
 
@@ -33,10 +38,11 @@ class AIConfigService {
         cachedConfigs.removeAll()
         lastFetchTime = nil
 
-        // Fetch all three categories
-        _ = try await getConfiguration(for: .translation)
-        _ = try await getConfiguration(for: .grammar)
-        _ = try await getConfiguration(for: .scoring)
+        // Fetch all categories
+        for category in AICategory.allCases {
+            _ = try await getConfiguration(for: category)
+        }
+        print("✅ AI Config force-refreshed all \(AICategory.allCases.count) categories")
     }
 
     /// Clear all cached configurations (forces fresh fetch on next request)

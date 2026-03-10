@@ -1,7 +1,7 @@
 import UIKit
 
-// MARK: - Fluenca Brand Colors
-private struct FluencaColors {
+// MARK: - Brand Colors
+private struct BrandColors {
     static let primary = UIColor(red: 1.0, green: 0.42, blue: 0.42, alpha: 1.0)      // #FF6B6B - Warm coral
     static let secondary = UIColor(red: 0.31, green: 0.80, blue: 0.77, alpha: 1.0)   // #4ECDC4 - Teal
     static let accent = UIColor(red: 1.0, green: 0.90, blue: 0.43, alpha: 1.0)       // #FFE66D - Yellow
@@ -101,9 +101,9 @@ class LanguageLabViewController: UIViewController {
         // Dark gradient background
         let gradientLayer = CAGradientLayer()
         gradientLayer.colors = [
-            FluencaColors.darkerBg.cgColor,
-            FluencaColors.darkBg.cgColor,
-            FluencaColors.darkerBg.cgColor
+            BrandColors.darkerBg.cgColor,
+            BrandColors.darkBg.cgColor,
+            BrandColors.darkerBg.cgColor
         ]
         gradientLayer.locations = [0, 0.5, 1]
         gradientLayer.frame = view.bounds
@@ -218,7 +218,7 @@ class LanguageLabViewController: UIViewController {
     private func setupSegmentedControl() {
         segmentedControl.selectedSegmentIndex = 0
         segmentedControl.backgroundColor = UIColor.white.withAlphaComponent(0.1)
-        segmentedControl.selectedSegmentTintColor = FluencaColors.fire
+        segmentedControl.selectedSegmentTintColor = BrandColors.fire
         segmentedControl.setTitleTextAttributes([
             .foregroundColor: UIColor.white.withAlphaComponent(0.7),
             .font: UIFont.systemFont(ofSize: 13, weight: .medium)
@@ -362,7 +362,7 @@ private class SparkStreaksView: UIView {
         headerStack.addArrangedSubview(titleStack)
 
         // Streak badge
-        streakBadgeView.backgroundColor = FluencaColors.fire
+        streakBadgeView.backgroundColor = BrandColors.fire
         streakBadgeView.layer.cornerRadius = 16
         headerStack.addArrangedSubview(streakBadgeView)
 
@@ -395,10 +395,10 @@ private class SparkStreaksView: UIView {
         createCalendarGrid()
 
         // Milestone view
-        milestoneView.backgroundColor = FluencaColors.secondary.withAlphaComponent(0.2)
+        milestoneView.backgroundColor = BrandColors.secondary.withAlphaComponent(0.2)
         milestoneView.layer.cornerRadius = 12
         milestoneView.layer.borderWidth = 1
-        milestoneView.layer.borderColor = FluencaColors.secondary.withAlphaComponent(0.3).cgColor
+        milestoneView.layer.borderColor = BrandColors.secondary.withAlphaComponent(0.3).cgColor
         addSubview(milestoneView)
 
         let trophyLabel = UILabel()
@@ -414,7 +414,7 @@ private class SparkStreaksView: UIView {
         let nextLabel = UILabel()
         nextLabel.text = "lab_next_milestone".localized
         nextLabel.font = .systemFont(ofSize: 14, weight: .medium)
-        nextLabel.textColor = FluencaColors.secondary
+        nextLabel.textColor = BrandColors.secondary
         milestoneStack.addArrangedSubview(nextLabel)
 
         let daysLabel = UILabel()
@@ -484,11 +484,11 @@ private class SparkStreaksView: UIView {
     private func createPartnerTab(partner: (name: String, flag: String, streak: Int, photoUrl: String?), index: Int) -> UIView {
         let container = UIView()
         container.backgroundColor = index == selectedPartnerIndex
-            ? FluencaColors.fire.withAlphaComponent(0.3)
+            ? BrandColors.fire.withAlphaComponent(0.3)
             : UIColor.white.withAlphaComponent(0.05)
         container.layer.cornerRadius = 12
         container.layer.borderWidth = index == selectedPartnerIndex ? 2 : 0
-        container.layer.borderColor = FluencaColors.fire.cgColor
+        container.layer.borderColor = BrandColors.fire.cgColor
         container.tag = index
 
         let tapGesture = UITapGestureRecognizer(target: self, action: #selector(partnerTapped(_:)))
@@ -545,7 +545,7 @@ private class SparkStreaksView: UIView {
         // Refresh partner tabs
         for (index, subview) in partnerStackView.arrangedSubviews.enumerated() {
             subview.backgroundColor = index == selectedPartnerIndex
-                ? FluencaColors.fire.withAlphaComponent(0.3)
+                ? BrandColors.fire.withAlphaComponent(0.3)
                 : UIColor.white.withAlphaComponent(0.05)
             subview.layer.borderWidth = index == selectedPartnerIndex ? 2 : 0
         }
@@ -623,13 +623,13 @@ private class SparkStreaksView: UIView {
         let isToday = day == currentDay
 
         container.backgroundColor = isActive
-            ? FluencaColors.fire.withAlphaComponent(0.3 + CGFloat.random(in: 0...0.3))
+            ? BrandColors.fire.withAlphaComponent(0.3 + CGFloat.random(in: 0...0.3))
             : UIColor.white.withAlphaComponent(0.05)
         container.layer.cornerRadius = 8
 
         if isToday {
             container.layer.borderWidth = 2
-            container.layer.borderColor = FluencaColors.secondary.cgColor
+            container.layer.borderColor = BrandColors.secondary.cgColor
         }
 
         let stack = UIStackView()
@@ -668,7 +668,7 @@ private class SparkStreaksView: UIView {
         pulseAnimation.autoreverses = true
         pulseAnimation.repeatCount = .infinity
 
-        view.layer.shadowColor = FluencaColors.fire.cgColor
+        view.layer.shadowColor = BrandColors.fire.cgColor
         view.layer.shadowOffset = .zero
         view.layer.shadowRadius = 20
         view.layer.shadowOpacity = 0.5
@@ -738,8 +738,8 @@ private class FluencyHeatView: UIView {
         // Gradient for mercury
         let mercuryGradient = CAGradientLayer()
         mercuryGradient.colors = [
-            FluencaColors.accent.cgColor,
-            FluencaColors.primary.cgColor
+            BrandColors.accent.cgColor,
+            BrandColors.primary.cgColor
         ]
         mercuryGradient.startPoint = CGPoint(x: 0.5, y: 1)
         mercuryGradient.endPoint = CGPoint(x: 0.5, y: 0)
@@ -747,7 +747,7 @@ private class FluencyHeatView: UIView {
 
         // Thermometer bulb
         let bulbView = UIView()
-        bulbView.backgroundColor = temperature > 50 ? FluencaColors.primary : FluencaColors.secondary
+        bulbView.backgroundColor = temperature > 50 ? BrandColors.primary : BrandColors.secondary
         bulbView.layer.cornerRadius = 40
         addSubview(bulbView)
 
@@ -768,10 +768,10 @@ private class FluencyHeatView: UIView {
 
         // Status card
         let statusCard = UIView()
-        statusCard.backgroundColor = FluencaColors.accent.withAlphaComponent(0.2)
+        statusCard.backgroundColor = BrandColors.accent.withAlphaComponent(0.2)
         statusCard.layer.cornerRadius = 16
         statusCard.layer.borderWidth = 1
-        statusCard.layer.borderColor = FluencaColors.accent.withAlphaComponent(0.4).cgColor
+        statusCard.layer.borderColor = BrandColors.accent.withAlphaComponent(0.4).cgColor
         addSubview(statusCard)
 
         let statusStack = UIStackView()
@@ -788,7 +788,7 @@ private class FluencyHeatView: UIView {
         else { statusText = "lab_heat_ice_cold".localized }
         statusLabel.text = statusText
         statusLabel.font = .systemFont(ofSize: 14, weight: .medium)
-        statusLabel.textColor = FluencaColors.accent
+        statusLabel.textColor = BrandColors.accent
         statusStack.addArrangedSubview(statusLabel)
 
         let tempLabel = UILabel()
@@ -876,7 +876,7 @@ private class FluencyHeatView: UIView {
         glowAnimation.autoreverses = true
         glowAnimation.repeatCount = .infinity
 
-        view.layer.shadowColor = FluencaColors.primary.cgColor
+        view.layer.shadowColor = BrandColors.primary.cgColor
         view.layer.shadowOffset = .zero
         view.layer.shadowRadius = 30
         view.layer.shadowOpacity = 0.6
@@ -956,7 +956,7 @@ private class LearningPulseView: UIView {
         legendStack.spacing = 24
         pulseContainer.addSubview(legendStack)
 
-        let targetLegend = createLegendItem(color: FluencaColors.secondary, text: "lab_target_language".localized)
+        let targetLegend = createLegendItem(color: BrandColors.secondary, text: "lab_target_language".localized)
         let nativeLegend = createLegendItem(color: UIColor.white.withAlphaComponent(0.3), text: "lab_native_language".localized)
         legendStack.addArrangedSubview(targetLegend)
         legendStack.addArrangedSubview(nativeLegend)
@@ -1018,7 +1018,7 @@ private class LearningPulseView: UIView {
 
                 let barView = UIView()
                 barView.backgroundColor = isTarget
-                    ? FluencaColors.secondary
+                    ? BrandColors.secondary
                     : UIColor.white.withAlphaComponent(0.2)
                 barView.layer.cornerRadius = 1
                 barStack.addArrangedSubview(barView)
@@ -1057,7 +1057,7 @@ private class LearningPulseView: UIView {
         let todayMessages = dailyActivity.last.map { $0.messagesSent + $0.messagesReceived } ?? 0
         let yesterdayMessages = dailyActivity.dropLast().last.map { $0.messagesSent + $0.messagesReceived } ?? 0
 
-        let targetCard = createStatCard(value: "\(targetPercentage)%", label: "lab_target_language_usage".localized, color: FluencaColors.secondary, highlighted: true)
+        let targetCard = createStatCard(value: "\(targetPercentage)%", label: "lab_target_language_usage".localized, color: BrandColors.secondary, highlighted: true)
         let messagesCard = createStatCard(value: "\(todayMessages)", label: "lab_messages_today".localized, color: .white, highlighted: false)
         row1.addArrangedSubview(targetCard)
         row1.addArrangedSubview(messagesCard)
@@ -1083,7 +1083,7 @@ private class LearningPulseView: UIView {
         }
 
         let timeCard = createStatCard(value: practiceText, label: "lab_practice_time".localized, color: .white, highlighted: false)
-        let changeCard = createStatCard(value: change, label: "lab_vs_yesterday".localized, color: FluencaColors.primary, highlighted: true)
+        let changeCard = createStatCard(value: change, label: "lab_vs_yesterday".localized, color: BrandColors.primary, highlighted: true)
         row2.addArrangedSubview(timeCard)
         row2.addArrangedSubview(changeCard)
         statsGrid.addArrangedSubview(row2)
@@ -1108,7 +1108,7 @@ private class LearningPulseView: UIView {
         let progressLabel = UILabel()
         progressLabel.text = "\(targetPercentage)%"
         progressLabel.font = .systemFont(ofSize: 14, weight: .semibold)
-        progressLabel.textColor = FluencaColors.secondary
+        progressLabel.textColor = BrandColors.secondary
         goalHeader.addArrangedSubview(progressLabel)
 
         let progressBar = UIView()
@@ -1117,7 +1117,7 @@ private class LearningPulseView: UIView {
         goalContainer.addSubview(progressBar)
 
         let progressFill = UIView()
-        progressFill.backgroundColor = targetPercentage >= 70 ? FluencaColors.secondary : FluencaColors.accent
+        progressFill.backgroundColor = targetPercentage >= 70 ? BrandColors.secondary : BrandColors.accent
         progressFill.layer.cornerRadius = 4
         progressBar.addSubview(progressFill)
 
@@ -1328,8 +1328,8 @@ private class StatsOverviewView: UIView {
         // Gradient background for wrapped
         let gradient = CAGradientLayer()
         gradient.colors = [
-            FluencaColors.primary.cgColor,
-            FluencaColors.fireGlow.cgColor
+            BrandColors.primary.cgColor,
+            BrandColors.fireGlow.cgColor
         ]
         gradient.startPoint = CGPoint(x: 0, y: 0)
         gradient.endPoint = CGPoint(x: 1, y: 1)
@@ -1347,7 +1347,7 @@ private class StatsOverviewView: UIView {
         wrappedStack.addArrangedSubview(wrappedBadge)
 
         let badgeLabel = UILabel()
-        badgeLabel.text = "lab_fluenca_wrapped".localized
+        badgeLabel.text = "lab_language_match_wrapped".localized
         badgeLabel.font = .systemFont(ofSize: 14, weight: .semibold)
         badgeLabel.textColor = .white
         wrappedBadge.addSubview(badgeLabel)
@@ -1385,7 +1385,7 @@ private class StatsOverviewView: UIView {
 
         let shareButton = UIButton(type: .system)
         shareButton.setTitle("lab_share_wrapped".localized + " ✨", for: .normal)
-        shareButton.setTitleColor(FluencaColors.primary, for: .normal)
+        shareButton.setTitleColor(BrandColors.primary, for: .normal)
         shareButton.titleLabel?.font = .systemFont(ofSize: 16, weight: .semibold)
         shareButton.backgroundColor = .white.withAlphaComponent(0.95)
         shareButton.layer.cornerRadius = 12
@@ -1522,7 +1522,7 @@ private class StatsOverviewView: UIView {
     private func createAchievementBadge(emoji: String, title: String, unlocked: Bool) -> UIView {
         let container = UIView()
         container.backgroundColor = unlocked
-            ? FluencaColors.gold.withAlphaComponent(0.2)
+            ? BrandColors.gold.withAlphaComponent(0.2)
             : UIColor.white.withAlphaComponent(0.05)
         container.layer.cornerRadius = 12
         container.alpha = unlocked ? 1.0 : 0.5

@@ -10,7 +10,7 @@ export default function TermsPage() {
 
           <div className="prose prose-gray max-w-none">
             <p>
-              Welcome to Fluenca! These Terms of Service ("Terms") govern your use of the Fluenca mobile application
+              Welcome to Language Match! These Terms of Service ("Terms") govern your use of the Language Match mobile application
               and related services (collectively, the "Service") operated by PainKiller Labs ("Company," "we," "us," or "our").
             </p>
             <p>
@@ -31,7 +31,7 @@ export default function TermsPage() {
 
             <h2 className="text-xl font-semibold mt-8 mb-4">2. Description of Service</h2>
             <p>
-              Fluenca is a language exchange platform that connects users who want to practice languages with native
+              Language Match is a language exchange platform that connects users who want to practice languages with native
               speakers and AI-powered conversation partners. The Service includes:
             </p>
             <ul className="list-disc pl-6 mb-4">
@@ -93,7 +93,7 @@ export default function TermsPage() {
             <h2 className="text-xl font-semibold mt-8 mb-4">7. Intellectual Property</h2>
             <p>
               The Service, including its content, features, and functionality, is owned by PainKiller Labs and is
-              protected by intellectual property laws. "Fluenca" and related logos are trademarks of PainKiller Labs.
+              protected by intellectual property laws. "Language Match" and related logos are trademarks of PainKiller Labs.
             </p>
 
             <h2 className="text-xl font-semibold mt-8 mb-4">8. Disclaimers</h2>
@@ -137,7 +137,7 @@ export default function TermsPage() {
 
             <hr className="my-8" />
             <p className="text-gray-600 text-sm">
-              By using Fluenca, you acknowledge that you have read, understood, and agree to be bound by these Terms of Service.
+              By using Language Match, you acknowledge that you have read, understood, and agree to be bound by these Terms of Service.
             </p>
           </div>
         </div>

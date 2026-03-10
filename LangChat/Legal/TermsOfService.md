@@ -2,7 +2,7 @@
 
 **Last Updated: January 3, 2026**
 
-Welcome to Fluenca! These Terms of Service ("Terms") govern your use of the Fluenca mobile application and related services (collectively, the "Service") operated by PainKiller Labs ("Company," "we," "us," or "our").
+Welcome to Language Match! These Terms of Service ("Terms") govern your use of the Language Match mobile application and related services (collectively, the "Service") operated by PainKiller Labs ("Company," "we," "us," or "our").
 
 By accessing or using our Service, you agree to be bound by these Terms. If you disagree with any part of these Terms, you may not access the Service.
 
@@ -20,7 +20,7 @@ To use certain features of the Service, you must create an account using Sign in
 
 ## 2. Description of Service
 
-Fluenca is a language exchange platform that connects users who want to practice languages with native speakers and AI-powered conversation partners. The Service includes:
+Language Match is a language exchange platform that connects users who want to practice languages with native speakers and AI-powered conversation partners. The Service includes:
 
 - **Matching System:** Connects users based on language learning goals and native languages
 - **Messaging:** Real-time chat with matched users
@@ -33,7 +33,7 @@ Fluenca is a language exchange platform that connects users who want to practice
 ## 3. User Conduct and Zero Tolerance Policy
 
 ### 3.1 Zero Tolerance for Objectionable Content and Abusive Users
-Fluenca maintains a zero-tolerance policy for objectionable content and abusive behavior. Any user who posts objectionable content or engages in abusive behavior will have their account terminated immediately and may be reported to the appropriate authorities. Objectionable content includes, but is not limited to:
+Language Match maintains a zero-tolerance policy for objectionable content and abusive behavior. Any user who posts objectionable content or engages in abusive behavior will have their account terminated immediately and may be reported to the appropriate authorities. Objectionable content includes, but is not limited to:
 
 - Sexually explicit, pornographic, or obscene material
 - Content that promotes violence, self-harm, or terrorism
@@ -157,7 +157,7 @@ AI-powered translation and grammar features are provided as learning aids. While
 The Service, including its original content, features, and functionality, is owned by PainKiller Labs and is protected by international copyright, trademark, and other intellectual property laws.
 
 ### 8.2 Trademarks
-"Fluenca" and related logos are trademarks of PainKiller Labs. You may not use these marks without our prior written permission.
+"Language Match" and related logos are trademarks of PainKiller Labs. You may not use these marks without our prior written permission.
 
 ### 8.3 Feedback
 Any feedback, suggestions, or ideas you provide about the Service may be used by us without any obligation to compensate you.
@@ -267,8 +267,8 @@ PainKiller Labs
 8 Parkwood Avenue
 Toronto, Ontario, Canada M4V 2W8
 
-**Website:** https://painkillerlabs.com/fluenca
+**Website:** https://language-match.com
 
 ---
 
-By using Fluenca, you acknowledge that you have read, understood, and agree to be bound by these Terms of Service.
+By using Language Match, you acknowledge that you have read, understood, and agree to be bound by these Terms of Service.

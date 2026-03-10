@@ -104,28 +104,49 @@ class SessionCell: UITableViewCell {
 
     func configure(with session: Session) {
         titleLabel.text = session.displayTitle
-        languagePairLabel.text = session.languagePair.displayString
-        participantCountLabel.text = "\(session.participantCount)/4 \("session_participants".localized)"
+        languagePairLabel.text = "\(session.languagePair.displayString) · \(session.maxDurationMinutes) min"
 
+        let maxP = session.maxParticipants
         switch session.status {
         case .live:
+            var participantText = "\(session.participantCount)/\(maxP) \("session_participants".localized)"
+            if session.viewerCount > 0 {
+                participantText += " · \(session.viewerCount) \("session_users_watching".localized)"
+            }
+            participantCountLabel.text = participantText
             statusBadge.text = " LIVE "
             statusBadge.backgroundColor = .systemRed
             statusBadge.isHidden = false
             timeLabel.isHidden = true
         case .scheduled:
+            participantCountLabel.text = "\(session.participantCount)/\(maxP) \("session_participants".localized)"
             statusBadge.isHidden = true
             timeLabel.isHidden = false
             if let scheduledAt = session.scheduledAt {
-                let formatter = DateFormatter()
-                if Calendar.current.isDateInToday(scheduledAt) {
-                    formatter.dateFormat = "h:mm a"
+                timeLabel.text = Self.relativeTimeString(for: scheduledAt)
+            }
+        case .ended:
+            participantCountLabel.text = "\(session.participantCount)/\(maxP) \("session_participants".localized)"
+            statusBadge.text = " \("session_ended_badge".localized) "
+            statusBadge.backgroundColor = .systemGray
+            statusBadge.isHidden = false
+            if let endedAt = session.endedAt {
+                let elapsed = Date().timeIntervalSince(endedAt)
+                let hours = Int(elapsed / 3600)
+                let minutes = Int(elapsed / 60) % 60
+                let relativeTime: String
+                if hours > 0 {
+                    relativeTime = "\(hours)h"
                 } else {
-                    formatter.dateFormat = "MMM d, h:mm a"
+                    relativeTime = "\(minutes)m"
                 }
-                timeLabel.text = formatter.string(from: scheduledAt)
+                timeLabel.text = String(format: "session_ended_ago".localized, relativeTime)
+                timeLabel.isHidden = false
+            } else {
+                timeLabel.isHidden = true
             }
         default:
+            participantCountLabel.text = "\(session.participantCount)/\(maxP) \("session_participants".localized)"
             statusBadge.isHidden = true
             timeLabel.isHidden = true
         }
@@ -149,6 +170,39 @@ class SessionCell: UITableViewCell {
         statusBadge.backgroundColor = .systemBlue
         statusBadge.isHidden = false
         timeLabel.isHidden = true
+    }
+
+    /// Returns a human-readable relative time string, e.g. "Starts in 27 hours" or "Today at 2:00 PM"
+    static func relativeTimeString(for date: Date) -> String {
+        let now = Date()
+        let interval = date.timeIntervalSince(now)
+
+        if interval <= 0 {
+            // Already past — show absolute time
+            let formatter = DateFormatter()
+            formatter.dateFormat = "h:mm a"
+            return formatter.string(from: date)
+        }
+
+        let minutes = Int(interval / 60)
+        let hours = Int(interval / 3600)
+        let days = Int(interval / 86400)
+
+        if minutes < 60 {
+            return String(format: "session_starts_in_minutes".localized, minutes)
+        } else if hours < 24 {
+            let formatter = DateFormatter()
+            formatter.dateFormat = "h:mm a"
+            return String(format: "session_starts_in_hours".localized, hours) + " · " + formatter.string(from: date)
+        } else if days == 1 {
+            let formatter = DateFormatter()
+            formatter.dateFormat = "h:mm a"
+            return String(format: "session_starts_tomorrow".localized, formatter.string(from: date))
+        } else {
+            let formatter = DateFormatter()
+            formatter.dateFormat = "MMM d, h:mm a"
+            return String(format: "session_starts_in_days".localized, days) + " · " + formatter.string(from: date)
+        }
     }
 
     override func prepareForReuse() {

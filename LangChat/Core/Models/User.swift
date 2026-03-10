@@ -149,6 +149,16 @@ struct User: Codable {
         }
     }
 
+    /// Minimal placeholder user for UI contexts where a full User isn't available
+    static let placeholder = User(
+        id: "",
+        username: "",
+        firstName: "User",
+        nativeLanguage: UserLanguage(language: .english, proficiency: .native, isNative: true),
+        learningLanguages: [],
+        openToLanguages: []
+    )
+
     var displayName: String {
         return username
     }

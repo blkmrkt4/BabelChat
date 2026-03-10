@@ -11,6 +11,7 @@ protocol PricingViewControllerDelegate: AnyObject {
     func didSelectFreeTier()
     func didSelectPremiumTier()
     func didSelectProTier()
+    func didSelectBroadcasterTier()
     func didSkipPricing()
 }
 
@@ -46,6 +47,14 @@ class PricingViewController: UIViewController {
     private let proPriceLabel = UILabel()
     private let proFeatureStack = UIStackView()
     private let proButton = UIButton(type: .system)
+
+    // Broadcaster tier card
+    private let broadcasterCard = UIView()
+    private let broadcasterTierLabel = UILabel()
+    private let broadcasterPriceLabel = UILabel()
+    private let broadcasterBannerLabel = UILabel()
+    private let broadcasterFeatureStack = UIStackView()
+    private let broadcasterButton = UIButton(type: .system)
 
     // Footer button
     private let restorePurchasesButton = UIButton(type: .system)
@@ -144,6 +153,7 @@ class PricingViewController: UIViewController {
         setupFreeCard()
         setupPremiumCard()
         setupProCard()
+        setupBroadcasterCard()
     }
 
     private func setupFreeCard() {
@@ -351,6 +361,85 @@ class PricingViewController: UIViewController {
         ])
     }
 
+    private func setupBroadcasterCard() {
+        broadcasterCard.backgroundColor = .systemPurple.withAlphaComponent(0.1)
+        broadcasterCard.layer.cornerRadius = 16
+        broadcasterCard.layer.borderWidth = 2
+        broadcasterCard.layer.borderColor = UIColor.systemPurple.cgColor
+        broadcasterCard.layer.shadowColor = UIColor.systemPurple.cgColor
+        broadcasterCard.layer.shadowOpacity = 0.3
+        broadcasterCard.layer.shadowOffset = CGSize(width: 0, height: 4)
+        broadcasterCard.layer.shadowRadius = 8
+        contentStack.addArrangedSubview(broadcasterCard)
+
+        let cardStack = UIStackView()
+        cardStack.axis = .vertical
+        cardStack.spacing = 8
+        cardStack.alignment = .leading
+        broadcasterCard.addSubview(cardStack)
+
+        // Tier name and price on same line
+        let headerStack = UIStackView()
+        headerStack.axis = .horizontal
+        headerStack.spacing = 12
+        headerStack.alignment = .firstBaseline
+        cardStack.addArrangedSubview(headerStack)
+
+        broadcasterTierLabel.text = "tier_broadcaster_name".localized
+        broadcasterTierLabel.font = .systemFont(ofSize: 20, weight: .bold)
+        broadcasterTierLabel.textColor = .systemPurple
+        headerStack.addArrangedSubview(broadcasterTierLabel)
+
+        broadcasterPriceLabel.text = "auto_4999mo".localized
+        broadcasterPriceLabel.font = .systemFont(ofSize: 20, weight: .heavy)
+        broadcasterPriceLabel.textColor = .systemPurple
+        headerStack.addArrangedSubview(broadcasterPriceLabel)
+
+        // Banner
+        broadcasterBannerLabel.text = "pricing_broadcaster_banner".localized
+        broadcasterBannerLabel.font = .systemFont(ofSize: 12, weight: .medium)
+        broadcasterBannerLabel.textColor = .white.withAlphaComponent(0.9)
+        broadcasterBannerLabel.backgroundColor = .systemPurple.withAlphaComponent(0.3)
+        broadcasterBannerLabel.textAlignment = .center
+        broadcasterBannerLabel.layer.cornerRadius = 12
+        broadcasterBannerLabel.layer.masksToBounds = true
+        broadcasterBannerLabel.translatesAutoresizingMaskIntoConstraints = false
+        cardStack.addArrangedSubview(broadcasterBannerLabel)
+
+        // Features (populated by loadPricingConfig)
+        broadcasterFeatureStack.axis = .vertical
+        broadcasterFeatureStack.spacing = 6
+        broadcasterFeatureStack.alignment = .leading
+        cardStack.addArrangedSubview(broadcasterFeatureStack)
+
+        // Button
+        broadcasterButton.setTitle("pricing_start_broadcaster".localized, for: .normal)
+        broadcasterButton.titleLabel?.font = .systemFont(ofSize: 16, weight: .bold)
+        broadcasterButton.setTitleColor(.white, for: .normal)
+        broadcasterButton.backgroundColor = .systemPurple
+        broadcasterButton.layer.cornerRadius = 22
+        broadcasterButton.addTarget(self, action: #selector(broadcasterTapped), for: .touchUpInside)
+        broadcasterButton.translatesAutoresizingMaskIntoConstraints = false
+        cardStack.addArrangedSubview(broadcasterButton)
+
+        // Layout
+        cardStack.translatesAutoresizingMaskIntoConstraints = false
+        NSLayoutConstraint.activate([
+            cardStack.topAnchor.constraint(equalTo: broadcasterCard.topAnchor, constant: 16),
+            cardStack.leadingAnchor.constraint(equalTo: broadcasterCard.leadingAnchor, constant: 16),
+            cardStack.trailingAnchor.constraint(equalTo: broadcasterCard.trailingAnchor, constant: -16),
+            cardStack.bottomAnchor.constraint(equalTo: broadcasterCard.bottomAnchor, constant: -16),
+
+            broadcasterBannerLabel.heightAnchor.constraint(equalToConstant: 26),
+            broadcasterBannerLabel.leadingAnchor.constraint(equalTo: cardStack.leadingAnchor),
+            broadcasterBannerLabel.trailingAnchor.constraint(equalTo: cardStack.trailingAnchor),
+
+            broadcasterButton.heightAnchor.constraint(equalToConstant: 44),
+            broadcasterButton.leadingAnchor.constraint(equalTo: cardStack.leadingAnchor),
+            broadcasterButton.trailingAnchor.constraint(equalTo: cardStack.trailingAnchor)
+        ])
+    }
+
     private func createFeatureLabel(_ text: String, isIncluded: Bool) -> UILabel {
         let label = UILabel()
         let checkmark = isIncluded ? "✓" : "✗"
@@ -422,6 +511,7 @@ class PricingViewController: UIViewController {
         // Show loading state for prices
         premiumPriceLabel.text = "common_loading".localized
         proPriceLabel.text = "common_loading".localized
+        broadcasterPriceLabel.text = "common_loading".localized
 
         // Show default config for features immediately
         updateUIWithConfig(pricingConfig)
@@ -491,6 +581,14 @@ class PricingViewController: UIViewController {
             proPriceLabel.text = priceText
         }
 
+        // Update Broadcaster price
+        if let broadcasterOffering = offerings.first(where: { $0.tier == .broadcaster }) {
+            let priceText = subscriptionService.shouldShowWeeklyPricing
+                ? broadcasterOffering.weeklyPriceString
+                : broadcasterOffering.localizedPricePerPeriod
+            broadcasterPriceLabel.text = priceText
+        }
+
         // Show weekly billing note if applicable
         if subscriptionService.shouldShowWeeklyPricing {
             premiumTrialLabel.text = (premiumTrialLabel.text ?? "") + " • Billed monthly"
@@ -501,6 +599,7 @@ class PricingViewController: UIViewController {
         // Use hardcoded fallback prices if RevenueCat fails
         premiumPriceLabel.text = pricingConfig.premiumPriceFormatted
         proPriceLabel.text = pricingConfig.proPriceFormatted
+        broadcasterPriceLabel.text = pricingConfig.broadcasterPriceFormatted
     }
 
     deinit {
@@ -513,13 +612,16 @@ class PricingViewController: UIViewController {
         if !subscriptionService.hasLoadedOfferings {
             premiumPriceLabel.text = config.premiumPriceFormatted
             proPriceLabel.text = config.proPriceFormatted
+            broadcasterPriceLabel.text = config.broadcasterPriceFormatted
             premiumTrialLabel.text = config.premiumBanner
+            broadcasterBannerLabel.text = config.broadcasterBanner
         }
 
         // Clear and repopulate feature stacks
         freeFeatureStack.arrangedSubviews.forEach { $0.removeFromSuperview() }
         premiumFeatureStack.arrangedSubviews.forEach { $0.removeFromSuperview() }
         proFeatureStack.arrangedSubviews.forEach { $0.removeFromSuperview() }
+        broadcasterFeatureStack.arrangedSubviews.forEach { $0.removeFromSuperview() }
 
         // Free features
         for feature in config.freeFeatures {
@@ -537,6 +639,12 @@ class PricingViewController: UIViewController {
         for feature in config.proFeatures {
             let label = createFeatureLabel(feature.title, isIncluded: feature.included)
             proFeatureStack.addArrangedSubview(label)
+        }
+
+        // Broadcaster features
+        for feature in config.broadcasterFeatures {
+            let label = createFeatureLabel(feature.title, isIncluded: feature.included)
+            broadcasterFeatureStack.addArrangedSubview(label)
         }
     }
 
@@ -574,6 +682,29 @@ class PricingViewController: UIViewController {
             DispatchQueue.main.async {
                 self?.proButton.setTitle("pricing_start_pro".localized, for: .normal)
                 self?.proButton.isEnabled = true
+
+                switch result {
+                case .success(let status):
+                    print("✅ Purchase successful: \(status.tier.displayName)")
+                    self?.handlePurchaseSuccess()
+                case .failure(let error):
+                    print("❌ Purchase failed: \(error.localizedDescription)")
+                    self?.showError(error)
+                }
+            }
+        }
+    }
+
+    @objc private func broadcasterTapped() {
+        // Show loading state
+        broadcasterButton.setTitle("common_loading".localized, for: .normal)
+        broadcasterButton.isEnabled = false
+
+        // Purchase broadcaster
+        subscriptionService.purchase(tier: .broadcaster) { [weak self] result in
+            DispatchQueue.main.async {
+                self?.broadcasterButton.setTitle("pricing_start_broadcaster".localized, for: .normal)
+                self?.broadcasterButton.isEnabled = true
 
                 switch result {
                 case .success(let status):

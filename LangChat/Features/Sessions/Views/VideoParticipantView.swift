@@ -2,6 +2,19 @@ import UIKit
 
 class VideoParticipantView: UIView {
 
+    // MARK: - Callbacks
+    /// Called when an empty slot's "+" is tapped
+    var onEmptySlotTapped: (() -> Void)?
+    /// Called when an occupied slot is tapped (for management)
+    var onOccupiedSlotTapped: (() -> Void)?
+    /// Called when an occupied slot is long-pressed (for host moderation)
+    var onParticipantLongPressed: (() -> Void)?
+
+    // MARK: - State
+    private(set) var isEmpty = true
+    private(set) var participantUserId: String?
+    private(set) var participantRole: SessionRole?
+
     // MARK: - UI
     private let videoContainer = UIView()
     private let placeholderIcon = UIImageView()
@@ -14,6 +27,7 @@ class VideoParticipantView: UIView {
     override init(frame: CGRect) {
         super.init(frame: frame)
         setupViews()
+        setupGestures()
     }
 
     required init?(coder: NSCoder) {
@@ -103,9 +117,34 @@ class VideoParticipantView: UIView {
         ])
     }
 
+    private func setupGestures() {
+        let tap = UITapGestureRecognizer(target: self, action: #selector(handleTap))
+        addGestureRecognizer(tap)
+        isUserInteractionEnabled = true
+
+        let longPress = UILongPressGestureRecognizer(target: self, action: #selector(handleLongPress(_:)))
+        addGestureRecognizer(longPress)
+    }
+
+    @objc private func handleTap() {
+        if isEmpty {
+            onEmptySlotTapped?()
+        } else {
+            onOccupiedSlotTapped?()
+        }
+    }
+
+    @objc private func handleLongPress(_ gesture: UILongPressGestureRecognizer) {
+        guard gesture.state == .began, !isEmpty else { return }
+        onParticipantLongPressed?()
+    }
+
     // MARK: - Configuration
 
-    func configure(name: String, role: SessionRole, isMuted: Bool, isVideoOff: Bool) {
+    func configure(name: String, role: SessionRole, isMuted: Bool, isVideoOff: Bool, userId: String? = nil) {
+        isEmpty = false
+        participantUserId = userId
+        participantRole = role
         nameLabel.text = " \(name) "
         nameLabel.isHidden = false
         placeholderIcon.isHidden = !isVideoOff
@@ -129,6 +168,9 @@ class VideoParticipantView: UIView {
     }
 
     func configureEmpty() {
+        isEmpty = true
+        participantUserId = nil
+        participantRole = nil
         nameLabel.isHidden = true
         roleBadge.isHidden = true
         muteIndicator.isHidden = true

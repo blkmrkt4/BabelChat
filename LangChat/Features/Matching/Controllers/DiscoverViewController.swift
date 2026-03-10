@@ -351,7 +351,27 @@ extension DiscoverViewController: UICollectionViewDelegate {
         let detailVC = UserDetailViewController()
         detailVC.user = user
         detailVC.isMatched = false
-        detailVC.isFromDiscover = false
+        detailVC.isFromDiscover = true
+
+        // Build flat user list from all categories (deduplicated)
+        var seenIds = Set<String>()
+        var flatUsers: [User] = []
+        var targetIndex = 0
+
+        for (catIdx, cat) in categories.enumerated() {
+            for (itemIdx, profile) in cat.users.enumerated() {
+                if seenIds.insert(profile.user.id).inserted {
+                    if catIdx == indexPath.section && itemIdx == indexPath.item {
+                        targetIndex = flatUsers.count
+                    }
+                    flatUsers.append(profile.user)
+                }
+            }
+        }
+
+        detailVC.allUsers = flatUsers
+        detailVC.currentUserIndex = targetIndex
+        detailVC.allCategories = categories
 
         // Pass the user's per-photo blur settings
         detailVC.viewingUserBlurSettings = user.photoBlurSettings

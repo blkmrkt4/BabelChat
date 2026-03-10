@@ -200,6 +200,15 @@ class SubscriptionService: NSObject {
                     priceValue: 19.99,
                     currencyCode: "USD",
                     trialDays: 0
+                ),
+                SubscriptionOffering(
+                    tier: .broadcaster,
+                    package: nil,
+                    localizedPrice: "$49.99",
+                    localizedPricePerPeriod: "$49.99/mo",
+                    priceValue: 49.99,
+                    currencyCode: "USD",
+                    trialDays: 0
                 )
             ]
             self.cachedOfferings = mockOfferings
@@ -283,6 +292,8 @@ class SubscriptionService: NSObject {
                     tier = .premium
                 } else if productId == "pro_monthly" {
                     tier = .pro
+                } else if productId == "broadcaster_monthly" {
+                    tier = .broadcaster
                 } else {
                     print("⚠️ [RevenueCat] Unknown product ID '\(productId)' - skipping")
                     return nil
@@ -304,7 +315,7 @@ class SubscriptionService: NSObject {
 
             if subscriptionOfferings.isEmpty {
                 print("⚠️ [RevenueCat] No matching offerings found!")
-                print("   Expected product IDs: 'premium_monthly', 'pro_monthly'")
+                print("   Expected product IDs: 'premium_monthly', 'pro_monthly', 'broadcaster_monthly'")
                 print("   Make sure these products exist in App Store Connect")
             } else {
                 print("✅ [RevenueCat] Successfully mapped \(subscriptionOfferings.count) offerings")
@@ -572,10 +583,29 @@ class SubscriptionService: NSObject {
         print("📋 [Status] Active entitlements: \(customerInfo.entitlements.active.keys.joined(separator: ", "))")
         print("📋 [Status] All purchased products: \(customerInfo.allPurchasedProductIdentifiers.joined(separator: ", "))")
 
-        // Check for Pro tier first (higher tier)
-        // Try both "pro" and "Pro" for compatibility
-        let proEntitlement = customerInfo.entitlements["pro"] ?? customerInfo.entitlements["Pro"]
-        if let entitlement = proEntitlement, entitlement.isActive {
+        // Check tiers from highest to lowest
+        // Try both lowercase and capitalized for compatibility
+
+        // Check for Broadcaster tier first (highest tier)
+        let broadcasterEntitlement = customerInfo.entitlements["broadcaster"] ?? customerInfo.entitlements["Broadcaster"]
+        if let entitlement = broadcasterEntitlement, entitlement.isActive {
+            print("✅ [Status] Broadcaster entitlement is ACTIVE")
+            print("   Expires: \(entitlement.expirationDate?.description ?? "never")")
+            print("   Is trialing: \(entitlement.periodType == .trial)")
+
+            let status = SubscriptionStatus(
+                tier: .broadcaster,
+                isActive: true,
+                expiresAt: entitlement.expirationDate,
+                isTrialing: entitlement.periodType == .trial,
+                trialStartDate: entitlement.originalPurchaseDate,
+                trialEndDate: entitlement.periodType == .trial ? entitlement.expirationDate : nil
+            )
+            self.currentStatus = status
+        }
+        // Check for Pro tier
+        else if let entitlement = customerInfo.entitlements["pro"] ?? customerInfo.entitlements["Pro"],
+           entitlement.isActive {
             print("✅ [Status] Pro entitlement is ACTIVE")
             print("   Expires: \(entitlement.expirationDate?.description ?? "never")")
             print("   Is trialing: \(entitlement.periodType == .trial)")
@@ -591,7 +621,6 @@ class SubscriptionService: NSObject {
             self.currentStatus = status
         }
         // Check for Premium tier
-        // Try both "premium" and "Premium" for compatibility
         else if let entitlement = customerInfo.entitlements["premium"] ?? customerInfo.entitlements["Premium"],
            entitlement.isActive {
             print("✅ [Status] Premium entitlement is ACTIVE")

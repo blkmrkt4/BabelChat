@@ -980,6 +980,8 @@ class ChatViewController: UIViewController {
         }
 
         // Create and display user message immediately
+        // Tag with user's native language — user types in their native language by default.
+        // Muse/partner messages are tagged with learning language (see generateAIResponse).
         let newMessage = Message(
             id: UUID().uuidString,
             senderId: "currentUser",
@@ -987,7 +989,7 @@ class ChatViewController: UIViewController {
             text: filteredText,
             timestamp: Date(),
             isRead: false,
-            originalLanguage: conversationLearningLanguage,
+            originalLanguage: currentUserNativeLanguage,
             translatedText: nil,
             grammarSuggestions: nil,
             alternatives: nil,
@@ -1037,7 +1039,7 @@ class ChatViewController: UIViewController {
                         conversationId: conversationId,
                         receiverId: self.user.id,
                         text: text,
-                        language: self.conversationLearningLanguage.name
+                        language: self.currentUserNativeLanguage.name
                     )
                     print("✅ User message sent to Supabase")
                 } else {
@@ -1159,7 +1161,10 @@ class ChatViewController: UIViewController {
     }
 
     /// Generate a natural conversational response for AI practice partners
-    private func generateConversationalResponse(userMessage: String) async throws -> String {
+    /// - Parameters:
+    ///   - userMessage: The user's message text
+    ///   - mode: Muse request mode (default: .phraseTranslation). Extensible for word meaning, grammar fix, etc.
+    private func generateConversationalResponse(userMessage: String, mode: MuseRequestMode = .phraseTranslation) async throws -> String {
         // Build conversation history for context (last 5 messages)
         let recentMessages = messages.suffix(5)
         var conversationHistory = ""
@@ -1179,10 +1184,18 @@ class ChatViewController: UIViewController {
         }
 
         // Process prompt template with variables
+        // Available placeholders for admin prompts:
+        //   {bot_name}              — Muse's display name (e.g., "Sofia")
+        //   {language}              — The learning language (e.g., "Tagalog")
+        //   {native_language}       — The user's native language (e.g., "English")
+        //   {conversation_history}  — Recent conversation context
+        //   {muse_mode}             — Request mode: "phrase_translation", "word_meaning", "grammar_fix"
         let systemPrompt = config.promptTemplate
             .replacingOccurrences(of: "{bot_name}", with: user.firstName)
             .replacingOccurrences(of: "{language}", with: conversationLearningLanguage.name)
+            .replacingOccurrences(of: "{native_language}", with: currentUserNativeLanguage.name)
             .replacingOccurrences(of: "{conversation_history}", with: conversationHistory)
+            .replacingOccurrences(of: "{muse_mode}", with: mode.rawValue)
 
         let messages = [
             ChatMessage(role: "system", content: systemPrompt),

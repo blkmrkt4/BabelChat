@@ -441,15 +441,15 @@ class SettingsViewController: UIViewController {
                 let firstName = UserDefaults.standard.string(forKey: "firstName") ?? "Someone"
 
                 // Build the deep link URL
-                let inviteLink = "fluenca://invite/\(inviteCode)"
+                let inviteLink = "language-match://invite/\(inviteCode)"
 
                 // Build clear, step-by-step instructions
                 let shareText = """
-                🎉 \(firstName) invited you to practice languages together on Fluenca!
+                🎉 \(firstName) invited you to practice languages together on Language Match!
 
                 📱 HOW TO CONNECT:
 
-                1️⃣ Download Fluenca from the App Store:
+                1️⃣ Download Language Match from the App Store:
                 https://apps.apple.com/app/fluenca/id6740043019
 
                 2️⃣ Create your account and choose the Premium plan ($9.99/mo) to unlock matching with real people
@@ -858,7 +858,7 @@ class SettingsViewController: UIViewController {
         }
 
         let alert = UIAlertController(
-            title: "Fluenca",
+            title: "Language Match",
             message: message,
             preferredStyle: .alert
         )
@@ -881,6 +881,26 @@ class SettingsViewController: UIViewController {
 
         alert.addAction(UIAlertAction(title: "Reset to Landing Page", style: .destructive) { [weak self] _ in
             self?.devMenuResetToLandingPage()
+        })
+
+        alert.addAction(UIAlertAction(title: "Force Refresh AI Config", style: .default) { [weak self] _ in
+            Task {
+                do {
+                    try await AIConfigService.shared.refreshAllConfigurations()
+                    // Also clear translation/grammar caches in SwipeableMessageCell
+                    await MainActor.run {
+                        let success = UIAlertController(title: "AI Config Refreshed", message: "All AI configurations and prompt caches have been refreshed from Supabase.", preferredStyle: .alert)
+                        success.addAction(UIAlertAction(title: "common_ok".localized, style: .default))
+                        self?.present(success, animated: true)
+                    }
+                } catch {
+                    await MainActor.run {
+                        let fail = UIAlertController(title: "Refresh Failed", message: error.localizedDescription, preferredStyle: .alert)
+                        fail.addAction(UIAlertAction(title: "common_ok".localized, style: .default))
+                        self?.present(fail, animated: true)
+                    }
+                }
+            }
         })
 
         alert.addAction(UIAlertAction(title: "common_cancel".localized, style: .cancel))

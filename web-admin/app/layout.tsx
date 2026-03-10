@@ -16,7 +16,7 @@ export default function RootLayout({
   const pathname = usePathname()
 
   // Public pages don't show admin navigation
-  const publicPages = ['/privacy', '/terms', '/support', '/login', '/fluenca']
+  const publicPages = ['/privacy', '/terms', '/support', '/login', '/language-match']
   const isPublicPage = publicPages.some(page => pathname?.startsWith(page))
 
   const links = [

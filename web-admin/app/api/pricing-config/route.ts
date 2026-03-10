@@ -44,7 +44,11 @@ export async function PUT(request: Request) {
         pro_price_usd: body.pro_price_usd,
         pro_banner: body.pro_banner,
         pro_features: body.pro_features,
+        broadcaster_price_usd: body.broadcaster_price_usd,
+        broadcaster_banner: body.broadcaster_banner,
+        broadcaster_features: body.broadcaster_features,
         free_features: body.free_features,
+        weekly_pricing_countries: body.weekly_pricing_countries,
         updated_at: new Date().toISOString()
       })
       .eq('id', CONFIG_ID)

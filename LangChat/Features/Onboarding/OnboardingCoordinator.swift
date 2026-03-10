@@ -620,6 +620,13 @@ extension OnboardingCoordinator: PricingViewControllerDelegate {
         }
     }
 
+    func didSelectBroadcasterTier() {
+        print("✅ User purchased Broadcaster tier")
+        navigationController?.dismiss(animated: true) { [weak self] in
+            self?.syncAndTransition()
+        }
+    }
+
     func didSkipPricing() {
         print("✅ User skipped pricing (continuing with Free tier)")
         navigationController?.dismiss(animated: true) { [weak self] in

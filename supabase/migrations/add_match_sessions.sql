@@ -214,12 +214,8 @@ BEGIN
                 AND (
                     p.native_language = s.language_pair->>'native'
                     OR p.native_language = s.language_pair->>'learning'
-                    OR s.language_pair->>'native' = ANY(
-                        SELECT jsonb_array_elements_text(p.learning_languages)
-                    )
-                    OR s.language_pair->>'learning' = ANY(
-                        SELECT jsonb_array_elements_text(p.learning_languages)
-                    )
+                    OR s.language_pair->>'native' = ANY(p.learning_languages)
+                    OR s.language_pair->>'learning' = ANY(p.learning_languages)
                 )
             )
         )

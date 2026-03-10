@@ -15,6 +15,9 @@ class DiscoverCategoryBuilder {
     ) -> [DiscoverCategory] {
         var categories: [DiscoverCategory] = []
 
+        // Extract primary learning language name for context-aware headers
+        let learningLanguageName = currentUser.learningLanguages.first?.language.name
+
         // Apply hard filters before building rows
         var filteredProfiles = scoredProfiles
 
@@ -66,7 +69,8 @@ class DiscoverCategoryBuilder {
             from: filteredProfiles,
             contexts: [.formal],
             id: "business",
-            titleKey: "discover_row_business"
+            titleKey: "discover_row_business",
+            languageName: learningLanguageName
         ) {
             categories.append(cat)
         }
@@ -76,7 +80,8 @@ class DiscoverCategoryBuilder {
             from: filteredProfiles,
             contexts: [.academic],
             id: "academic",
-            titleKey: "discover_row_academic"
+            titleKey: "discover_row_academic",
+            languageName: learningLanguageName
         ) {
             categories.append(cat)
         }
@@ -86,7 +91,8 @@ class DiscoverCategoryBuilder {
             from: filteredProfiles,
             contexts: [.casual],
             id: "casual",
-            titleKey: "discover_row_casual"
+            titleKey: "discover_row_casual",
+            languageName: learningLanguageName
         ) {
             categories.append(cat)
         }
@@ -403,7 +409,8 @@ class DiscoverCategoryBuilder {
         from profiles: [(user: User, score: Int, reasons: [String])],
         contexts: [LearningContext],
         id: String,
-        titleKey: String
+        titleKey: String,
+        languageName: String? = nil
     ) -> DiscoverCategory? {
         let contextSet = Set(contexts)
         let matching = profiles.filter { profile in
@@ -412,9 +419,18 @@ class DiscoverCategoryBuilder {
         }.sorted { $0.score > $1.score }
 
         guard !matching.isEmpty else { return nil }
+
+        // Append language name for context (e.g. "Business & Professional - Spanish")
+        let displayTitle: String
+        if let langName = languageName {
+            displayTitle = "\(titleKey.localized) - \(langName)"
+        } else {
+            displayTitle = titleKey
+        }
+
         return DiscoverCategory(
             id: id,
-            titleKey: titleKey,
+            titleKey: displayTitle,
             subtitle: nil,
             users: matching
         )

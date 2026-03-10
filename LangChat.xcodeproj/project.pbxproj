@@ -336,7 +336,7 @@
 				DEVELOPMENT_TEAM = 2BC9ZX9TN8;
 				GENERATE_INFOPLIST_FILE = YES;
 				INFOPLIST_FILE = LangChat/Info.plist;
-				INFOPLIST_KEY_CFBundleDisplayName = Fluenca;
+				INFOPLIST_KEY_CFBundleDisplayName = "Language Match";
 				INFOPLIST_KEY_LSApplicationCategoryType = "public.app-category.social-networking";
 				INFOPLIST_KEY_UIApplicationSupportsIndirectInputEvents = YES;
 				INFOPLIST_KEY_UILaunchStoryboardName = LaunchScreen;
@@ -377,7 +377,7 @@
 				DEVELOPMENT_TEAM = 2BC9ZX9TN8;
 				GENERATE_INFOPLIST_FILE = YES;
 				INFOPLIST_FILE = LangChat/Info.plist;
-				INFOPLIST_KEY_CFBundleDisplayName = Fluenca;
+				INFOPLIST_KEY_CFBundleDisplayName = "Language Match";
 				INFOPLIST_KEY_LSApplicationCategoryType = "public.app-category.social-networking";
 				INFOPLIST_KEY_UIApplicationSupportsIndirectInputEvents = YES;
 				INFOPLIST_KEY_UILaunchStoryboardName = LaunchScreen;

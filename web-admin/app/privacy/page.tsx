@@ -10,7 +10,7 @@ export default function PrivacyPage() {
 
           <div className="prose prose-gray max-w-none">
             <p>
-              PainKiller Labs ("Company," "we," "us," or "our") operates the Fluenca mobile application (the "App").
+              PainKiller Labs ("Company," "we," "us," or "our") operates the Language Match mobile application (the "App").
               This Privacy Policy explains how we collect, use, disclose, and safeguard your information when you use our App.
             </p>
             <p>
@@ -146,7 +146,7 @@ export default function PrivacyPage() {
 
             <hr className="my-8" />
             <p className="text-gray-600 text-sm">
-              By using Fluenca, you acknowledge that you have read and understood this Privacy Policy.
+              By using Language Match, you acknowledge that you have read and understood this Privacy Policy.
             </p>
           </div>
         </div>

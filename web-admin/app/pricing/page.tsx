@@ -15,6 +15,9 @@ interface PricingConfig {
   pro_price_usd: number
   pro_banner: string
   pro_features: Feature[]
+  broadcaster_price_usd: number
+  broadcaster_banner: string
+  broadcaster_features: Feature[]
   free_features: Feature[]
   weekly_pricing_countries: string[]  // Country codes that show weekly pricing
   updated_at: string
@@ -86,9 +89,17 @@ export default function PricingPage() {
         pro_banner: 'Best Value for Serious Learners',
         pro_features: [
           { title: 'Everything in Premium', subtitle: '', included: true },
+          { title: 'Host up to 5 sessions/month', subtitle: '', included: true },
+          { title: '2 video speaker slots per session', subtitle: '', included: true },
           { title: 'Unlimited Text-to-Speech plays', subtitle: '', included: true },
-          { title: 'Natural voices (Google Neural2)', subtitle: '', included: true },
-          { title: 'Higher word limit per play - 150 vs 100 for Premium', subtitle: '', included: true },
+        ],
+        broadcaster_price_usd: 49.99,
+        broadcaster_banner: 'For Power Hosts',
+        broadcaster_features: [
+          { title: 'Everything in Pro', subtitle: '', included: true },
+          { title: 'Host up to 15 sessions/month', subtitle: '', included: true },
+          { title: '4 video speaker slots per session', subtitle: '', included: true },
+          { title: 'Priority matching & support', subtitle: '', included: true },
         ],
         free_features: [
           { title: 'No matching with real people - AI Muse chats only', subtitle: '', included: true },
@@ -188,6 +199,26 @@ export default function PricingPage() {
     updateConfig({ pro_features: features })
   }
 
+  function updateBroadcasterFeature(index: number, field: 'title' | 'subtitle' | 'included', value: string | boolean) {
+    if (!config) return
+    const features = [...config.broadcaster_features]
+    features[index] = { ...features[index], [field]: value }
+    updateConfig({ broadcaster_features: features })
+  }
+
+  function addBroadcasterFeature() {
+    if (!config) return
+    updateConfig({
+      broadcaster_features: [...config.broadcaster_features, { title: 'New Feature', subtitle: 'Description', included: true }]
+    })
+  }
+
+  function removeBroadcasterFeature(index: number) {
+    if (!config) return
+    const features = config.broadcaster_features.filter((_, i) => i !== index)
+    updateConfig({ broadcaster_features: features })
+  }
+
   function addFreeFeature() {
     if (!config) return
     updateConfig({
@@ -219,7 +250,7 @@ export default function PricingPage() {
 
   return (
     <div className="min-h-screen bg-gray-50 p-4">
-      <div className="max-w-5xl mx-auto space-y-4">
+      <div className="max-w-7xl mx-auto space-y-4">
         {/* Header */}
         <div className="flex items-center justify-between">
           <div>
@@ -253,7 +284,7 @@ export default function PricingPage() {
           </div>
         )}
 
-        <div className="grid grid-cols-3 gap-4">
+        <div className="grid grid-cols-4 gap-4">
           {/* Free Tier */}
           <div className="bg-white rounded-lg shadow-sm p-4 space-y-4">
             <div className="flex items-center justify-between border-b pb-2">
@@ -550,6 +581,112 @@ export default function PricingPage() {
               </div>
             </div>
           </div>
+
+          {/* Broadcaster Tier */}
+          <div className="bg-white rounded-lg shadow-sm p-4 space-y-4">
+            <div className="flex items-center justify-between border-b pb-2">
+              <h2 className="font-bold text-indigo-700">Broadcaster Tier</h2>
+              <span className="text-xs bg-indigo-100 text-indigo-700 px-2 py-1 rounded">$49.99/mo</span>
+            </div>
+
+            {/* Price */}
+            <div>
+              <label className="block text-xs font-medium text-gray-500 mb-1">
+                Price (USD)
+              </label>
+              <div className="flex items-center gap-2">
+                <span className="text-gray-500">$</span>
+                <input
+                  type="number"
+                  step="0.01"
+                  min="0"
+                  value={config.broadcaster_price_usd}
+                  onChange={(e) => updateConfig({ broadcaster_price_usd: parseFloat(e.target.value) || 0 })}
+                  className="w-20 px-2 py-1 border rounded text-lg font-bold focus:outline-none focus:ring-2 focus:ring-indigo-500"
+                />
+                <span className="text-gray-500">/mo</span>
+              </div>
+            </div>
+
+            {/* Banner */}
+            <div>
+              <label className="block text-xs font-medium text-gray-500 mb-1">
+                Banner ({config.broadcaster_banner.length}/{BANNER_MAX_LENGTH})
+              </label>
+              <input
+                type="text"
+                value={config.broadcaster_banner}
+                onChange={(e) => updateConfig({ broadcaster_banner: e.target.value.slice(0, BANNER_MAX_LENGTH) })}
+                maxLength={BANNER_MAX_LENGTH}
+                className="w-full px-2 py-1 border rounded text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500"
+                placeholder="e.g., For Power Hosts"
+              />
+            </div>
+
+            {/* Features */}
+            <div>
+              <div className="flex items-center justify-between mb-2">
+                <label className="text-xs font-medium text-gray-500">Features</label>
+                <button
+                  onClick={addBroadcasterFeature}
+                  className="text-xs text-indigo-600 hover:text-indigo-800"
+                >
+                  + Add
+                </button>
+              </div>
+              <div className="space-y-2 max-h-60 overflow-y-auto">
+                {config.broadcaster_features.map((feature, index) => (
+                  <div key={index} className={`p-2 rounded border ${
+                    feature.included ? 'bg-indigo-50 border-indigo-100' : 'bg-gray-50 border-gray-200'
+                  }`}>
+                    <div className="flex items-start gap-2">
+                      <select
+                        value={feature.included ? 'included' : 'excluded'}
+                        onChange={(e) => updateBroadcasterFeature(index, 'included', e.target.value === 'included')}
+                        className={`mt-0.5 text-sm border rounded px-1 py-0.5 focus:outline-none focus:ring-1 focus:ring-indigo-500 ${
+                          feature.included ? 'text-indigo-600 bg-indigo-50' : 'text-gray-400 bg-gray-100'
+                        }`}
+                      >
+                        <option value="included">✓</option>
+                        <option value="excluded">✗</option>
+                      </select>
+                      <div className="flex-1 space-y-1">
+                        <input
+                          type="text"
+                          value={feature.title}
+                          onChange={(e) => updateBroadcasterFeature(index, 'title', e.target.value.slice(0, TITLE_MAX_LENGTH))}
+                          maxLength={TITLE_MAX_LENGTH}
+                          className={`w-full px-1.5 py-0.5 text-sm font-medium border rounded focus:outline-none focus:ring-1 focus:ring-indigo-500 ${
+                            !feature.included ? 'text-gray-400' : ''
+                          }`}
+                          placeholder="Feature title"
+                        />
+                        <div className="flex items-center gap-1">
+                          <input
+                            type="text"
+                            value={feature.subtitle}
+                            onChange={(e) => updateBroadcasterFeature(index, 'subtitle', e.target.value.slice(0, SUBTITLE_MAX_LENGTH))}
+                            maxLength={SUBTITLE_MAX_LENGTH}
+                            className={`flex-1 px-1.5 py-0.5 text-xs border rounded focus:outline-none focus:ring-1 focus:ring-indigo-500 ${
+                              !feature.included ? 'text-gray-400' : 'text-gray-600'
+                            }`}
+                            placeholder="Subtitle"
+                          />
+                          <span className="text-xs text-gray-400">{feature.title.length}/{TITLE_MAX_LENGTH}</span>
+                        </div>
+                      </div>
+                      <button
+                        onClick={() => removeBroadcasterFeature(index)}
+                        className="text-red-400 hover:text-red-600 text-xs"
+                      >
+                        ✕
+                      </button>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </div>
+          </div>
         </div>
 
         {/* Weekly Pricing Countries */}
@@ -620,7 +757,7 @@ export default function PricingPage() {
         {/* Preview Section */}
         <div className="bg-white rounded-lg shadow-sm p-4">
           <h3 className="font-bold text-gray-700 mb-3">Preview (as shown in app)</h3>
-          <div className="grid grid-cols-3 gap-4">
+          <div className="grid grid-cols-4 gap-4">
             {/* Free Preview */}
             <div className="border rounded-lg p-3 bg-gray-50">
               <div className="text-lg font-bold mb-1">Free</div>
@@ -663,6 +800,25 @@ export default function PricingPage() {
               </div>
               <div className="space-y-1 text-sm">
                 {config.pro_features.map((f, i) => (
+                  <div key={i} className={`flex items-center gap-2 ${!f.included ? 'opacity-50' : ''}`}>
+                    <span className={f.included ? 'text-yellow-300' : 'text-gray-400'}>
+                      {f.included ? '✓' : '✗'}
+                    </span>
+                    <span>{f.title}</span>
+                  </div>
+                ))}
+              </div>
+            </div>
+
+            {/* Broadcaster Preview */}
+            <div className="border rounded-lg p-3 bg-gradient-to-br from-indigo-600 to-violet-700 text-white">
+              <div className="text-lg font-bold mb-1">Broadcaster</div>
+              <div className="text-2xl font-bold mb-1">${config.broadcaster_price_usd.toFixed(2)}/mo</div>
+              <div className="text-xs bg-white/20 px-2 py-1 rounded-full inline-block mb-2">
+                {config.broadcaster_banner}
+              </div>
+              <div className="space-y-1 text-sm">
+                {config.broadcaster_features.map((f, i) => (
                   <div key={i} className={`flex items-center gap-2 ${!f.included ? 'opacity-50' : ''}`}>
                     <span className={f.included ? 'text-yellow-300' : 'text-gray-400'}>
                       {f.included ? '✓' : '✗'}

@@ -2,7 +2,7 @@
 
 **Last Updated: January 3, 2026**
 
-This End User License Agreement ("Agreement") is a legal agreement between you ("User" or "you") and PainKiller Labs ("Company," "we," "us," or "our") for the use of the Fluenca mobile application ("App").
+This End User License Agreement ("Agreement") is a legal agreement between you ("User" or "you") and PainKiller Labs ("Company," "we," "us," or "our") for the use of the Language Match mobile application ("App").
 
 By downloading, installing, or using the App, you agree to be bound by the terms of this Agreement. If you do not agree to these terms, do not download, install, or use the App.
 
@@ -34,7 +34,7 @@ You retain ownership of any content you submit, post, or display through the App
 By submitting User Content, you grant us a worldwide, non-exclusive, royalty-free license to use, reproduce, modify, adapt, publish, and display such content solely for the purpose of operating and providing the App's services.
 
 ### 3.3 Zero Tolerance for Objectionable Content and Abusive Users
-Fluenca maintains a **zero-tolerance policy** for objectionable content and abusive behavior. Any user who posts objectionable content or engages in abusive behavior will have their account terminated immediately and may be reported to the appropriate authorities.
+Language Match maintains a **zero-tolerance policy** for objectionable content and abusive behavior. Any user who posts objectionable content or engages in abusive behavior will have their account terminated immediately and may be reported to the appropriate authorities.
 
 You agree that your User Content will not:
 - Contain sexually explicit, pornographic, or obscene material
@@ -168,7 +168,7 @@ PainKiller Labs
 8 Parkwood Avenue
 Toronto, Ontario, Canada M4V 2W8
 
-**Website:** https://painkillerlabs.com/fluenca
+**Website:** https://language-match.com
 
 ---
 

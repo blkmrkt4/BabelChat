@@ -8,6 +8,7 @@ class SelectMatchViewController: UIViewController {
     private var matches: [User] = []
     private var filteredMatches: [User] = []
     private let searchController = UISearchController(searchResultsController: nil)
+    private let emptyStateLabel = UILabel()
     private let excludedUserIds: Set<String>
 
     init(excludedUserIds: [String] = []) {
@@ -42,11 +43,25 @@ class SelectMatchViewController: UIViewController {
         tableView.translatesAutoresizingMaskIntoConstraints = false
         view.addSubview(tableView)
 
+        emptyStateLabel.text = "session_no_matches_yet".localized
+        emptyStateLabel.textAlignment = .center
+        emptyStateLabel.numberOfLines = 0
+        emptyStateLabel.font = .systemFont(ofSize: 16, weight: .medium)
+        emptyStateLabel.textColor = .secondaryLabel
+        emptyStateLabel.isHidden = true
+        view.addSubview(emptyStateLabel)
+        emptyStateLabel.translatesAutoresizingMaskIntoConstraints = false
+
         NSLayoutConstraint.activate([
             tableView.topAnchor.constraint(equalTo: view.safeAreaLayoutGuide.topAnchor),
             tableView.leadingAnchor.constraint(equalTo: view.leadingAnchor),
             tableView.trailingAnchor.constraint(equalTo: view.trailingAnchor),
             tableView.bottomAnchor.constraint(equalTo: view.bottomAnchor),
+
+            emptyStateLabel.centerXAnchor.constraint(equalTo: view.centerXAnchor),
+            emptyStateLabel.centerYAnchor.constraint(equalTo: view.centerYAnchor),
+            emptyStateLabel.leadingAnchor.constraint(equalTo: view.leadingAnchor, constant: 40),
+            emptyStateLabel.trailingAnchor.constraint(equalTo: view.trailingAnchor, constant: -40),
         ])
 
         loadMatches()
@@ -57,9 +72,12 @@ class SelectMatchViewController: UIViewController {
             do {
                 guard let userId = SupabaseService.shared.currentUserId else { return }
                 let matchResponses = try await SupabaseService.shared.getMatches()
+                var seenIds = Set<String>()
                 let users: [User] = matchResponses.compactMap { match in
                     let otherProfile = match.user1Id == userId.uuidString ? match.user2 : match.user1
-                    guard let user = otherProfile?.toUser(), !excludedUserIds.contains(user.id) else { return nil }
+                    guard let user = otherProfile?.toUser(),
+                          !excludedUserIds.contains(user.id),
+                          seenIds.insert(user.id).inserted else { return nil }
                     return user
                 }
 
@@ -67,11 +85,18 @@ class SelectMatchViewController: UIViewController {
                     self.matches = users
                     self.filteredMatches = users
                     self.tableView.reloadData()
+                    self.updateEmptyState()
                 }
             } catch {
                 print("Failed to load matches: \(error)")
             }
         }
+    }
+
+    private func updateEmptyState() {
+        let isEmpty = filteredMatches.isEmpty
+        emptyStateLabel.isHidden = !isEmpty
+        tableView.isHidden = isEmpty
     }
 
     @objc private func cancelTapped() {

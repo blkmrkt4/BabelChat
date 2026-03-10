@@ -30,6 +30,7 @@ enum SubscriptionTier: String, Codable {
     case free = "free"
     case premium = "premium"
     case pro = "pro"
+    case broadcaster = "broadcaster"
 
     var displayName: String {
         switch self {
@@ -39,6 +40,8 @@ enum SubscriptionTier: String, Codable {
             return "tier_premium_display_name".localized
         case .pro:
             return "tier_pro_display_name".localized
+        case .broadcaster:
+            return "tier_broadcaster_display_name".localized
         }
     }
 
@@ -50,6 +53,8 @@ enum SubscriptionTier: String, Codable {
             return "$9.99/month"
         case .pro:
             return "$19.99/month"
+        case .broadcaster:
+            return "$49.99/month"
         }
     }
 
@@ -76,6 +81,13 @@ enum SubscriptionTier: String, Codable {
                 "tier_pro_feature_3".localized,
                 "tier_pro_feature_4".localized
             ]
+        case .broadcaster:
+            return [
+                "tier_broadcaster_feature_1".localized,
+                "tier_broadcaster_feature_2".localized,
+                "tier_broadcaster_feature_3".localized,
+                "tier_broadcaster_feature_4".localized
+            ]
         }
     }
 
@@ -87,6 +99,8 @@ enum SubscriptionTier: String, Codable {
             return "tier_premium_short_desc".localized
         case .pro:
             return "tier_pro_short_desc".localized
+        case .broadcaster:
+            return "tier_broadcaster_short_desc".localized
         }
     }
 
@@ -99,6 +113,8 @@ enum SubscriptionTier: String, Codable {
             return "premium_monthly" // Must match RevenueCat dashboard
         case .pro:
             return "pro_monthly" // Must match RevenueCat dashboard
+        case .broadcaster:
+            return "broadcaster_monthly" // Must match RevenueCat dashboard
         }
     }
 
@@ -108,7 +124,7 @@ enum SubscriptionTier: String, Codable {
         switch self {
         case .free:
             return 50
-        case .premium, .pro:
+        case .premium, .pro, .broadcaster:
             return nil // Unlimited
         }
     }
@@ -117,7 +133,7 @@ enum SubscriptionTier: String, Codable {
         switch self {
         case .free:
             return 10
-        case .premium, .pro:
+        case .premium, .pro, .broadcaster:
             return nil // Unlimited
         }
     }
@@ -139,7 +155,7 @@ enum SubscriptionTier: String, Codable {
             return 10
         case .premium:
             return 200
-        case .pro:
+        case .pro, .broadcaster:
             return nil // Unlimited
         }
     }
@@ -149,7 +165,7 @@ enum SubscriptionTier: String, Codable {
         switch self {
         case .free, .premium:
             return 100
-        case .pro:
+        case .pro, .broadcaster:
             return 150
         }
     }
@@ -159,7 +175,7 @@ enum SubscriptionTier: String, Codable {
         switch self {
         case .free:
             return .appleNative
-        case .premium, .pro:
+        case .premium, .pro, .broadcaster:
             return .googleNeural2
         }
     }
@@ -169,7 +185,7 @@ enum SubscriptionTier: String, Codable {
         switch self {
         case .free:
             return false
-        case .premium, .pro:
+        case .premium, .pro, .broadcaster:
             return true
         }
     }
@@ -181,7 +197,7 @@ enum SubscriptionTier: String, Codable {
             return "10 plays/month"
         case .premium:
             return "200 plays/month"
-        case .pro:
+        case .pro, .broadcaster:
             return "Unlimited"
         }
     }
@@ -191,7 +207,7 @@ enum SubscriptionTier: String, Codable {
         switch self {
         case .free:
             return "Standard voice"
-        case .premium, .pro:
+        case .premium, .pro, .broadcaster:
             return "Natural voices (Google Neural2)"
         }
     }
@@ -200,9 +216,9 @@ enum SubscriptionTier: String, Codable {
 
     var canHostSession: Bool {
         switch self {
-        case .free:
+        case .free, .premium:
             return false
-        case .premium, .pro:
+        case .pro, .broadcaster:
             return true
         }
     }
@@ -211,8 +227,52 @@ enum SubscriptionTier: String, Codable {
         switch self {
         case .free:
             return false
-        case .premium, .pro:
+        case .premium, .pro, .broadcaster:
             return true
+        }
+    }
+
+    /// Whether this tier can view video in sessions (vs audio-only)
+    var canViewSessionVideo: Bool {
+        switch self {
+        case .free:
+            return false
+        case .premium, .pro, .broadcaster:
+            return true
+        }
+    }
+
+    /// Monthly session hosting limit (nil = cannot host)
+    var monthlySessionHostLimit: Int? {
+        switch self {
+        case .free, .premium:
+            return nil
+        case .pro:
+            return 5
+        case .broadcaster:
+            return 15
+        }
+    }
+
+    /// Max video participant slots when hosting (speakers with video)
+    var maxVideoSlots: Int {
+        switch self {
+        case .free, .premium:
+            return 0
+        case .pro:
+            return 2
+        case .broadcaster:
+            return 4
+        }
+    }
+
+    /// Max session duration in minutes
+    var maxSessionDuration: Int {
+        switch self {
+        case .free, .premium:
+            return 15
+        case .pro, .broadcaster:
+            return 15
         }
     }
 }

@@ -25,7 +25,7 @@ interface SupportedLanguage {
   language_name: string
 }
 
-// Supported languages for Fluenca (22 languages)
+// Supported languages for Language Match (22 languages)
 const SUPPORTED_LANGUAGES = [
   { code: 'en', name: 'English' },
   { code: 'es', name: 'Spanish' },
@@ -327,7 +327,7 @@ export default function LocalizationPage() {
         <div>
           <h2 className="text-2xl font-bold">App Localization</h2>
           <p className="text-gray-600 mt-1">
-            Manage UI string translations for the Fluenca iOS app.
+            Manage UI string translations for the Language Match iOS app.
             {englishStats && ` ${englishStats.total} source strings.`}
           </p>
         </div>

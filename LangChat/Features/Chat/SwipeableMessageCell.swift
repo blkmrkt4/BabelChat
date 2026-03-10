@@ -52,6 +52,7 @@ class SwipeableMessageCell: UITableViewCell {
     private let messageLabel = UILabel()
     private let timeLabel = UILabel()
     private let profileImageView = UIImageView()
+    private let senderInfoLabel = UILabel()
 
     // Right pane (translation) elements
     private let translationScrollView = UIScrollView()
@@ -76,9 +77,10 @@ class SwipeableMessageCell: UITableViewCell {
     private var granularityLevel: Int = 2 // 1-3 from settings
     weak var delegate: SwipeableMessageCellDelegate?
 
-    // Language context for API calls
+    // Language context for API calls — explicit routing, not detection-based
     private var learningLanguage: Language = .spanish // Language being practiced
     private var nativeLanguage: Language = .english // User's native language
+    private var languageContext: LanguageContext?
 
     // Constraints for dynamic layout
     private var bubbleLeadingConstraint: NSLayoutConstraint!
@@ -133,6 +135,10 @@ class SwipeableMessageCell: UITableViewCell {
         grammarStackView.arrangedSubviews.forEach { $0.removeFromSuperview() }
         alternativesStackView.arrangedSubviews.forEach { $0.removeFromSuperview() }
         grammarLanguageBadge.isHidden = true
+        senderInfoLabel.isHidden = true
+        senderInfoLabel.text = nil
+        bubbleTopToSenderInfoConstraint.isActive = false
+        bubbleTopToTopConstraint.isActive = true
         currentMessage = nil
         currentMessageLanguage = nil
     }
@@ -208,12 +214,21 @@ class SwipeableMessageCell: UITableViewCell {
         profileImageView.clipsToBounds = true
         profileImageView.layer.cornerRadius = 16
         centerPane.addSubview(profileImageView)
+
+        // Sender info label (for session chat — flag + name + native language)
+        senderInfoLabel.font = .systemFont(ofSize: 12, weight: .medium)
+        senderInfoLabel.textColor = .secondaryLabel
+        senderInfoLabel.isHidden = true
+        centerPane.addSubview(senderInfoLabel)
     }
 
     private func setupRightPane() {
         // Translation pane with scroll view
+        translationScrollView.isScrollEnabled = true
         translationScrollView.showsVerticalScrollIndicator = true
         translationScrollView.bounces = true
+        translationScrollView.clipsToBounds = true
+        rightPane.clipsToBounds = true
         rightPane.addSubview(translationScrollView)
 
         translationBubbleView.backgroundColor = .systemIndigo.withAlphaComponent(0.1)
@@ -233,8 +248,11 @@ class SwipeableMessageCell: UITableViewCell {
 
     private func setupLeftPane() {
         // Grammar/Alternatives pane with scroll view
+        grammarScrollView.isScrollEnabled = true
         grammarScrollView.showsVerticalScrollIndicator = true
         grammarScrollView.bounces = true
+        grammarScrollView.clipsToBounds = true
+        leftPane.clipsToBounds = true
         leftPane.addSubview(grammarScrollView)
 
         grammarBubbleView.backgroundColor = .systemGreen.withAlphaComponent(0.1)
@@ -332,11 +350,25 @@ class SwipeableMessageCell: UITableViewCell {
         setupLeftPaneConstraints()
     }
 
+    private var bubbleTopToSenderInfoConstraint: NSLayoutConstraint!
+    private var bubbleTopToTopConstraint: NSLayoutConstraint!
+
     private func setupCenterPaneConstraints() {
         bubbleView.translatesAutoresizingMaskIntoConstraints = false
         messageLabel.translatesAutoresizingMaskIntoConstraints = false
         timeLabel.translatesAutoresizingMaskIntoConstraints = false
         profileImageView.translatesAutoresizingMaskIntoConstraints = false
+        senderInfoLabel.translatesAutoresizingMaskIntoConstraints = false
+
+        // Sender info label constraints (above bubble, aligned to bubble leading)
+        NSLayoutConstraint.activate([
+            senderInfoLabel.leadingAnchor.constraint(equalTo: centerPane.leadingAnchor, constant: 52),
+            senderInfoLabel.topAnchor.constraint(equalTo: centerPane.topAnchor, constant: 4),
+        ])
+
+        bubbleTopToSenderInfoConstraint = bubbleView.topAnchor.constraint(equalTo: senderInfoLabel.bottomAnchor, constant: 2)
+        bubbleTopToTopConstraint = bubbleView.topAnchor.constraint(equalTo: centerPane.topAnchor, constant: 4)
+        bubbleTopToTopConstraint.isActive = true
 
         NSLayoutConstraint.activate([
             profileImageView.leadingAnchor.constraint(equalTo: centerPane.leadingAnchor, constant: 12),
@@ -344,7 +376,6 @@ class SwipeableMessageCell: UITableViewCell {
             profileImageView.widthAnchor.constraint(equalToConstant: 32),
             profileImageView.heightAnchor.constraint(equalToConstant: 32),
 
-            bubbleView.topAnchor.constraint(equalTo: centerPane.topAnchor, constant: 4),
             bubbleView.bottomAnchor.constraint(equalTo: timeLabel.topAnchor, constant: -2),
             bubbleView.widthAnchor.constraint(lessThanOrEqualToConstant: 280),  // Fixed width instead of UIScreen.main
 
@@ -502,12 +533,12 @@ class SwipeableMessageCell: UITableViewCell {
 
         // Show action sheet to toggle language
         let alert = UIAlertController(
-            title: "Explanation Language",
-            message: "Currently showing explanations in \(currentLangName)",
+            title: nil,
+            message: nil,
             preferredStyle: .actionSheet
         )
 
-        alert.addAction(UIAlertAction(title: "Show in \(alternateLangName)", style: .default) { [weak self] _ in
+        alert.addAction(UIAlertAction(title: String(format: "chat_show_in_language".localized, alternateLangName), style: .default) { [weak self] _ in
             self?.toggleGrammarExplanationLanguage(for: message)
         })
 
@@ -814,6 +845,10 @@ class SwipeableMessageCell: UITableViewCell {
         granularityLevel = granularity
         self.learningLanguage = learningLanguage
         self.nativeLanguage = nativeLanguage
+        self.languageContext = LanguageContext(
+            conversationLearningLanguage: learningLanguage,
+            currentUserNativeLanguage: nativeLanguage
+        )
 
         // Configure center pane (original message)
         messageLabel.text = message.text
@@ -831,9 +866,8 @@ class SwipeableMessageCell: UITableViewCell {
         }
 
         // Configure grammar pane (initially show loading or cached)
-        // Detect message language for grammar toggle feature
-        let detectedLang = Language.detect(from: message.text)
-        currentMessageLanguage = detectedLang ?? learningLanguage
+        // Use explicit language context — detection is advisory only
+        currentMessageLanguage = languageContext?.grammarAnalysisLanguage ?? learningLanguage
 
         // Check if we have cached grammar and display appropriate version
         let isShowingNative = Self.grammarExplanationInNative[message.id] ?? true
@@ -872,6 +906,21 @@ class SwipeableMessageCell: UITableViewCell {
         }
     }
 
+    /// Set sender info for session chat context (flag + name + native language).
+    /// Call after configure(). Pass nil to hide.
+    func setSenderInfo(_ info: String?) {
+        if let info = info {
+            senderInfoLabel.text = info
+            senderInfoLabel.isHidden = false
+            bubbleTopToTopConstraint.isActive = false
+            bubbleTopToSenderInfoConstraint.isActive = true
+        } else {
+            senderInfoLabel.isHidden = true
+            bubbleTopToSenderInfoConstraint.isActive = false
+            bubbleTopToTopConstraint.isActive = true
+        }
+    }
+
     private func configureSentMessage() {
         bubbleView.backgroundColor = .systemBlue
         messageLabel.textColor = .white
@@ -886,6 +935,9 @@ class SwipeableMessageCell: UITableViewCell {
         timeLabel.trailingAnchor.constraint(equalTo: bubbleView.trailingAnchor).isActive = true
 
         profileImageView.isHidden = true
+        senderInfoLabel.isHidden = true
+        bubbleTopToSenderInfoConstraint.isActive = false
+        bubbleTopToTopConstraint.isActive = true
     }
 
     private func configureReceivedMessage(user: User) {
@@ -1063,10 +1115,18 @@ class SwipeableMessageCell: UITableViewCell {
         // Show loading state
         translationLabel.text = "chat_translating".localized
 
-        // Detect message language
+        guard let ctx = languageContext else { return }
+
+        // Deterministic routing: direction based on message ownership, NOT detection.
+        // User's own message (native input) → translate TO learning language.
+        // Partner/Muse message (learning lang) → translate TO native language.
+        let pair = ctx.translationPair(isCurrentUserMessage: message.isSentByCurrentUser)
+        let sourceLanguage = pair.source
+        let targetLanguage = pair.target
+
+        // Advisory detection for logging only
         let detectedLang = Language.detect(from: message.text)
-        let sourceLanguage = detectedLang ?? learningLanguage
-        let targetLanguage = (sourceLanguage == nativeLanguage) ? learningLanguage : nativeLanguage
+        print("🌐 Translation routing: source=\(sourceLanguage.name) target=\(targetLanguage.name) detected=\(detectedLang?.name ?? "nil") isUser=\(message.isSentByCurrentUser)")
 
         Task { @MainActor in
             do {
@@ -1076,9 +1136,23 @@ class SwipeableMessageCell: UITableViewCell {
                     nativeLanguage: targetLanguage.name
                 )
 
-                // Cache and display
-                Self.translationCache[message.id] = translation
-                translationLabel.text = translation
+                // Validate output language (simple heuristic)
+                let outputDetected = Language.detect(from: translation)
+                if let outputDetected = outputDetected, outputDetected != targetLanguage {
+                    print("⚠️ Translation output language mismatch: expected=\(targetLanguage.name) detected=\(outputDetected.name). Attempting strict retry.")
+                    // Strict retry with explicit instruction
+                    let retryTranslation = try await AIConfigurationManager.shared.translate(
+                        text: message.text,
+                        learningLanguage: sourceLanguage.name,
+                        nativeLanguage: targetLanguage.name
+                    )
+                    Self.translationCache[message.id] = retryTranslation
+                    translationLabel.text = retryTranslation
+                    print("🌐 Strict retry result displayed")
+                } else {
+                    Self.translationCache[message.id] = translation
+                    translationLabel.text = translation
+                }
             } catch {
                 translationLabel.text = "Translation failed: \(error.localizedDescription)\n\nTap to retry."
                 print("Translation error: \(error)")
@@ -1093,10 +1167,17 @@ class SwipeableMessageCell: UITableViewCell {
         let loadingLabel = createGrammarLabel(text: "Analyzing grammar...")
         grammarStackView.addArrangedSubview(loadingLabel)
 
-        // Detect message language
-        let detectedLang = Language.detect(from: message.text)
-        let sourceLanguage = detectedLang ?? learningLanguage
+        guard let ctx = languageContext else { return }
+
+        // Deterministic: always analyze in the conversation's learning language.
+        // This prevents grammar from evaluating in Italian when the pair is EN↔TL.
+        let sourceLanguage = ctx.grammarAnalysisLanguage
         currentMessageLanguage = sourceLanguage
+        let explanationLanguage = ctx.defaultExplanationLanguage
+
+        // Advisory detection for logging only
+        let detectedLang = Language.detect(from: message.text)
+        print("📝 Grammar routing: analysis=\(sourceLanguage.name) explanation=\(explanationLanguage.name) detected=\(detectedLang?.name ?? "nil")")
 
         // Map granularity to sensitivity level
         let sensitivityLevel: GrammarSensitivityLevel = {
@@ -1109,12 +1190,11 @@ class SwipeableMessageCell: UITableViewCell {
 
         Task { @MainActor in
             do {
-                // Default: explanations in user's native language
                 let grammarJSON = try await AIConfigurationManager.shared.checkGrammar(
                     text: message.text,
                     learningLanguage: sourceLanguage.name,
-                    nativeLanguage: nativeLanguage.name,
-                    explanationLanguage: nativeLanguage.name,
+                    nativeLanguage: ctx.currentUserNativeLanguage.name,
+                    explanationLanguage: explanationLanguage.name,
                     sensitivityLevel: sensitivityLevel
                 )
 
@@ -1136,17 +1216,14 @@ class SwipeableMessageCell: UITableViewCell {
     private func fetchAlternateGrammarExplanation(for message: Message, inNativeLanguage: Bool) {
         // Show loading state
         clearGrammarPane()
-        // Explanations toggle between native language and learning language
-        let targetLanguage = inNativeLanguage ? nativeLanguage : learningLanguage
-        let loadingLabel = createGrammarLabel(text: "Loading explanation in \(targetLanguage.name)...")
+        let explanationLanguage = inNativeLanguage ? nativeLanguage : learningLanguage
+        let loadingLabel = createGrammarLabel(text: "Loading explanation in \(explanationLanguage.name)...")
         grammarStackView.addArrangedSubview(loadingLabel)
 
-        // The message could be in either language - detect it
-        let sourceLanguage = currentMessageLanguage ?? learningLanguage
+        // Analysis language stays stable (learning language) — only explanation language toggles
+        let analysisLanguage = languageContext?.grammarAnalysisLanguage ?? learningLanguage
 
-        // Determine which language to use for explanations
-        // Explanations are in either native language or learning language
-        let explanationLang = inNativeLanguage ? nativeLanguage.name : learningLanguage.name
+        print("📝 Grammar toggle: analysis=\(analysisLanguage.name) explanation=\(explanationLanguage.name) inNative=\(inNativeLanguage)")
 
         // Map granularity to sensitivity level
         let sensitivityLevel: GrammarSensitivityLevel = {
@@ -1159,12 +1236,13 @@ class SwipeableMessageCell: UITableViewCell {
 
         Task { @MainActor in
             do {
-                // Call grammar check with explicit explanation language
+                // Analysis language is always the conversation's learning language.
+                // Only explanation language changes on toggle.
                 let grammarJSON = try await AIConfigurationManager.shared.checkGrammar(
                     text: message.text,
-                    learningLanguage: sourceLanguage.name,
+                    learningLanguage: analysisLanguage.name,
                     nativeLanguage: nativeLanguage.name,
-                    explanationLanguage: explanationLang,
+                    explanationLanguage: explanationLanguage.name,
                     sensitivityLevel: sensitivityLevel
                 )
 

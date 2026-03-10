@@ -35,7 +35,7 @@ BEGIN
       'Authorization', 'Bearer ' || p_api_key,
       'Content-Type', 'application/json',
       'HTTP-Referer', 'https://ByZyB.ai',
-      'X-Title', 'Fluenca Health Check'
+      'X-Title', 'Language Match Health Check'
     ),
     body := jsonb_build_object(
       'model', p_model_id,

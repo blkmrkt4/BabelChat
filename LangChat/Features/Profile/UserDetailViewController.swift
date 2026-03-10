@@ -10,6 +10,11 @@ class UserDetailViewController: UIViewController, PhotoGridViewDelegate {
     var currentUserIndex: Int = 0
     var isFromDiscover: Bool = false // Track if opened from Discover to hide back button
 
+    // Discover category navigation
+    var allCategories: [DiscoverCategory] = []
+    var currentCategoryIndex: Int = 0
+    var currentItemIndex: Int = 0
+
     private let scrollView = UIScrollView()
     private let contentView = UIView()
 
@@ -369,19 +374,22 @@ class UserDetailViewController: UIViewController, PhotoGridViewDelegate {
 
             deleteButton.addTarget(self, action: #selector(deleteButtonTapped), for: .touchUpInside)
         } else {
-            // For non-matched users: show full action buttons
-            setupActionButton(backButton, systemName: "chevron.left",
-                             borderColor: UIColor(hex: "#999999"),
-                             iconColor: UIColor(hex: "#666666"))
+            // For non-matched users: C2 filled circle buttons, no labels
 
-            // Use custom image buttons for reject, star, and like
-            setupImageButton(rejectButton, imageName: "RejectButton")
-            setupImageButton(pinButton, imageName: "StarButton")
-            setupImageButton(likeButton, imageName: "MatchButton")
+            // Nav pill arrows — gray capsule
+            setupNavPillButton(backButton, systemName: "chevron.left")
+            setupNavPillButton(forwardButton, systemName: "chevron.right")
 
-            setupActionButton(forwardButton, systemName: "chevron.right",
-                             borderColor: UIColor(hex: "#999999"),
-                             iconColor: UIColor(hex: "#666666"))
+            // Filled circle action buttons — red X, gold star (smaller), green check
+            setupFilledCircleButton(rejectButton, systemName: "xmark",
+                                    bgColor: UIColor { $0.userInterfaceStyle == .dark ? UIColor(red: 0.94, green: 0.33, blue: 0.31, alpha: 1.0) : UIColor(red: 0.83, green: 0.18, blue: 0.18, alpha: 1.0) },
+                                    iconWeight: .bold, iconSize: 24)
+            setupFilledCircleButton(pinButton, systemName: "star.fill",
+                                    bgColor: UIColor { $0.userInterfaceStyle == .dark ? UIColor(red: 1.0, green: 0.84, blue: 0.31, alpha: 1.0) : UIColor(red: 0.78, green: 0.64, blue: 0.08, alpha: 1.0) },
+                                    iconWeight: .medium, iconSize: 18)
+            setupFilledCircleButton(likeButton, systemName: "checkmark",
+                                    bgColor: UIColor { $0.userInterfaceStyle == .dark ? UIColor(red: 0.40, green: 0.73, blue: 0.42, alpha: 1.0) : UIColor(red: 0.18, green: 0.49, blue: 0.20, alpha: 1.0) },
+                                    iconWeight: .bold, iconSize: 24)
 
             actionButtonsContainer.addSubview(backButton)
             actionButtonsContainer.addSubview(rejectButton)
@@ -435,28 +443,23 @@ class UserDetailViewController: UIViewController, PhotoGridViewDelegate {
     }
 
     private func setupActionButton(_ button: UIButton, systemName: String, borderColor: UIColor, iconColor: UIColor) {
-        // Premium glassmorphism style matching HTML design
-        // Background: rgba(255, 255, 255, 0.1)
         button.backgroundColor = UIColor.white.withAlphaComponent(0.1)
-        button.layer.cornerRadius = 35 // 70x70 button size
+        button.layer.cornerRadius = 35
 
-        // Border: 3px solid
         button.layer.borderWidth = 3
         button.layer.borderColor = borderColor.cgColor
 
-        // Shadow: 0 8px 32px rgba(0,0,0,0.1)
         button.layer.shadowColor = UIColor.black.cgColor
         button.layer.shadowOffset = CGSize(width: 0, height: 8)
         button.layer.shadowRadius = 32
         button.layer.shadowOpacity = 0.1
 
-        // Add blur effect for backdrop-filter: blur(10px)
         let blurEffect = UIBlurEffect(style: .systemUltraThinMaterial)
         let blurView = UIVisualEffectView(effect: blurEffect)
         blurView.isUserInteractionEnabled = false
         blurView.layer.cornerRadius = 35
         blurView.clipsToBounds = true
-        blurView.alpha = 0.5 // Subtle blur
+        blurView.alpha = 0.5
         button.insertSubview(blurView, at: 0)
         blurView.translatesAutoresizingMaskIntoConstraints = false
         NSLayoutConstraint.activate([
@@ -466,78 +469,59 @@ class UserDetailViewController: UIViewController, PhotoGridViewDelegate {
             blurView.bottomAnchor.constraint(equalTo: button.bottomAnchor)
         ])
 
-        // Icon configuration - font-size: 1.8rem
         let config = UIImage.SymbolConfiguration(pointSize: 28, weight: .medium, scale: .large)
         let image = UIImage(systemName: systemName, withConfiguration: config)
         button.setImage(image, for: .normal)
         button.tintColor = iconColor
         button.contentMode = .scaleAspectFit
-
-        // Store colors for hover effect
-        button.layer.setValue(borderColor, forKey: "originalBorderColor")
-        button.layer.setValue(iconColor, forKey: "originalIconColor")
-
-        // Add spring animation on tap
-        button.addTarget(self, action: #selector(buttonTouchDown(_:)), for: .touchDown)
-        button.addTarget(self, action: #selector(buttonTouchUp(_:)), for: [.touchUpInside, .touchUpOutside, .touchCancel])
     }
 
-    private func setupImageButton(_ button: UIButton, imageName: String) {
-        // Use .alwaysOriginal to prevent system tinting (blue color)
-        let image = UIImage(named: imageName)?.withRenderingMode(.alwaysOriginal)
-        button.setImage(image, for: .normal)
-        button.imageView?.contentMode = .scaleAspectFit
-        button.contentHorizontalAlignment = .fill
-        button.contentVerticalAlignment = .fill
-        button.adjustsImageWhenHighlighted = false
+    // MARK: - C2 Filled Circle Button Setup
 
-        // Add subtle shadow for depth
+    private func setupNavPillButton(_ button: UIButton, systemName: String) {
+        button.backgroundColor = UIColor { trait in
+            trait.userInterfaceStyle == .dark
+                ? UIColor(white: 0.35, alpha: 1.0)
+                : UIColor(white: 0.74, alpha: 1.0)
+        }
+        button.layer.cornerRadius = 20
+
+        let config = UIImage.SymbolConfiguration(pointSize: 14, weight: .bold, scale: .medium)
+        button.setImage(UIImage(systemName: systemName, withConfiguration: config), for: .normal)
+        button.tintColor = .white
+
+        button.addTarget(self, action: #selector(filledButtonTouchDown(_:)), for: .touchDown)
+        button.addTarget(self, action: #selector(filledButtonTouchUp(_:)), for: [.touchUpInside, .touchUpOutside, .touchCancel])
+    }
+
+    private func setupFilledCircleButton(_ button: UIButton, systemName: String, bgColor: UIColor, iconWeight: UIImage.SymbolWeight, iconSize: CGFloat) {
+        button.backgroundColor = bgColor
+        button.layer.cornerRadius = 30 // will be overridden by constraints for smaller buttons
+        button.clipsToBounds = false
+
+        // Subtle drop shadow
         button.layer.shadowColor = UIColor.black.cgColor
-        button.layer.shadowOffset = CGSize(width: 0, height: 4)
+        button.layer.shadowOffset = CGSize(width: 0, height: 3)
         button.layer.shadowRadius = 8
-        button.layer.shadowOpacity = 0.15
+        button.layer.shadowOpacity = 0.12
 
-        // Add spring animation on tap
-        button.addTarget(self, action: #selector(imageButtonTouchDown(_:)), for: .touchDown)
-        button.addTarget(self, action: #selector(imageButtonTouchUp(_:)), for: [.touchUpInside, .touchUpOutside, .touchCancel])
+        let config = UIImage.SymbolConfiguration(pointSize: iconSize, weight: iconWeight, scale: .medium)
+        button.setImage(UIImage(systemName: systemName, withConfiguration: config), for: .normal)
+        button.tintColor = .white
+
+        button.addTarget(self, action: #selector(filledButtonTouchDown(_:)), for: .touchDown)
+        button.addTarget(self, action: #selector(filledButtonTouchUp(_:)), for: [.touchUpInside, .touchUpOutside, .touchCancel])
     }
 
-    @objc private func imageButtonTouchDown(_ sender: UIButton) {
+    @objc private func filledButtonTouchDown(_ sender: UIButton) {
         UIView.animate(withDuration: 0.1, delay: 0, options: .curveEaseInOut) {
-            sender.transform = CGAffineTransform(scaleX: 0.9, y: 0.9)
+            sender.transform = CGAffineTransform(scaleX: 0.88, y: 0.88)
         }
     }
 
-    @objc private func imageButtonTouchUp(_ sender: UIButton) {
-        UIView.animate(withDuration: 0.2, delay: 0, usingSpringWithDamping: 0.5, initialSpringVelocity: 0.5, options: .allowUserInteraction) {
+    @objc private func filledButtonTouchUp(_ sender: UIButton) {
+        UIView.animate(withDuration: 0.25, delay: 0, usingSpringWithDamping: 0.5, initialSpringVelocity: 0.5, options: .allowUserInteraction) {
             sender.transform = .identity
-        }
-    }
-
-    @objc private func buttonTouchDown(_ sender: UIButton) {
-        // Active state: scale(1.05) - slightly pressed
-        UIView.animate(withDuration: 0.1, delay: 0, options: .curveEaseInOut) {
-            sender.transform = CGAffineTransform(scaleX: 1.05, y: 1.05)
-            // Change background to rgba(255, 255, 255, 0.2) on press
-            sender.backgroundColor = UIColor.white.withAlphaComponent(0.2)
-        }
-    }
-
-    @objc private func buttonTouchUp(_ sender: UIButton) {
-        // Hover state: scale(1.15) then back to normal
-        UIView.animate(withDuration: 0.3, delay: 0, options: [.curveEaseOut, .allowUserInteraction]) {
-            sender.transform = CGAffineTransform(scaleX: 1.15, y: 1.15)
-            // Enhanced shadow on hover
-            sender.layer.shadowOpacity = 0.2
-            sender.layer.shadowRadius = 40
-        } completion: { _ in
-            // Spring back to normal
-            UIView.animate(withDuration: 0.3, delay: 0, usingSpringWithDamping: 0.6, initialSpringVelocity: 0.5, options: .curveEaseOut) {
-                sender.transform = .identity
-                sender.backgroundColor = UIColor.white.withAlphaComponent(0.1)
-                sender.layer.shadowOpacity = 0.1
-                sender.layer.shadowRadius = 32
-            }
         }
     }
 
@@ -609,16 +593,16 @@ class UserDetailViewController: UIViewController, PhotoGridViewDelegate {
             actionButtonsContainer.trailingAnchor.constraint(equalTo: contentView.trailingAnchor, constant: -20),
             actionButtonsContainer.heightAnchor.constraint(equalToConstant: 70),
 
-            // Navigation arrows - smaller and positioned at the edges
-            backButton.leadingAnchor.constraint(equalTo: actionButtonsContainer.leadingAnchor, constant: 0),
+            // Navigation arrows
+            backButton.leadingAnchor.constraint(equalTo: actionButtonsContainer.leadingAnchor),
             backButton.centerYAnchor.constraint(equalTo: actionButtonsContainer.centerYAnchor),
-            backButton.widthAnchor.constraint(equalToConstant: 44),
-            backButton.heightAnchor.constraint(equalToConstant: 44),
+            backButton.widthAnchor.constraint(equalToConstant: isMatched ? 44 : 40),
+            backButton.heightAnchor.constraint(equalToConstant: isMatched ? 44 : 40),
 
-            forwardButton.trailingAnchor.constraint(equalTo: actionButtonsContainer.trailingAnchor, constant: 0),
+            forwardButton.trailingAnchor.constraint(equalTo: actionButtonsContainer.trailingAnchor),
             forwardButton.centerYAnchor.constraint(equalTo: actionButtonsContainer.centerYAnchor),
-            forwardButton.widthAnchor.constraint(equalToConstant: 44),
-            forwardButton.heightAnchor.constraint(equalToConstant: 44),
+            forwardButton.widthAnchor.constraint(equalToConstant: isMatched ? 44 : 40),
+            forwardButton.heightAnchor.constraint(equalToConstant: isMatched ? 44 : 40),
         ])
 
         // Add middle button constraints based on isMatched
@@ -642,24 +626,27 @@ class UserDetailViewController: UIViewController, PhotoGridViewDelegate {
             let smallImage = UIImage(systemName: "trash", withConfiguration: smallConfig)
             deleteButton.setImage(smallImage, for: .normal)
         } else {
-            // Three action buttons in the middle - reject, pin, like
-            // Space them evenly between the navigation arrows
+            // C2: filled circles — 60pt Pass & Match, 48pt Bookmark
             NSLayoutConstraint.activate([
-                rejectButton.centerXAnchor.constraint(equalTo: actionButtonsContainer.centerXAnchor, constant: -55),
-                rejectButton.centerYAnchor.constraint(equalTo: actionButtonsContainer.centerYAnchor),
-                rejectButton.widthAnchor.constraint(equalToConstant: 45),
-                rejectButton.heightAnchor.constraint(equalToConstant: 45),
-
                 pinButton.centerXAnchor.constraint(equalTo: actionButtonsContainer.centerXAnchor),
                 pinButton.centerYAnchor.constraint(equalTo: actionButtonsContainer.centerYAnchor),
-                pinButton.widthAnchor.constraint(equalToConstant: 35),
-                pinButton.heightAnchor.constraint(equalToConstant: 35),
+                pinButton.widthAnchor.constraint(equalToConstant: 48),
+                pinButton.heightAnchor.constraint(equalToConstant: 48),
 
-                likeButton.centerXAnchor.constraint(equalTo: actionButtonsContainer.centerXAnchor, constant: 55),
+                rejectButton.trailingAnchor.constraint(equalTo: pinButton.leadingAnchor, constant: -16),
+                rejectButton.centerYAnchor.constraint(equalTo: actionButtonsContainer.centerYAnchor),
+                rejectButton.widthAnchor.constraint(equalToConstant: 60),
+                rejectButton.heightAnchor.constraint(equalToConstant: 60),
+
+                likeButton.leadingAnchor.constraint(equalTo: pinButton.trailingAnchor, constant: 16),
                 likeButton.centerYAnchor.constraint(equalTo: actionButtonsContainer.centerYAnchor),
-                likeButton.widthAnchor.constraint(equalToConstant: 45),
-                likeButton.heightAnchor.constraint(equalToConstant: 45),
+                likeButton.widthAnchor.constraint(equalToConstant: 60),
+                likeButton.heightAnchor.constraint(equalToConstant: 60),
             ])
+            // Set corner radii to match sizes
+            pinButton.layer.cornerRadius = 24
+            rejectButton.layer.cornerRadius = 30
+            likeButton.layer.cornerRadius = 30
         }
 
         NSLayoutConstraint.activate([
@@ -913,6 +900,7 @@ class UserDetailViewController: UIViewController, PhotoGridViewDelegate {
     @objc private func backButtonTapped() {
         // Go to previous profile
         if currentUserIndex > 0 {
+            let previousCategory = categoryNameForUserIndex(currentUserIndex)
             currentUserIndex -= 1
             user = allUsers[currentUserIndex]
             // Update match object if we have allMatches (for matched users)
@@ -920,6 +908,12 @@ class UserDetailViewController: UIViewController, PhotoGridViewDelegate {
                 match = allMatches[currentUserIndex]
             }
             updateUI()
+
+            // Show category transition label if crossing categories
+            let newCategory = categoryNameForUserIndex(currentUserIndex)
+            if let newCat = newCategory, let prevCat = previousCategory, newCat != prevCat {
+                showCategoryTransitionLabel(newCat, forward: false)
+            }
 
             // Animate transition
             UIView.transition(with: view, duration: 0.3, options: .transitionCurlDown, animations: nil)
@@ -1130,6 +1124,7 @@ class UserDetailViewController: UIViewController, PhotoGridViewDelegate {
     @objc private func forwardButtonTapped() {
         // Go to next profile
         if currentUserIndex < allUsers.count - 1 {
+            let previousCategory = categoryNameForUserIndex(currentUserIndex)
             currentUserIndex += 1
             user = allUsers[currentUserIndex]
             // Update match object if we have allMatches (for matched users)
@@ -1137,6 +1132,12 @@ class UserDetailViewController: UIViewController, PhotoGridViewDelegate {
                 match = allMatches[currentUserIndex]
             }
             updateUI()
+
+            // Show category transition label if crossing categories
+            let newCategory = categoryNameForUserIndex(currentUserIndex)
+            if let newCat = newCategory, let prevCat = previousCategory, newCat != prevCat {
+                showCategoryTransitionLabel(newCat, forward: true)
+            }
 
             // Animate transition
             UIView.transition(with: view, duration: 0.3, options: .transitionCurlUp, animations: nil)
@@ -1173,6 +1174,58 @@ class UserDetailViewController: UIViewController, PhotoGridViewDelegate {
                 feedbackLabel.transform = .identity
             }) { _ in
                 feedbackLabel.removeFromSuperview()
+            }
+        }
+    }
+
+    private func categoryNameForUserIndex(_ index: Int) -> String? {
+        guard !allCategories.isEmpty, index >= 0, index < allUsers.count else { return nil }
+        let userId = allUsers[index].id
+        // Walk through categories in order to find which one this user belongs to
+        var seenIds = Set<String>()
+        for category in allCategories {
+            for profile in category.users {
+                if seenIds.insert(profile.user.id).inserted {
+                    if profile.user.id == userId {
+                        let localized = category.titleKey.localized
+                        return localized
+                    }
+                }
+            }
+        }
+        return nil
+    }
+
+    private func showCategoryTransitionLabel(_ categoryName: String, forward: Bool) {
+        let label = UILabel()
+        label.text = forward ? "\(categoryName) →" : "← \(categoryName)"
+        label.font = .systemFont(ofSize: 14, weight: .semibold)
+        label.textColor = .secondaryLabel
+        label.textAlignment = .center
+        label.alpha = 0
+        label.backgroundColor = UIColor.systemBackground.withAlphaComponent(0.9)
+        label.layer.cornerRadius = 12
+        label.clipsToBounds = true
+
+        view.addSubview(label)
+        label.translatesAutoresizingMaskIntoConstraints = false
+        let widthConstraint = label.widthAnchor.constraint(greaterThanOrEqualToConstant: 120)
+        NSLayoutConstraint.activate([
+            label.centerXAnchor.constraint(equalTo: view.centerXAnchor),
+            label.topAnchor.constraint(equalTo: view.safeAreaLayoutGuide.topAnchor, constant: 8),
+            label.heightAnchor.constraint(equalToConstant: 32),
+            widthConstraint
+        ])
+        // Add horizontal padding
+        label.layoutMargins = UIEdgeInsets(top: 0, left: 16, bottom: 0, right: 16)
+
+        UIView.animate(withDuration: 0.25) {
+            label.alpha = 1
+        } completion: { _ in
+            UIView.animate(withDuration: 0.25, delay: 1.0) {
+                label.alpha = 0
+            } completion: { _ in
+                label.removeFromSuperview()
             }
         }
     }

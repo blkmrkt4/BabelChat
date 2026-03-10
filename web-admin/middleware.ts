@@ -6,7 +6,7 @@ export async function middleware(request: NextRequest) {
   const { pathname } = request.nextUrl
 
   // Allow these paths without authentication
-  const publicPaths = ['/login', '/_next', '/favicon.ico', '/privacy', '/terms', '/support', '/fluenca']
+  const publicPaths = ['/login', '/_next', '/favicon.ico', '/privacy', '/terms', '/support', '/language-match']
   const isPublicPath = publicPaths.some(path => pathname.startsWith(path))
 
   // Allow API routes (they use Authorization header)

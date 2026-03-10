@@ -58,7 +58,7 @@ class WelcomeViewController: UIViewController {
         scrollView.addSubview(contentStackView)
 
         // Logo
-        logoLabel.text = "Fluenca"
+        logoLabel.text = "Language Match"
         logoLabel.font = .systemFont(ofSize: 48, weight: .bold)
         logoLabel.textColor = .white
         logoLabel.textAlignment = .center

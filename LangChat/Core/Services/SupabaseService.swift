@@ -2727,17 +2727,17 @@ extension SupabaseService {
 
     /// Build a shareable invite link URL
     func buildInviteLink(code: String) -> URL? {
-        // Format: fluenca://invite/FLU-ABC123
-        return URL(string: "fluenca://invite/\(code)")
+        // Format: language-match://invite/FLU-ABC123
+        return URL(string: "language-match://invite/\(code)")
     }
 
     /// Build a shareable invite link with fallback web URL
     func buildShareableInviteText(code: String, inviterName: String) -> String {
-        let appLink = "fluenca://invite/\(code)"
+        let appLink = "language-match://invite/\(code)"
         let webLink = "https://ByZyB.ai/invite/\(code)"
 
         return """
-        \(inviterName) has invited you to connect on Fluenca!
+        \(inviterName) has invited you to connect on Language Match!
 
         Open this link to connect: \(appLink)
 

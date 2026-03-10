@@ -7,6 +7,7 @@ class SessionService {
     private let supabase = SupabaseService.shared
     private var sessionChannel: RealtimeChannel?
     private var messagesChannel: RealtimeChannel?
+    private var videoSlotsChannel: RealtimeChannel?
 
     private init() {}
 
@@ -22,6 +23,8 @@ class SessionService {
         let scheduledAt: String?
         let startedAt: String?
         let livekitRoomName: String
+        let maxParticipants: Int
+        let maxVideoViewers: Int
 
         enum CodingKeys: String, CodingKey {
             case hostId = "host_id"
@@ -33,6 +36,8 @@ class SessionService {
             case scheduledAt = "scheduled_at"
             case startedAt = "started_at"
             case livekitRoomName = "livekit_room_name"
+            case maxParticipants = "max_participants"
+            case maxVideoViewers = "max_video_viewers"
         }
     }
 
@@ -78,6 +83,43 @@ class SessionService {
         }
     }
 
+    // MARK: - Host Enrichment
+
+    /// Batch-fetch host profiles and assign to sessions
+    private func enrichWithHosts(_ sessions: inout [Session]) async {
+        let hostIds = Array(Set(sessions.map { $0.hostId }))
+        guard !hostIds.isEmpty else { return }
+
+        do {
+            let profiles: [ProfileResponse] = try await supabase.client
+                .from("profiles")
+                .select()
+                .in("id", values: hostIds)
+                .execute()
+                .value
+
+            var userMap: [String: User] = [:]
+            for profile in profiles {
+                if let user = profile.toUser() {
+                    userMap[profile.id] = user
+                }
+            }
+
+            for i in sessions.indices {
+                sessions[i].host = userMap[sessions[i].hostId]
+            }
+        } catch {
+            print("Failed to enrich sessions with host data: \(error)")
+        }
+    }
+
+    /// Enrich a single session with host data
+    private func enrichWithHost(_ session: inout Session) async {
+        var sessions = [session]
+        await enrichWithHosts(&sessions)
+        session = sessions[0]
+    }
+
     // MARK: - CRUD
 
     func createSession(
@@ -86,7 +128,8 @@ class SessionService {
         languagePair: SessionLanguagePair,
         isOpen: Bool,
         scheduledAt: Date?,
-        invitees: [(userId: String, role: SessionRole)] = []
+        invitees: [(userId: String, role: SessionRole)] = [],
+        hostTier: SubscriptionTier = .pro
     ) async throws -> Session {
         guard let userId = supabase.currentUserId else {
             throw SessionError.notAuthenticated
@@ -104,7 +147,9 @@ class SessionService {
             isOpen: isOpen,
             scheduledAt: scheduledAt?.ISO8601Format(),
             startedAt: isStartingNow ? Date().ISO8601Format() : nil,
-            livekitRoomName: roomName
+            livekitRoomName: roomName,
+            maxParticipants: hostTier.maxVideoSlots,
+            maxVideoViewers: 5
         )
 
         let response: Session = try await supabase.client
@@ -137,7 +182,7 @@ class SessionService {
             throw SessionError.notAuthenticated
         }
 
-        let response: [Session] = try await supabase.client
+        var response: [Session] = try await supabase.client
             .from("sessions")
             .select()
             .eq("host_id", value: userId.uuidString)
@@ -146,6 +191,7 @@ class SessionService {
             .execute()
             .value
 
+        await enrichWithHosts(&response)
         return response
     }
 
@@ -154,16 +200,17 @@ class SessionService {
             throw SessionError.notAuthenticated
         }
 
-        let response: [Session] = try await supabase.client
+        var response: [Session] = try await supabase.client
             .rpc("get_discoverable_sessions", params: ["p_user_id": userId.uuidString])
             .execute()
             .value
 
+        await enrichWithHosts(&response)
         return response
     }
 
     func getSession(id: String) async throws -> Session {
-        let response: Session = try await supabase.client
+        var response: Session = try await supabase.client
             .from("sessions")
             .select()
             .eq("id", value: id)
@@ -171,6 +218,7 @@ class SessionService {
             .execute()
             .value
 
+        await enrichWithHost(&response)
         return response
     }
 
@@ -237,7 +285,7 @@ class SessionService {
 
         let response: SessionParticipant = try await supabase.client
             .from("session_participants")
-            .upsert(insert)
+            .upsert(insert, onConflict: "session_id,user_id")
             .select()
             .single()
             .execute()
@@ -521,8 +569,130 @@ class SessionService {
     func unsubscribeAll() {
         sessionChannel?.unsubscribe()
         messagesChannel?.unsubscribe()
+        videoSlotsChannel?.unsubscribe()
         sessionChannel = nil
         messagesChannel = nil
+        videoSlotsChannel = nil
+    }
+
+    // MARK: - Past Sessions
+
+    func getMyPastSessions() async throws -> [Session] {
+        guard let userId = supabase.currentUserId else {
+            throw SessionError.notAuthenticated
+        }
+
+        // Get session IDs where user was a participant
+        let participantRecords: [SessionParticipant] = try await supabase.client
+            .from("session_participants")
+            .select()
+            .eq("user_id", value: userId.uuidString)
+            .execute()
+            .value
+
+        let participatedIds = participantRecords.map { $0.sessionId }
+        guard !participatedIds.isEmpty else { return [] }
+
+        // Fetch ended sessions from the last 30 days that the user participated in
+        let thirtyDaysAgo = Date().addingTimeInterval(-30 * 24 * 3600).ISO8601Format()
+
+        var sessions: [Session] = try await supabase.client
+            .from("sessions")
+            .select()
+            .in("id", values: participatedIds)
+            .eq("status", value: "ended")
+            .gte("ended_at", value: thirtyDaysAgo)
+            .order("ended_at", ascending: false)
+            .execute()
+            .value
+
+        await enrichWithHosts(&sessions)
+        return sessions
+    }
+
+    // MARK: - Viewer Count
+
+    func incrementViewerCount(sessionId: String) async throws {
+        try await supabase.client
+            .rpc("increment_viewer_count", params: ["p_session_id": sessionId])
+            .execute()
+    }
+
+    func decrementViewerCount(sessionId: String) async throws {
+        try await supabase.client
+            .rpc("decrement_viewer_count", params: ["p_session_id": sessionId])
+            .execute()
+    }
+
+    // MARK: - Video Slots
+
+    /// Reserve a video slot for the current user in a session
+    func reserveVideoSlot(sessionId: String) async throws -> ReserveVideoSlotResponse {
+        let response: ReserveVideoSlotResponse = try await supabase.client
+            .rpc("reserve_video_slot", params: ["p_session_id": sessionId])
+            .execute()
+            .value
+
+        return response
+    }
+
+    /// Activate a confirmed video slot when joining a live session
+    func activateVideoSlot(sessionId: String) async throws {
+        try await supabase.client
+            .rpc("activate_video_slot", params: ["p_session_id": sessionId])
+            .execute()
+    }
+
+    /// Release a video slot (when leaving a session)
+    @discardableResult
+    func releaseVideoSlot(sessionId: String) async throws -> String? {
+        let response: String? = try await supabase.client
+            .rpc("release_video_slot", params: ["p_session_id": sessionId])
+            .execute()
+            .value
+
+        return response
+    }
+
+    /// Get video slot status for a session
+    func getVideoSlotStatus(sessionId: String) async throws -> VideoSlotInfo {
+        let response: VideoSlotInfo = try await supabase.client
+            .rpc("get_video_slot_status", params: ["p_session_id": sessionId])
+            .execute()
+            .value
+
+        return response
+    }
+
+    /// Subscribe to video slot changes for real-time UI updates
+    func subscribeToVideoSlotUpdates(
+        sessionId: String,
+        onChange: @escaping (VideoSlot) -> Void
+    ) -> RealtimeChannel {
+        let channel = supabase.client.realtime.channel("video_slots:\(sessionId)")
+
+        channel.on("postgres_changes", filter: ChannelFilter(
+            event: "*",
+            schema: "public",
+            table: "session_video_slots",
+            filter: "session_id=eq.\(sessionId)"
+        )) { message in
+            if let payload = message.payload["record"] as? [String: Any] {
+                do {
+                    let jsonData = try JSONSerialization.data(withJSONObject: payload)
+                    let decoder = JSONDecoder()
+                    decoder.dateDecodingStrategy = .iso8601
+                    let slot = try decoder.decode(VideoSlot.self, from: jsonData)
+                    Task { @MainActor in onChange(slot) }
+                } catch {
+                    print("Error parsing video slot update: \(error)")
+                }
+            }
+        }
+
+        channel.subscribe()
+        self.videoSlotsChannel = channel
+        return channel
     }
 }
 

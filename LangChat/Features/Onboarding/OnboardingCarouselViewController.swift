@@ -269,7 +269,7 @@ class OnboardingCarouselViewController: UIViewController {
 
         // Logo
         let logoLabel = UILabel()
-        logoLabel.text = "Fluenca"
+        logoLabel.text = "Language Match"
         logoLabel.font = .systemFont(ofSize: 52, weight: .bold)
         logoLabel.textColor = .white
         logoLabel.textAlignment = .center

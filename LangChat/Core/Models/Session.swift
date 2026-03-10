@@ -71,8 +71,13 @@ struct Session: Codable {
     let endedAt: Date?
     let maxDurationMinutes: Int
     let participantCount: Int
+    let maxParticipants: Int
+    let maxVideoViewers: Int
     let livekitRoomName: String?
     let createdAt: Date
+
+    // Viewer count (for live sessions)
+    var viewerCount: Int
 
     // Joined data (optional, populated when fetched with joins)
     var host: User?
@@ -91,12 +96,45 @@ struct Session: Codable {
         case endedAt = "ended_at"
         case maxDurationMinutes = "max_duration_minutes"
         case participantCount = "participant_count"
+        case maxParticipants = "max_participants"
+        case maxVideoViewers = "max_video_viewers"
         case livekitRoomName = "livekit_room_name"
         case createdAt = "created_at"
+        case viewerCount = "viewer_count"
+    }
+
+    init(from decoder: Decoder) throws {
+        let container = try decoder.container(keyedBy: CodingKeys.self)
+        id = try container.decode(String.self, forKey: .id)
+        hostId = try container.decode(String.self, forKey: .hostId)
+        title = try container.decodeIfPresent(String.self, forKey: .title)
+        goal = try container.decodeIfPresent(String.self, forKey: .goal)
+        languagePair = try container.decode(SessionLanguagePair.self, forKey: .languagePair)
+        status = try container.decode(SessionStatus.self, forKey: .status)
+        isOpen = try container.decode(Bool.self, forKey: .isOpen)
+        scheduledAt = try container.decodeIfPresent(Date.self, forKey: .scheduledAt)
+        startedAt = try container.decodeIfPresent(Date.self, forKey: .startedAt)
+        endedAt = try container.decodeIfPresent(Date.self, forKey: .endedAt)
+        maxDurationMinutes = try container.decode(Int.self, forKey: .maxDurationMinutes)
+        participantCount = try container.decode(Int.self, forKey: .participantCount)
+        maxParticipants = try container.decodeIfPresent(Int.self, forKey: .maxParticipants) ?? 4
+        maxVideoViewers = try container.decodeIfPresent(Int.self, forKey: .maxVideoViewers) ?? 5
+        livekitRoomName = try container.decodeIfPresent(String.self, forKey: .livekitRoomName)
+        createdAt = try container.decode(Date.self, forKey: .createdAt)
+        viewerCount = try container.decodeIfPresent(Int.self, forKey: .viewerCount) ?? 0
+        // host and participants are set via post-fetch enrichment, not from JSON
+        host = nil
+        participants = nil
     }
 
     var isLive: Bool {
         return status == .live
+    }
+
+    /// Whether the session's max duration has been exceeded (host may have crashed)
+    var isExpired: Bool {
+        guard status == .live, let startedAt = startedAt else { return false }
+        return Date().timeIntervalSince(startedAt) > TimeInterval(maxDurationMinutes * 60)
     }
 
     var isScheduled: Bool {

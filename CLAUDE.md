@@ -4,7 +4,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## Project Overview
 
-**Fluenca** (codebase name: LangChat) is a completed MVP iOS native app for language exchange, published by PainKiller Labs. Users swipe through profiles to match with language partners, chat with built-in translation and grammar analysis, and practice with AI conversation partners (Muses). The app is localized into 22 languages via `Localizable.xcstrings` with runtime bundle switching (`LocalizationService`).
+**Language Match** (codebase name: LangChat) is a completed MVP iOS native app for language exchange, published by PainKiller Labs. Users swipe through profiles to match with language partners, chat with built-in translation and grammar analysis, and practice with AI conversation partners (Muses). The app is localized into 22 languages via `Localizable.xcstrings` with runtime bundle switching (`LocalizationService`).
 
 ## Key Documentation
 
@@ -168,7 +168,7 @@ Next.js admin app at `web-admin/` for managing the live product:
 
 ## App Store
 
-- Published by **PainKiller Labs** as **Fluenca**
+- Published by **PainKiller Labs** as **Language Match**
 - Deployment target: iOS 16.0
 - Required capabilities: Push Notifications, Sign in with Apple
 - Minimum user age: 18

@@ -27,8 +27,8 @@ class UsageLimitService {
     ///   - tier: The user's subscription tier
     /// - Returns: UsageLimitResult indicating if action is allowed
     func checkLimit(for type: UsageLimitType, tier: SubscriptionTier) -> UsageLimitResult {
-        // Premium and Pro users have no limits
-        if tier == .premium || tier == .pro {
+        // Paid tier users have no daily limits
+        if tier == .premium || tier == .pro || tier == .broadcaster {
             return .allowed(remaining: nil)
         }
 
@@ -79,7 +79,7 @@ class UsageLimitService {
 
     /// Get remaining count for a specific type
     func getRemainingCount(for type: UsageLimitType, tier: SubscriptionTier) -> Int? {
-        if tier == .premium || tier == .pro {
+        if tier == .premium || tier == .pro || tier == .broadcaster {
             return nil // Unlimited
         }
 
@@ -204,6 +204,62 @@ class UsageLimitService {
     @discardableResult
     func incrementSessionJoin() -> Int {
         return incrementUsage(for: .sessionJoins)
+    }
+
+    // MARK: - Monthly Session Host Limits
+
+    private let monthlyHostKeyPrefix = "monthly_session_hosts_"
+
+    /// Check if user can host a new session based on their subscription tier
+    func canHostSession(tier: SubscriptionTier) -> UsageLimitResult {
+        guard tier.canHostSession else {
+            return .limitReached(type: .sessionJoins, limit: 0, resetDate: getNextMonthResetDate())
+        }
+
+        guard let monthlyLimit = tier.monthlySessionHostLimit else {
+            return .allowed(remaining: nil)
+        }
+
+        let count = getMonthlyHostCount()
+        if count >= monthlyLimit {
+            return .limitReached(type: .sessionJoins, limit: monthlyLimit, resetDate: getNextMonthResetDate())
+        }
+
+        return .allowed(remaining: monthlyLimit - count)
+    }
+
+    /// Increment monthly session host count
+    @discardableResult
+    func incrementSessionHost() -> Int {
+        let monthKey = getCurrentMonthKey()
+        let key = "\(monthlyHostKeyPrefix)\(monthKey)"
+        let count = userDefaults.integer(forKey: key) + 1
+        userDefaults.set(count, forKey: key)
+        print("📊 Session hosts this month: \(count)")
+        return count
+    }
+
+    /// Get current month's host count
+    func getMonthlyHostCount() -> Int {
+        let monthKey = getCurrentMonthKey()
+        let key = "\(monthlyHostKeyPrefix)\(monthKey)"
+        return userDefaults.integer(forKey: key)
+    }
+
+    private func getCurrentMonthKey() -> String {
+        let formatter = DateFormatter()
+        formatter.dateFormat = "yyyy-MM"
+        return formatter.string(from: Date())
+    }
+
+    private func getNextMonthResetDate() -> Date {
+        let calendar = Calendar.current
+        let components = calendar.dateComponents([.year, .month], from: Date())
+        guard let startOfMonth = calendar.date(from: components),
+              let nextMonth = calendar.date(byAdding: .month, value: 1, to: startOfMonth) else {
+            return Date().addingTimeInterval(30 * 24 * 3600)
+        }
+        return nextMonth
     }
 }
 
