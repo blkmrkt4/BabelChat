@@ -61,7 +61,9 @@ class PushNotificationService: NSObject {
     /// Handle successful device token registration
     func didRegisterForRemoteNotifications(deviceToken: Data) {
         let tokenString = deviceToken.map { String(format: "%02.2hhx", $0) }.joined()
+        #if DEBUG
         print("📱 APNs Device Token: \(tokenString)")
+        #endif
 
         // Save token to Supabase
         Task {

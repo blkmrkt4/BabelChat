@@ -320,7 +320,7 @@ class CreateSessionViewController: UIViewController {
 
         // Co-Host card
         let coHostCard = createRoleCard(
-            roleName: "session_role_co_speaker".localized,
+            roleName: "session_role_co_host".localized,
             description: "session_role_cohost_desc".localized,
             iconName: "person.2.fill"
         )
@@ -415,7 +415,7 @@ class CreateSessionViewController: UIViewController {
     @objc private func coHostCardTapped() {
         guard let user = pendingRoleUser else { return }
         dismiss(animated: true) { [weak self] in
-            self?.addInvitee(user: user, role: .coSpeaker)
+            self?.addInvitee(user: user, role: .coHost)
             self?.pendingRoleUser = nil
         }
     }

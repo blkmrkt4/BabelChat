@@ -294,6 +294,14 @@ class OnboardingCoordinator {
         UserDefaults.standard.set(true, forKey: "onboardingCompleted")
         print("✅ Onboarding marked as complete")
 
+        // Persist terms consent to backend (now that user is authenticated)
+        if let userId = SupabaseService.shared.currentUserId,
+           let acceptedDate = userData.termsAcceptedDate ?? UserDefaults.standard.object(forKey: "termsAcceptedDate") as? Date {
+            Task {
+                await TermsAcceptanceViewController.persistConsent(userId: userId, acceptedAt: acceptedDate)
+            }
+        }
+
         // Show pricing page before transitioning to main app
         showPricingPage()
     }

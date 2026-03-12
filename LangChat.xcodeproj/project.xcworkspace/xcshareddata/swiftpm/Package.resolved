@@ -1,6 +1,24 @@
 {
-  "originHash" : "9bebb9497bf73eea1ec4b423c4a9f37222173e5ea923388ba1f45c7f8d7939b0",
+  "originHash" : "2ce780dec5c36f0d07fca9920e873621c9a4a1c75c4481bc53ca745a3955e260",
   "pins" : [
+    {
+      "identity" : "100ms-ios-analytics-sdk",
+      "kind" : "remoteSourceControl",
+      "location" : "https://github.com/100mslive/100ms-ios-analytics-sdk",
+      "state" : {
+        "revision" : "ffbd36c153603a3309ad9740d287438c4e89bd40",
+        "version" : "0.0.2"
+      }
+    },
+    {
+      "identity" : "100ms-ios-sdk",
+      "kind" : "remoteSourceControl",
+      "location" : "https://github.com/100mslive/100ms-ios-sdk.git",
+      "state" : {
+        "revision" : "d45ecd1cb085890bc50defcc3e2e86af690301b1",
+        "version" : "1.17.1"
+      }
+    },
     {
       "identity" : "purchases-ios",
       "kind" : "remoteSourceControl",

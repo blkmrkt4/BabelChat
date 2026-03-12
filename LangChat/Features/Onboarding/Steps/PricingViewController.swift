@@ -489,7 +489,7 @@ class PricingViewController: UIViewController {
                 switch result {
                 case .success(let status):
                     if status.tier != .free && status.isActive {
-                        self?.handlePurchaseSuccess()
+                        self?.handlePurchaseSuccess(tier: status.tier)
                     } else {
                         let alert = UIAlertController(
                             title: "pricing_no_subscription_found".localized,
@@ -663,7 +663,7 @@ class PricingViewController: UIViewController {
                 switch result {
                 case .success(let status):
                     print("✅ Purchase successful: \(status.tier.displayName)")
-                    self?.handlePurchaseSuccess()
+                    self?.handlePurchaseSuccess(tier: status.tier)
                 case .failure(let error):
                     print("❌ Purchase failed: \(error.localizedDescription)")
                     self?.showError(error)
@@ -686,7 +686,7 @@ class PricingViewController: UIViewController {
                 switch result {
                 case .success(let status):
                     print("✅ Purchase successful: \(status.tier.displayName)")
-                    self?.handlePurchaseSuccess()
+                    self?.handlePurchaseSuccess(tier: status.tier)
                 case .failure(let error):
                     print("❌ Purchase failed: \(error.localizedDescription)")
                     self?.showError(error)
@@ -709,7 +709,7 @@ class PricingViewController: UIViewController {
                 switch result {
                 case .success(let status):
                     print("✅ Purchase successful: \(status.tier.displayName)")
-                    self?.handlePurchaseSuccess()
+                    self?.handlePurchaseSuccess(tier: status.tier)
                 case .failure(let error):
                     print("❌ Purchase failed: \(error.localizedDescription)")
                     self?.showError(error)
@@ -727,10 +727,19 @@ class PricingViewController: UIViewController {
         }
     }
 
-    private func handlePurchaseSuccess() {
+    private func handlePurchaseSuccess(tier: SubscriptionTier) {
         if let delegate = delegate {
-            // Onboarding flow - notify delegate
-            delegate.didSelectPremiumTier()
+            // Onboarding flow - notify delegate with correct tier
+            switch tier {
+            case .premium:
+                delegate.didSelectPremiumTier()
+            case .pro:
+                delegate.didSelectProTier()
+            case .broadcaster:
+                delegate.didSelectBroadcasterTier()
+            case .free:
+                delegate.didSelectFreeTier()
+            }
         } else {
             // Presented modally - dismiss
             dismiss(animated: true)

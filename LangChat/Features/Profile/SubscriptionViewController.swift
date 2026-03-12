@@ -12,10 +12,12 @@ class SubscriptionViewController: UIViewController {
     private let freeTierView = UIView()
     private let premiumTierView = UIView()
     private let proTierView = UIView()
+    private let broadcasterTierView = UIView()
 
     // Price labels for dynamic updates
     private var premiumPriceLabel: UILabel?
     private var proPriceLabel: UILabel?
+    private var broadcasterPriceLabel: UILabel?
 
     private let subscriptionService = SubscriptionService.shared
 
@@ -64,6 +66,14 @@ class SubscriptionViewController: UIViewController {
                 ? proOffering.weeklyPriceString
                 : proOffering.localizedPricePerPeriod
             proPriceLabel?.text = priceText
+        }
+
+        // Update Broadcaster price
+        if let broadcasterOffering = offerings.first(where: { $0.tier == .broadcaster }) {
+            let priceText = subscriptionService.shouldShowWeeklyPricing
+                ? broadcasterOffering.weeklyPriceString
+                : broadcasterOffering.localizedPricePerPeriod
+            broadcasterPriceLabel?.text = priceText
         }
     }
 
@@ -125,7 +135,9 @@ class SubscriptionViewController: UIViewController {
 
         proPriceLabel = setupTierView(proTierView, tier: .pro, buttonTitle: getCurrentTier() == "Pro" ? "Current Plan" : "Upgrade", buttonAction: #selector(selectProTier))
 
-        let stackView = UIStackView(arrangedSubviews: [freeTierView, premiumTierView, proTierView])
+        broadcasterPriceLabel = setupTierView(broadcasterTierView, tier: .broadcaster, buttonTitle: getCurrentTier() == "Broadcaster" ? "Current Plan" : "Upgrade", buttonAction: #selector(selectBroadcasterTier))
+
+        let stackView = UIStackView(arrangedSubviews: [freeTierView, premiumTierView, proTierView, broadcasterTierView])
         stackView.axis = .vertical
         stackView.spacing = 16
         stackView.distribution = .fillEqually
@@ -161,7 +173,7 @@ class SubscriptionViewController: UIViewController {
             stackView.leadingAnchor.constraint(equalTo: contentView.leadingAnchor, constant: 16),
             stackView.trailingAnchor.constraint(equalTo: contentView.trailingAnchor, constant: -16),
             stackView.bottomAnchor.constraint(equalTo: contentView.bottomAnchor, constant: -24),
-            stackView.heightAnchor.constraint(greaterThanOrEqualToConstant: 600)
+            stackView.heightAnchor.constraint(greaterThanOrEqualToConstant: 800)
         ])
     }
 
@@ -272,6 +284,10 @@ class SubscriptionViewController: UIViewController {
 
     @objc private func selectProTier() {
         purchaseTier(.pro)
+    }
+
+    @objc private func selectBroadcasterTier() {
+        purchaseTier(.broadcaster)
     }
 
     private func purchaseTier(_ tier: SubscriptionTier) {

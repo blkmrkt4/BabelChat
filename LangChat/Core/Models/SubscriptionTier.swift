@@ -122,10 +122,8 @@ enum SubscriptionTier: String, Codable {
 
     var monthlyMessageLimit: Int? {
         switch self {
-        case .free:
-            return 50
-        case .premium, .pro, .broadcaster:
-            return nil // Unlimited
+        case .free, .premium, .pro, .broadcaster:
+            return nil // No monthly cap; free tier is gated by daily limits only
         }
     }
 

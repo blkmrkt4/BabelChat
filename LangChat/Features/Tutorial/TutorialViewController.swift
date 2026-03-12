@@ -10,9 +10,11 @@ class TutorialViewController: UIViewController {
     private var freePriceLabel: UILabel?
     private var premiumPriceLabel: UILabel?
     private var proPriceLabel: UILabel?
+    private var broadcasterPriceLabel: UILabel?
     private var freeFeaturesLabel: UILabel?
     private var premiumFeaturesLabel: UILabel?
     private var proFeaturesLabel: UILabel?
+    private var broadcasterFeaturesLabel: UILabel?
     private var currencyLabel: UILabel?
 
     // MARK: - UI Components
@@ -237,12 +239,21 @@ class TutorialViewController: UIViewController {
                 : proOffering.localizedPricePerPeriod
             proPriceLabel?.text = priceText
         }
+
+        // Update Broadcaster price
+        if let broadcasterOffering = offerings.first(where: { $0.tier == .broadcaster }) {
+            let priceText = subscriptionService.shouldShowWeeklyPricing
+                ? broadcasterOffering.weeklyPriceString
+                : broadcasterOffering.localizedPricePerPeriod
+            broadcasterPriceLabel?.text = priceText
+        }
     }
 
     private func updatePricingCards(with config: PricingConfig) {
         // Update price labels with localized prices (RevenueCat if available, config as fallback)
         premiumPriceLabel?.text = subscriptionService.localizedPricePerPeriod(for: .premium)
         proPriceLabel?.text = subscriptionService.localizedPricePerPeriod(for: .pro)
+        broadcasterPriceLabel?.text = subscriptionService.localizedPricePerPeriod(for: .broadcaster)
 
         // Update feature labels
         if let label = freeFeaturesLabel {
@@ -255,6 +266,10 @@ class TutorialViewController: UIViewController {
         }
         if let label = proFeaturesLabel {
             let features = config.proFeaturesText.prefix(4).map { "• \($0)" }.joined(separator: "\n")
+            label.text = features
+        }
+        if let label = broadcasterFeaturesLabel {
+            let features = config.broadcasterFeaturesText.prefix(4).map { "• \($0)" }.joined(separator: "\n")
             label.text = features
         }
     }
@@ -486,8 +501,8 @@ class TutorialViewController: UIViewController {
             pricingStack.addArrangedSubview(currencyContainer)
             self.currencyLabel = currencyIndicator
 
-            // Add all 3 tiers
-            let tiers: [SubscriptionTier] = [.free, .premium, .pro]
+            // Add all 4 tiers
+            let tiers: [SubscriptionTier] = [.free, .premium, .pro, .broadcaster]
             for tier in tiers {
                 let tierView = createPricingTierRow(tier: tier)
                 pricingStack.addArrangedSubview(tierView)
@@ -635,8 +650,13 @@ class TutorialViewController: UIViewController {
         let isPremium = tier == .premium
         let isPro = tier == .pro
         let isFree = tier == .free
+        let isBroadcaster = tier == .broadcaster
 
-        if isPremium {
+        if isBroadcaster {
+            container.backgroundColor = UIColor.systemIndigo.withAlphaComponent(0.2)
+            container.layer.borderWidth = 1.5
+            container.layer.borderColor = UIColor.systemIndigo.cgColor
+        } else if isPremium {
             container.backgroundColor = UIColor.systemBlue.withAlphaComponent(0.2)
             container.layer.borderWidth = 1.5
             container.layer.borderColor = UIColor.systemBlue.cgColor
@@ -662,7 +682,9 @@ class TutorialViewController: UIViewController {
         let tierLabel = UILabel()
         tierLabel.text = tier.displayName
         tierLabel.font = .systemFont(ofSize: 15, weight: .bold)
-        if isPro {
+        if isBroadcaster {
+            tierLabel.textColor = .systemIndigo
+        } else if isPro {
             tierLabel.textColor = goldColor
         } else if isPremium {
             tierLabel.textColor = .systemBlue
@@ -679,6 +701,9 @@ class TutorialViewController: UIViewController {
         } else if isPro {
             priceLabel.text = subscriptionService.localizedPricePerPeriod(for: .pro)
             self.proPriceLabel = priceLabel
+        } else if isBroadcaster {
+            priceLabel.text = subscriptionService.localizedPricePerPeriod(for: .broadcaster)
+            self.broadcasterPriceLabel = priceLabel
         } else {
             priceLabel.text = "tier_trial_price".localized  // Free tier is always "Free"
             self.freePriceLabel = priceLabel
@@ -705,6 +730,9 @@ class TutorialViewController: UIViewController {
         } else if isPremium {
             features = pricingConfig.premiumFeaturesText
             self.premiumFeaturesLabel = featuresLabel
+        } else if isBroadcaster {
+            features = pricingConfig.broadcasterFeaturesText
+            self.broadcasterFeaturesLabel = featuresLabel
         } else {
             features = pricingConfig.proFeaturesText
             self.proFeaturesLabel = featuresLabel

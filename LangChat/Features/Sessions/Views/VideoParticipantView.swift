@@ -156,7 +156,7 @@ class VideoParticipantView: UIView {
             roleBadge.text = " HOST "
             roleBadge.backgroundColor = .systemOrange
             roleBadge.isHidden = false
-        } else if role == .coSpeaker || role == .rotatingSpeaker {
+        } else if role == .coHost || role == .rotatingSpeaker {
             roleBadge.text = " SPEAKER "
             roleBadge.backgroundColor = .systemBlue
             roleBadge.isHidden = false

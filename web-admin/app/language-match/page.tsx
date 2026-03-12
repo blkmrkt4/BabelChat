@@ -17,7 +17,7 @@ export default function MarketingPage() {
           </p>
 
           {/* App Store Badge */}
-          <a href="https://apps.apple.com/app/fluenca" className="inline-block">
+          <a href="https://apps.apple.com/app/language-match/id6740043019" className="inline-block">
             <img
               src="https://tools.applemediaservices.com/api/badges/download-on-the-app-store/black/en-us?size=250x83"
               alt="Download on the App Store"
@@ -109,7 +109,7 @@ export default function MarketingPage() {
           <p className="text-purple-200 text-lg mb-8">
             Your brain learns faster when it cares about who you're talking to.
           </p>
-          <a href="https://apps.apple.com/app/fluenca" className="inline-block">
+          <a href="https://apps.apple.com/app/language-match/id6740043019" className="inline-block">
             <img
               src="https://tools.applemediaservices.com/api/badges/download-on-the-app-store/black/en-us?size=250x83"
               alt="Download on the App Store"

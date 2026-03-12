@@ -80,8 +80,8 @@ struct PricingConfig: Codable {
 
     static let defaultBroadcasterFeatures: [PricingFeature] = [
         PricingFeature(title: "Everything in Pro", subtitle: "", included: true),
-        PricingFeature(title: "Host up to 15 sessions/month", subtitle: "", included: true),
-        PricingFeature(title: "4 video speaker slots per session", subtitle: "", included: true),
+        PricingFeature(title: "15 hosted sessions/month", subtitle: "", included: true),
+        PricingFeature(title: "4 video speaker slots/session", subtitle: "", included: true),
         PricingFeature(title: "Priority matching & support", subtitle: "", included: true)
     ]
 
@@ -92,25 +92,28 @@ struct PricingConfig: Codable {
             premiumBanner: "7-Day Free Trial • Cancel Anytime",
             premiumFeatures: [
                 PricingFeature(title: "Match with real people worldwide", subtitle: "", included: true),
-                PricingFeature(title: "Unlimited messages", subtitle: "", included: true),
+                PricingFeature(title: "Unlimited messages*", subtitle: "", included: true),
                 PricingFeature(title: "Full translation & grammar insights", subtitle: "", included: true),
                 PricingFeature(title: "200 Text-to-Speech plays/month with natural voices", subtitle: "", included: true),
-                PricingFeature(title: "Watch sessions with audio + video", subtitle: "", included: true)
+                PricingFeature(title: "Watch sessions with audio + video", subtitle: "", included: true),
+                PricingFeature(title: "Up to 5 video viewer slots/session", subtitle: "", included: true)
             ],
             proPriceUsd: 19.99,
             proBanner: "Best Value for Serious Learners",
             proFeatures: [
                 PricingFeature(title: "Everything in Premium", subtitle: "", included: true),
-                PricingFeature(title: "Host up to 5 sessions/month", subtitle: "", included: true),
-                PricingFeature(title: "2 video speaker slots per session", subtitle: "", included: true),
-                PricingFeature(title: "Unlimited Text-to-Speech plays", subtitle: "", included: true)
+                PricingFeature(title: "5 hosted sessions/month", subtitle: "", included: true),
+                PricingFeature(title: "2 video speaker slots/session", subtitle: "", included: true),
+                PricingFeature(title: "Unlimited Text-to-Speech plays*", subtitle: "", included: true),
+                PricingFeature(title: "Priority matching", subtitle: "", included: true)
             ],
             broadcasterPriceUsd: 49.99,
             broadcasterBanner: "For Power Hosts",
             broadcasterFeatures: defaultBroadcasterFeatures,
             freeFeatures: [
                 PricingFeature(title: "7 days to explore all features", subtitle: "", included: true),
-                PricingFeature(title: "AI Muse conversations", subtitle: "", included: true),
+                PricingFeature(title: "10 messages/day", subtitle: "", included: true),
+                PricingFeature(title: "AI Muse conversations (5/day)", subtitle: "", included: true),
                 PricingFeature(title: "Full translation & grammar insights", subtitle: "", included: true),
                 PricingFeature(title: "Listen to sessions (audio only)", subtitle: "", included: true)
             ],

@@ -81,31 +81,35 @@ export default function PricingPage() {
         premium_banner: '7-Day Free Trial • Cancel Anytime',
         premium_features: [
           { title: 'Match with real people worldwide', subtitle: '', included: true },
-          { title: 'Unlimited messages', subtitle: '', included: true },
+          { title: 'Unlimited messages*', subtitle: '', included: true },
           { title: 'Full translation & grammar insights', subtitle: '', included: true },
           { title: '200 Text-to-Speech plays/month with natural voices', subtitle: '', included: true },
+          { title: 'Watch sessions with audio + video', subtitle: '', included: true },
+          { title: 'Up to 5 video viewer slots/session', subtitle: '', included: true },
         ],
         pro_price_usd: 19.99,
         pro_banner: 'Best Value for Serious Learners',
         pro_features: [
           { title: 'Everything in Premium', subtitle: '', included: true },
-          { title: 'Host up to 5 sessions/month', subtitle: '', included: true },
-          { title: '2 video speaker slots per session', subtitle: '', included: true },
-          { title: 'Unlimited Text-to-Speech plays', subtitle: '', included: true },
+          { title: '5 hosted sessions/month', subtitle: '', included: true },
+          { title: '2 video speaker slots/session', subtitle: '', included: true },
+          { title: 'Unlimited Text-to-Speech plays*', subtitle: '', included: true },
+          { title: 'Priority matching', subtitle: '', included: true },
         ],
         broadcaster_price_usd: 49.99,
         broadcaster_banner: 'For Power Hosts',
         broadcaster_features: [
           { title: 'Everything in Pro', subtitle: '', included: true },
-          { title: 'Host up to 15 sessions/month', subtitle: '', included: true },
-          { title: '4 video speaker slots per session', subtitle: '', included: true },
+          { title: '15 hosted sessions/month', subtitle: '', included: true },
+          { title: '4 video speaker slots/session', subtitle: '', included: true },
           { title: 'Priority matching & support', subtitle: '', included: true },
         ],
         free_features: [
-          { title: 'No matching with real people - AI Muse chats only', subtitle: '', included: true },
-          { title: '50 messages per month', subtitle: '', included: true },
+          { title: '7 days to explore all features', subtitle: '', included: true },
+          { title: '10 messages/day', subtitle: '', included: true },
+          { title: 'AI Muse conversations (5/day)', subtitle: '', included: true },
           { title: 'Full translation & grammar insights', subtitle: '', included: true },
-          { title: 'Basic text to speech', subtitle: '', included: true },
+          { title: 'Listen to sessions (audio only)', subtitle: '', included: true },
         ],
         weekly_pricing_countries: ['IN', 'BR', 'MX', 'ID', 'PH', 'VN', 'TH', 'MY'],
         updated_at: new Date().toISOString()
@@ -829,6 +833,13 @@ export default function PricingPage() {
               </div>
             </div>
           </div>
+        </div>
+
+        {/* Fair use note */}
+        <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-3 text-xs text-yellow-800">
+          <strong>* Fair Use Policy:</strong> Features marked &quot;Unlimited&quot; are subject to reasonable use.
+          Automated, abusive, or commercially exploitative usage may result in throttling or account review.
+          This applies to messages, swipes, profile views, session joins, and Text-to-Speech plays on paid tiers.
         </div>
 
         {/* Character limit info */}

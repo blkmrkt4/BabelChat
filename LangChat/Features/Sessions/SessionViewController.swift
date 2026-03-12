@@ -303,7 +303,7 @@ class SessionViewController: UIViewController {
             updateMediaControls(canSpeak: true)
             navigationItem.rightBarButtonItem = nil
 
-        case .coSpeaker:
+        case .coHost:
             endButton.isHidden = true
             manageButton.isHidden = false
             addParticipantButton.isHidden = false
@@ -373,10 +373,10 @@ class SessionViewController: UIViewController {
         }
 
         // Connect LiveKit
-        connectLiveKit()
+        connectHMS()
     }
 
-    private func connectLiveKit() {
+    private func connectHMS() {
         Task {
             do {
                 // Request camera/microphone permissions before connecting
@@ -391,9 +391,9 @@ class SessionViewController: UIViewController {
                 // Configure audio session for live voice/video
                 LiveKitService.shared.configureAudioSessionForSession()
 
-                let tokenResponse = try await fetchLiveKitToken()
+                let tokenResponse = try await fetchSessionToken()
                 try await LiveKitService.shared.connect(
-                    url: Config.livekitURL,
+                    url: Config.hmsEndpoint,
                     token: tokenResponse.token
                 )
 
@@ -403,7 +403,7 @@ class SessionViewController: UIViewController {
                 await MainActor.run {
                     // Re-apply role permissions and control state after connection completes
                     // This ensures controls are correct even if role resolved while connecting
-                    print("[Session] LiveKit connected — re-applying role: \(self.myRole)")
+                    print("[Session] 100ms connected — re-applying role: \(self.myRole)")
                     LiveKitService.shared.applyPermissions(for: self.myRole)
                     self.updateUIForRole()
                 }
@@ -415,7 +415,7 @@ class SessionViewController: UIViewController {
                     print("[Session] Participant disconnected: \(participantId)")
                 }
             } catch {
-                print("[Session] LiveKit connection failed: \(error)")
+                print("[Session] 100ms connection failed: \(error)")
             }
         }
     }
@@ -501,7 +501,7 @@ class SessionViewController: UIViewController {
         }
     }
 
-    private func fetchLiveKitToken() async throws -> LiveKitTokenResponse {
+    private func fetchSessionToken() async throws -> SessionTokenResponse {
         guard SupabaseService.shared.currentUserId != nil else {
             throw SessionError.notAuthenticated
         }
@@ -511,9 +511,9 @@ class SessionViewController: UIViewController {
             "sessionId": session.id
         ]
 
-        let tokenResponse: LiveKitTokenResponse = try await SupabaseService.shared.client
+        let tokenResponse: SessionTokenResponse = try await SupabaseService.shared.client
             .functions.invoke(
-                "livekit-token",
+                "session-token",
                 options: .init(body: params)
             )
 
@@ -556,8 +556,8 @@ class SessionViewController: UIViewController {
         updateUIForRole()
 
         // Update LiveKit permissions for the new role without reconnecting
-        // (connectLiveKit already happened at session join)
-        print("[Session] Role changed to \(myRole) — updating LiveKit permissions")
+        // (connectHMS already happened at session join)
+        print("[Session] Role changed to \(myRole) — updating 100ms permissions")
         LiveKitService.shared.applyPermissions(for: myRole)
     }
 
@@ -839,7 +839,7 @@ class SessionViewController: UIViewController {
                         try await SessionService.shared.createInvite(
                             sessionId: self.session.id,
                             inviteeId: user.id,
-                            role: SessionRole.coSpeaker.rawValue
+                            role: SessionRole.coHost.rawValue
                         )
                         await MainActor.run {
                             self.dismiss(animated: true)
@@ -983,10 +983,10 @@ class SessionViewController: UIViewController {
         case .host:
             // Host can manage everyone except themselves
             return true
-        case .coSpeaker:
+        case .coHost:
             // Co-host can manage rotating speakers and listeners, but NOT host or other co-hosts
             switch participant.role {
-            case .host, .coSpeaker:
+            case .host, .coHost:
                 return false
             case .rotatingSpeaker, .listener:
                 return true
@@ -1382,9 +1382,8 @@ private enum AssociatedKeys {
     static var museDialogObserver = "museDialogObserver"
 }
 
-// MARK: - LiveKit Token Response
-struct LiveKitTokenResponse: Codable {
+/// MARK: - Session Token Response
+struct SessionTokenResponse: Codable {
     let token: String
     let roomName: String
-    let url: String
 }

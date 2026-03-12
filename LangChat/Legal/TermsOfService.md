@@ -12,7 +12,7 @@ By accessing or using our Service, you agree to be bound by these Terms. If you 
 You must be at least 18 years old to use the Service. By using the Service, you represent and warrant that you meet this age requirement.
 
 ### 1.2 Account Registration
-To use certain features of the Service, you must create an account using Sign in with Apple. You agree to:
+To use certain features of the Service, you must create an account using Sign in with Apple or email registration. You agree to:
 - Provide accurate and complete information
 - Maintain the security of your account credentials
 - Promptly notify us of any unauthorized access to your account
@@ -110,29 +110,41 @@ Messages sent through the Service may be processed by our systems to provide fea
 ## 6. Subscription Services
 
 ### 6.1 Free Tier
-The basic Service is available free of charge with certain limitations on features and usage.
+The basic Service is available free of charge with daily usage limits, including messages, swipes, profile views, AI conversations, and session joins. A 7-day introductory period allows exploration of additional features.
 
-### 6.2 Premium Tier
+### 6.2 Premium Tier ($9.99/month)
 The Premium subscription provides:
-- Enhanced AI features
-- Increased usage limits
-- Premium voice quality for text-to-speech
-- Additional learning tools
+- Unlimited messages, swipes, and profile views*
+- Matching with real people worldwide
+- Full translation and grammar insights
+- 200 Text-to-Speech plays/month with natural voices
+- Session viewing with audio and video
+- Up to 5 video viewer slots per session
 
-### 6.3 Pro Tier
+### 6.3 Pro Tier ($19.99/month)
 The Pro subscription provides:
 - All Premium features
-- Unlimited usage
-- Priority support
-- Advanced analytics
+- 5 hosted sessions/month with 2 video speaker slots/session
+- Unlimited Text-to-Speech plays*
+- Priority matching
+- 150-word Text-to-Speech limit per play (vs. 100 for Premium)
 
-### 6.4 Billing
+### 6.4 Broadcaster Tier ($49.99/month)
+The Broadcaster subscription provides:
+- All Pro features
+- 15 hosted sessions/month with 4 video speaker slots/session
+- Priority matching and support
+
+### 6.5 Fair Use Policy
+Features described as "unlimited" (marked with *) are subject to a fair use policy. These features are intended for reasonable personal use. Automated, abusive, or commercially exploitative usage patterns may result in temporary throttling, usage review, or account suspension. We reserve the right to define and enforce reasonable usage thresholds to maintain service quality for all users.
+
+### 6.6 Billing
 - Subscriptions are billed through Apple's App Store
 - Payment is charged to your Apple ID account
 - Subscriptions automatically renew unless canceled at least 24 hours before the end of the current period
 - You can manage subscriptions in your Apple ID account settings
 
-### 6.5 Refunds
+### 6.7 Refunds
 Refund requests are handled by Apple in accordance with their App Store policies.
 
 ## 7. AI Features

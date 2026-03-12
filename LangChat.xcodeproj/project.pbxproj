@@ -161,6 +161,7 @@
 				8F1056012EF5F51000C3580B /* RevenueCat */,
 				8F1056032EF5F51000C3580B /* RevenueCatUI */,
 				8FF54CFC2F13F0D300D85922 /* Sentry */,
+				8FA00B032F50D00000100HMS /* HMSSDK */,
 			);
 			productName = LangChat;
 			productReference = 8F1BA3AE2E87209F003EDC2A /* LangChat.app */;
@@ -248,6 +249,7 @@
 				8F691F622E9EB0DA00F49850 /* XCRemoteSwiftPackageReference "supabase-swift" */,
 				8F1056002EF5F51000C3580B /* XCRemoteSwiftPackageReference "purchases-ios" */,
 				8FF54CFB2F13F0D300D85922 /* XCRemoteSwiftPackageReference "sentry-cocoa" */,
+				8FA00B022F50D00000100HMS /* XCRemoteSwiftPackageReference "100ms-ios-sdk" */,
 			);
 			preferredProjectObjectVersion = 77;
 			productRefGroup = 8F1BA3AF2E87209F003EDC2A /* Products */;
@@ -679,6 +681,14 @@
 				minimumVersion = 9.1.0;
 			};
 		};
+		8FA00B022F50D00000100HMS /* XCRemoteSwiftPackageReference "100ms-ios-sdk" */ = {
+			isa = XCRemoteSwiftPackageReference;
+			repositoryURL = "https://github.com/100mslive/100ms-ios-sdk.git";
+			requirement = {
+				kind = upToNextMajorVersion;
+				minimumVersion = 1.17.0;
+			};
+		};
 /* End XCRemoteSwiftPackageReference section */
 
 /* Begin XCSwiftPackageProductDependency section */
@@ -716,6 +726,11 @@
 			isa = XCSwiftPackageProductDependency;
 			package = 8FF54CFB2F13F0D300D85922 /* XCRemoteSwiftPackageReference "sentry-cocoa" */;
 			productName = Sentry;
+		};
+		8FA00B032F50D00000100HMS /* HMSSDK */ = {
+			isa = XCSwiftPackageProductDependency;
+			package = 8FA00B022F50D00000100HMS /* XCRemoteSwiftPackageReference "100ms-ios-sdk" */;
+			productName = HMSSDK;
 		};
 /* End XCSwiftPackageProductDependency section */
 	};

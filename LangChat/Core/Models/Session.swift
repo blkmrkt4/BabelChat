@@ -3,13 +3,13 @@ import Foundation
 // MARK: - Session Role
 enum SessionRole: String, Codable {
     case host = "host"
-    case coSpeaker = "co_speaker"
+    case coHost = "co_host"
     case rotatingSpeaker = "rotating_speaker"
     case listener = "listener"
 
     var canSpeak: Bool {
         switch self {
-        case .host, .coSpeaker, .rotatingSpeaker:
+        case .host, .coHost, .rotatingSpeaker:
             return true
         case .listener:
             return false
@@ -22,7 +22,7 @@ enum SessionRole: String, Codable {
 
     var canPromote: Bool {
         switch self {
-        case .host, .coSpeaker:
+        case .host, .coHost:
             return true
         case .rotatingSpeaker, .listener:
             return false
@@ -32,7 +32,7 @@ enum SessionRole: String, Codable {
     var displayName: String {
         switch self {
         case .host: return "session_role_host".localized
-        case .coSpeaker: return "session_role_co_speaker".localized
+        case .coHost: return "session_role_co_host".localized
         case .rotatingSpeaker: return "session_role_speaker".localized
         case .listener: return "session_role_listener".localized
         }
@@ -73,7 +73,7 @@ struct Session: Codable {
     let participantCount: Int
     let maxParticipants: Int
     let maxVideoViewers: Int
-    let livekitRoomName: String?
+    let roomName: String?
     let createdAt: Date
 
     // Viewer count (for live sessions)
@@ -98,7 +98,7 @@ struct Session: Codable {
         case participantCount = "participant_count"
         case maxParticipants = "max_participants"
         case maxVideoViewers = "max_video_viewers"
-        case livekitRoomName = "livekit_room_name"
+        case roomName = "livekit_room_name"
         case createdAt = "created_at"
         case viewerCount = "viewer_count"
     }
@@ -119,7 +119,7 @@ struct Session: Codable {
         participantCount = try container.decode(Int.self, forKey: .participantCount)
         maxParticipants = try container.decodeIfPresent(Int.self, forKey: .maxParticipants) ?? 4
         maxVideoViewers = try container.decodeIfPresent(Int.self, forKey: .maxVideoViewers) ?? 5
-        livekitRoomName = try container.decodeIfPresent(String.self, forKey: .livekitRoomName)
+        roomName = try container.decodeIfPresent(String.self, forKey: .roomName)
         createdAt = try container.decode(Date.self, forKey: .createdAt)
         viewerCount = try container.decodeIfPresent(Int.self, forKey: .viewerCount) ?? 0
         // host and participants are set via post-fetch enrichment, not from JSON

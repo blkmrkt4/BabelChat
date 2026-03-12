@@ -22,7 +22,8 @@ class SessionService {
         let isOpen: Bool
         let scheduledAt: String?
         let startedAt: String?
-        let livekitRoomName: String
+        let roomName: String
+        let hmsRoomId: String
         let maxParticipants: Int
         let maxVideoViewers: Int
 
@@ -35,7 +36,8 @@ class SessionService {
             case isOpen = "is_open"
             case scheduledAt = "scheduled_at"
             case startedAt = "started_at"
-            case livekitRoomName = "livekit_room_name"
+            case roomName = "livekit_room_name"
+            case hmsRoomId = "hms_room_id"
             case maxParticipants = "max_participants"
             case maxVideoViewers = "max_video_viewers"
         }
@@ -138,6 +140,10 @@ class SessionService {
         let isStartingNow = scheduledAt == nil
         let roomName = "session_\(UUID().uuidString.lowercased())"
 
+        // Create room on 100ms via Edge Function (region based on host location)
+        let hostLocation = UserDefaults.standard.string(forKey: "location") ?? ""
+        let hmsRoomId = try await createHMSRoom(roomName: roomName, hostLocation: hostLocation)
+
         let insert = SessionInsert(
             hostId: userId.uuidString,
             title: title,
@@ -147,7 +153,8 @@ class SessionService {
             isOpen: isOpen,
             scheduledAt: scheduledAt?.ISO8601Format(),
             startedAt: isStartingNow ? Date().ISO8601Format() : nil,
-            livekitRoomName: roomName,
+            roomName: roomName,
+            hmsRoomId: hmsRoomId,
             maxParticipants: hostTier.maxVideoSlots,
             maxVideoViewers: 5
         )
@@ -427,9 +434,28 @@ class SessionService {
         return response
     }
 
+    // MARK: - 100ms Room Creation
+
+    private struct CreateRoomResponse: Decodable {
+        let roomId: String
+        let roomName: String
+    }
+
+    /// Creates a room on 100ms via the create-room Edge Function.
+    /// The host's location is used to select the nearest 100ms media region.
+    private func createHMSRoom(roomName: String, hostLocation: String) async throws -> String {
+        let response: CreateRoomResponse = try await supabase.client.functions
+            .invoke(
+                "create-room",
+                options: .init(body: ["roomName": roomName, "hostLocation": hostLocation])
+            )
+
+        return response.roomId
+    }
+
     // MARK: - Invites
 
-    func createInvite(sessionId: String, inviteeId: String, role: String = "co_speaker") async throws {
+    func createInvite(sessionId: String, inviteeId: String, role: String = "co_host") async throws {
         guard let userId = supabase.currentUserId else {
             throw SessionError.notAuthenticated
         }
@@ -483,7 +509,7 @@ class SessionService {
                 .execute()
                 .value
 
-            let role = SessionRole(rawValue: invite.role) ?? .coSpeaker
+            let role = SessionRole(rawValue: invite.role) ?? .coHost
             try await joinSession(sessionId: invite.sessionId, role: role)
         }
     }

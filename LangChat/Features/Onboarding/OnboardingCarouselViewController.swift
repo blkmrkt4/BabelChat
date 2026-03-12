@@ -19,8 +19,10 @@ class OnboardingCarouselViewController: UIViewController {
     private var freeFeatureStack: UIStackView?
     private var premiumFeatureStack: UIStackView?
     private var proFeatureStack: UIStackView?
+    private var broadcasterFeatureStack: UIStackView?
     private var premiumPriceLabel: UILabel?
     private var proPriceLabel: UILabel?
+    private var broadcasterPriceLabel: UILabel?
     private var freePriceLabel: UILabel?
 
     private let numberOfPages = 4
@@ -75,6 +77,14 @@ class OnboardingCarouselViewController: UIViewController {
             proPriceLabel?.text = priceText
         }
 
+        // Update Broadcaster price with localized App Store price
+        if let broadcasterOffering = offerings.first(where: { $0.tier == .broadcaster }) {
+            let priceText = subscriptionService.shouldShowWeeklyPricing
+                ? broadcasterOffering.weeklyPriceString
+                : broadcasterOffering.localizedPricePerPeriod
+            broadcasterPriceLabel?.text = priceText
+        }
+
         // Free tier shows "7-Day Trial" (no price change needed)
         freePriceLabel?.text = "tier_trial_price".localized
     }
@@ -83,6 +93,7 @@ class OnboardingCarouselViewController: UIViewController {
         // Use config prices as initial values (RevenueCat will update with real prices)
         premiumPriceLabel?.text = config.premiumPriceFormatted
         proPriceLabel?.text = config.proPriceFormatted
+        broadcasterPriceLabel?.text = config.broadcasterPriceFormatted
 
         // Update free features
         if let stack = freeFeatureStack {
@@ -106,6 +117,15 @@ class OnboardingCarouselViewController: UIViewController {
         if let stack = proFeatureStack {
             stack.arrangedSubviews.forEach { $0.removeFromSuperview() }
             for feature in config.proFeatures {
+                let label = createPricingFeatureLabel(feature.title)
+                stack.addArrangedSubview(label)
+            }
+        }
+
+        // Update broadcaster features
+        if let stack = broadcasterFeatureStack {
+            stack.arrangedSubviews.forEach { $0.removeFromSuperview() }
+            for feature in config.broadcasterFeatures {
                 let label = createPricingFeatureLabel(feature.title)
                 stack.addArrangedSubview(label)
             }
@@ -691,6 +711,10 @@ class OnboardingCarouselViewController: UIViewController {
         let proCard = createPricingCard(tier: .pro)
         contentStack.addArrangedSubview(proCard)
 
+        // Broadcaster tier
+        let broadcasterCard = createPricingCard(tier: .broadcaster)
+        contentStack.addArrangedSubview(broadcasterCard)
+
         NSLayoutConstraint.activate([
             gradientView.topAnchor.constraint(equalTo: pageView.topAnchor),
             gradientView.leadingAnchor.constraint(equalTo: pageView.leadingAnchor),
@@ -721,9 +745,14 @@ class OnboardingCarouselViewController: UIViewController {
         let isPremium = tier == .premium
         let isPro = tier == .pro
         let isFree = tier == .free
+        let isBroadcaster = tier == .broadcaster
 
         let container = UIView()
-        if isPro {
+        if isBroadcaster {
+            container.backgroundColor = UIColor.systemIndigo.withAlphaComponent(0.15)
+            container.layer.borderWidth = 1.5
+            container.layer.borderColor = UIColor.systemIndigo.cgColor
+        } else if isPro {
             container.backgroundColor = goldColor.withAlphaComponent(0.12)
             container.layer.borderWidth = 1.5
             container.layer.borderColor = goldColor.cgColor
@@ -753,7 +782,9 @@ class OnboardingCarouselViewController: UIViewController {
         let titleLabel = UILabel()
         titleLabel.text = tier.displayName
         titleLabel.font = .systemFont(ofSize: 18, weight: .bold)
-        if isPro {
+        if isBroadcaster {
+            titleLabel.textColor = .systemIndigo
+        } else if isPro {
             titleLabel.textColor = goldColor
         } else if isPremium {
             titleLabel.textColor = .systemBlue
@@ -770,6 +801,8 @@ class OnboardingCarouselViewController: UIViewController {
             priceLabel.text = subscriptionService.localizedPricePerPeriod(for: .premium)
         } else if isPro {
             priceLabel.text = subscriptionService.localizedPricePerPeriod(for: .pro)
+        } else if isBroadcaster {
+            priceLabel.text = subscriptionService.localizedPricePerPeriod(for: .broadcaster)
         } else {
             priceLabel.text = tier.price
         }
@@ -784,6 +817,8 @@ class OnboardingCarouselViewController: UIViewController {
             self.premiumPriceLabel = priceLabel
         } else if isPro {
             self.proPriceLabel = priceLabel
+        } else if isBroadcaster {
+            self.broadcasterPriceLabel = priceLabel
         }
 
         stack.addArrangedSubview(headerStack)
@@ -809,6 +844,8 @@ class OnboardingCarouselViewController: UIViewController {
             self.premiumFeatureStack = featureStack
         } else if isPro {
             self.proFeatureStack = featureStack
+        } else if isBroadcaster {
+            self.broadcasterFeatureStack = featureStack
         }
 
         // Add initial features from default config
@@ -817,6 +854,8 @@ class OnboardingCarouselViewController: UIViewController {
             features = pricingConfig.freeFeaturesText
         } else if isPremium {
             features = pricingConfig.premiumFeaturesText
+        } else if isBroadcaster {
+            features = pricingConfig.broadcasterFeaturesText
         } else {
             features = pricingConfig.proFeaturesText
         }

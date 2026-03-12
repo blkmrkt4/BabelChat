@@ -136,9 +136,11 @@ extension SignInWithAppleService: ASAuthorizationControllerDelegate {
         }
 
         print("✅ Sign in with Apple successful")
+        #if DEBUG
         print("   User ID: \(appleIDCredential.user)")
         print("   Email: \(appleIDCredential.email ?? "not provided")")
         print("   Full Name: \(appleIDCredential.fullName?.givenName ?? "") \(appleIDCredential.fullName?.familyName ?? "")")
+        #endif
 
         let result = AppleSignInResult(
             idToken: idTokenString,

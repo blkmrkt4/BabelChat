@@ -87,21 +87,16 @@ struct Config {
         return nil
     }()
 
-    // MARK: - LiveKit
+    // MARK: - 100ms
 
-    static let livekitURL: String = {
-        guard let url = infoPlistValue(for: "LIVEKIT_URL") else {
-            print("⚠️ LIVEKIT_URL not found in Info.plist. LiveKit sessions will not work.")
-            return ""
-        }
-        return url
-    }()
+    /// 100ms does not require a client-side URL — the endpoint is embedded in the auth token.
+    /// This is kept for API compatibility with LiveKitService.connect(url:token:).
+    static let hmsEndpoint: String = ""
 
     // MARK: - App Store
 
-    /// App Store ID - Update this after first App Store submission
-    /// Format: Just the numeric ID, e.g., "1234567890"
-    static let appStoreID: String = "PENDING_SUBMISSION"
+    /// App Store ID
+    static let appStoreID: String = "6740043019"
 
     /// Full App Store URL for the app
     static var appStoreURL: URL? {

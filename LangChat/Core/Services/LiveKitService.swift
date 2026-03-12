@@ -1,12 +1,10 @@
 import Foundation
 import AVFoundation
-#if canImport(LiveKit)
-import LiveKit
-#endif
+import HMSSDK
 
-/// LiveKit service wrapper for video/audio room management.
-/// Requires LiveKit Swift SDK (`livekit-client-sdk-swift`) to be added via SPM.
-class LiveKitService {
+/// 100ms service wrapper for video/audio room management.
+/// Provides the same interface as the previous LiveKit integration.
+class LiveKitService: HMSUpdateListener {
     static let shared = LiveKitService()
 
     // MARK: - Callbacks
@@ -21,16 +19,13 @@ class LiveKitService {
     private(set) var isCameraEnabled = false
     private(set) var isVideoSubscriptionEnabled = true
 
-    #if canImport(LiveKit)
-    private var room: Room?
-    #endif
+    private var hmsSDK: HMSSDK?
 
     private init() {}
 
     // MARK: - Permissions
 
     /// Request camera and microphone permissions before connecting.
-    /// Returns true if both permissions were granted.
     func requestMediaPermissions() async -> (audio: Bool, video: Bool) {
         let audioGranted = await withCheckedContinuation { continuation in
             AVCaptureDevice.requestAccess(for: .audio) { granted in
@@ -50,7 +45,6 @@ class LiveKitService {
     // MARK: - Audio Session Management
 
     /// Configure audio session for live voice/video sessions.
-    /// Must be called before connecting to a LiveKit room.
     func configureAudioSessionForSession() {
         do {
             try AVAudioSession.sharedInstance().setCategory(
@@ -59,7 +53,9 @@ class LiveKitService {
                 options: [.allowBluetooth, .allowBluetoothA2DP, .defaultToSpeaker]
             )
             try AVAudioSession.sharedInstance().setActive(true, options: .notifyOthersOnDeactivation)
+            #if DEBUG
             print("Audio session configured for live session")
+            #endif
         } catch {
             print("Failed to configure audio session for session: \(error.localizedDescription)")
             CrashReportingService.shared.captureError(error, context: ["stage": "session_audio_setup"])
@@ -67,7 +63,6 @@ class LiveKitService {
     }
 
     /// Restore audio session to default TTS playback mode.
-    /// Call this when leaving a session.
     func restoreAudioSessionForPlayback() {
         do {
             try AVAudioSession.sharedInstance().setCategory(
@@ -76,7 +71,9 @@ class LiveKitService {
                 options: [.duckOthers, .defaultToSpeaker]
             )
             try AVAudioSession.sharedInstance().setActive(true, options: .notifyOthersOnDeactivation)
+            #if DEBUG
             print("Audio session restored for playback")
+            #endif
         } catch {
             print("Failed to restore audio session: \(error.localizedDescription)")
             CrashReportingService.shared.captureError(error, context: ["stage": "session_audio_restore"])
@@ -85,138 +82,152 @@ class LiveKitService {
 
     // MARK: - Connection
 
+    /// Connect to a 100ms room.
+    /// - Parameters:
+    ///   - url: Unused (kept for API compatibility). 100ms uses the token to determine the endpoint.
+    ///   - token: Auth token from the `session-token` Edge Function.
     func connect(url: String, token: String) async throws {
-        print("LiveKit: Connecting to \(url)...")
-
-        #if canImport(LiveKit)
-        let room = Room()
-        room.add(delegate: self)
-        try await room.connect(url, token)
-        self.room = room
-        isConnected = true
-        print("LiveKit: Connected")
-        #else
-        // Stub: LiveKit SDK not yet added
-        isConnected = true
-        print("LiveKit: Connected (stub — add livekit-client-sdk-swift via SPM)")
+        #if DEBUG
+        print("100ms: Connecting...")
         #endif
+
+        let sdk = HMSSDK.build()
+        self.hmsSDK = sdk
+
+        let config = HMSConfig(userName: userName(), authToken: token)
+
+        try await withCheckedThrowingContinuation { (continuation: CheckedContinuation<Void, Error>) in
+            var resumed = false
+            sdk.join(config: config, delegate: self)
+
+            // Store continuation to be resumed from on(join:) or on(error:)
+            self.joinContinuation = continuation
+            self.joinContinuationResumed = { resumed = true }
+            // Safety timeout — if neither callback fires in 15 seconds, fail
+            DispatchQueue.main.asyncAfter(deadline: .now() + 15) { [weak self] in
+                guard !resumed else { return }
+                self?.joinContinuation?.resume(throwing: NSError(
+                    domain: "LiveKitService", code: -1,
+                    userInfo: [NSLocalizedDescriptionKey: "100ms join timed out"]
+                ))
+                self?.joinContinuation = nil
+            }
+        }
+    }
+
+    private var joinContinuation: CheckedContinuation<Void, Error>?
+    private var joinContinuationResumed: (() -> Void)?
+
+    private func userName() -> String {
+        let first = UserDefaults.standard.string(forKey: "firstName") ?? ""
+        let last = UserDefaults.standard.string(forKey: "lastName") ?? ""
+        let name = "\(first) \(last)".trimmingCharacters(in: .whitespaces)
+        return name.isEmpty ? "User" : name
     }
 
     func disconnect() {
-        print("LiveKit: Disconnecting...")
-
-        #if canImport(LiveKit)
-        Task {
-            await room?.disconnect()
-            room = nil
-        }
+        #if DEBUG
+        print("100ms: Disconnecting...")
         #endif
+
+        hmsSDK?.leave()
+        hmsSDK = nil
 
         isConnected = false
         isMicEnabled = false
         isCameraEnabled = false
         isVideoSubscriptionEnabled = true
 
-        // Restore audio session when leaving
         restoreAudioSessionForPlayback()
     }
 
     // MARK: - Media Controls
 
     func enableMicrophone() {
-        #if canImport(LiveKit)
-        Task {
-            try? await room?.localParticipant.setMicrophone(enabled: true)
-        }
-        #endif
+        hmsSDK?.localPeer?.localAudioTrack()?.setMute(false)
         isMicEnabled = true
     }
 
     func disableMicrophone() {
-        #if canImport(LiveKit)
-        Task {
-            try? await room?.localParticipant.setMicrophone(enabled: false)
-        }
-        #endif
+        hmsSDK?.localPeer?.localAudioTrack()?.setMute(true)
         isMicEnabled = false
     }
 
     func enableCamera() {
-        #if canImport(LiveKit)
-        Task {
-            try? await room?.localParticipant.setCamera(enabled: true)
-        }
-        #endif
+        hmsSDK?.localPeer?.localVideoTrack()?.setMute(false)
         isCameraEnabled = true
     }
 
     func disableCamera() {
-        #if canImport(LiveKit)
-        Task {
-            try? await room?.localParticipant.setCamera(enabled: false)
-        }
-        #endif
+        hmsSDK?.localPeer?.localVideoTrack()?.setMute(true)
         isCameraEnabled = false
     }
 
     // MARK: - Host Moderation
 
     /// Remotely mute a specific participant's microphone (host only).
+    /// Uses 100ms's first-class remote mute API (server-enforced).
     func muteParticipant(identity: String) {
-        #if canImport(LiveKit)
-        guard let participant = room?.remoteParticipants[Participant.Identity(identity)] else { return }
-        // LiveKit server-side API is needed for force-muting.
-        // For now, send a data message requesting the participant mute themselves.
-        Task {
-            let data = try JSONEncoder().encode(["action": "mute_audio", "target": identity])
-            try await room?.localParticipant.publish(data: data, options: DataPublishOptions(reliable: true))
+        guard let peer = findPeer(byUserId: identity),
+              let audioTrack = peer.audioTrack else { return }
+        hmsSDK?.changeTrackState(for: audioTrack, mute: true) { success, error in
+            #if DEBUG
+            if let error = error {
+                print("100ms: Failed to mute \(identity): \(error.localizedDescription)")
+            } else {
+                print("100ms: Muted \(identity)")
+            }
+            #endif
         }
-        #else
-        print("LiveKit: muteParticipant (stub) — \(identity)")
-        #endif
     }
 
     /// Remotely disable a specific participant's camera (host only).
     func disableParticipantCamera(identity: String) {
-        #if canImport(LiveKit)
-        Task {
-            let data = try JSONEncoder().encode(["action": "disable_camera", "target": identity])
-            try await room?.localParticipant.publish(data: data, options: DataPublishOptions(reliable: true))
+        guard let peer = findPeer(byUserId: identity),
+              let videoTrack = peer.videoTrack else { return }
+        hmsSDK?.changeTrackState(for: videoTrack, mute: true) { success, error in
+            #if DEBUG
+            if let error = error {
+                print("100ms: Failed to disable camera for \(identity): \(error.localizedDescription)")
+            } else {
+                print("100ms: Disabled camera for \(identity)")
+            }
+            #endif
         }
-        #else
-        print("LiveKit: disableParticipantCamera (stub) — \(identity)")
-        #endif
+    }
+
+    private func findPeer(byUserId userId: String) -> HMSPeer? {
+        return hmsSDK?.room?.peers.first { peer in
+            // Match by customerUserId (set via token metadata) or peer name
+            peer.customerUserID == userId || peer.peerID == userId
+        }
     }
 
     // MARK: - Selective Video Subscription
 
-    /// Enable or disable video track subscription for all remote participants.
-    /// Used to implement audio-only mode for free users or waitlisted viewers.
-    /// When disabled, the client only receives audio tracks, saving video bandwidth.
+    /// Enable or disable video subscription for all remote participants.
+    /// In 100ms, this is done by muting/unmuting playback on remote video tracks.
     func setVideoSubscriptionEnabled(_ enabled: Bool) {
-        #if canImport(LiveKit)
-        guard let room = room else {
-            isVideoSubscriptionEnabled = enabled
-            return
-        }
-        for participant in room.remoteParticipants.values {
-            for publication in participant.trackPublications.values {
-                if publication.kind == .video {
-                    Task {
-                        try? await publication.set(subscribed: enabled)
-                    }
-                }
+        isVideoSubscriptionEnabled = enabled
+
+        guard let peers = hmsSDK?.room?.peers else { return }
+        for peer in peers where !peer.isLocal {
+            if let videoTrack = peer.videoTrack as? HMSRemoteVideoTrack {
+                videoTrack.setPlaybackAllowed(enabled)
             }
         }
+
+        #if DEBUG
+        print("100ms: Video subscription \(enabled ? "enabled" : "disabled")")
         #endif
-        isVideoSubscriptionEnabled = enabled
-        print("LiveKit: Video subscription \(enabled ? "enabled" : "disabled")")
     }
 
     // MARK: - Role Permissions
 
     func applyPermissions(for role: SessionRole) {
-        print("LiveKit: Applying permissions for role: \(role.rawValue)")
+        #if DEBUG
+        print("100ms: Applying permissions for role: \(role.rawValue)")
+        #endif
         if role.canSpeak {
             enableMicrophone()
             enableCamera()
@@ -225,52 +236,127 @@ class LiveKitService {
             disableCamera()
         }
     }
-}
 
-// MARK: - LiveKit Room Delegate
-#if canImport(LiveKit)
-extension LiveKitService: RoomDelegate {
-    func room(_ room: Room, participant: RemoteParticipant, didSubscribeTrack publication: RemoteTrackPublication) {
-        // Apply video subscription state to newly subscribed tracks
-        if publication.kind == .video && !isVideoSubscriptionEnabled {
-            Task {
-                try? await publication.set(subscribed: false)
+    // MARK: - HMSUpdateListener
+
+    func on(join room: HMSRoom) {
+        isConnected = true
+        #if DEBUG
+        print("100ms: Joined room \(room.name ?? "")")
+        #endif
+        joinContinuationResumed?()
+        joinContinuation?.resume()
+        joinContinuation = nil
+    }
+
+    func on(room: HMSRoom, update: HMSRoomUpdate) {
+        // Room-level updates (peer count changes, etc.)
+    }
+
+    func on(peer: HMSPeer, update: HMSPeerUpdate) {
+        let identity = peer.customerUserID ?? peer.peerID
+
+        switch update {
+        case .peerJoined:
+            // Apply video subscription state to new peer
+            if !peer.isLocal && !isVideoSubscriptionEnabled {
+                if let videoTrack = peer.videoTrack as? HMSRemoteVideoTrack {
+                    videoTrack.setPlaybackAllowed(false)
+                }
             }
-        }
-        onTrackPublished?(participant.identity?.stringValue ?? "")
-    }
-
-    func room(_ room: Room, participant: RemoteParticipant, didUnsubscribeTrack publication: RemoteTrackPublication) {
-        onTrackUnpublished?(participant.identity?.stringValue ?? "")
-    }
-
-    func room(_ room: Room, participantDidJoin participant: RemoteParticipant) {
-        onParticipantConnected?(participant.identity?.stringValue ?? "")
-    }
-
-    func room(_ room: Room, participantDidLeave participant: RemoteParticipant) {
-        onParticipantDisconnected?(participant.identity?.stringValue ?? "")
-    }
-
-    func room(_ room: Room, participant: RemoteParticipant, didReceiveData data: Data, forTopic topic: String) {
-        // Handle moderation commands from host
-        guard let command = try? JSONDecoder().decode([String: String].self, from: data),
-              let action = command["action"],
-              let target = command["target"],
-              target == room.localParticipant.identity?.stringValue else { return }
-
-        Task { @MainActor in
-            switch action {
-            case "mute_audio":
-                self.disableMicrophone()
-                self.isMicEnabled = false
-            case "disable_camera":
-                self.disableCamera()
-                self.isCameraEnabled = false
-            default:
-                break
-            }
+            onParticipantConnected?(identity)
+        case .peerLeft:
+            onParticipantDisconnected?(identity)
+        default:
+            break
         }
     }
+
+    func on(track: HMSTrack, update: HMSTrackUpdate, for peer: HMSPeer) {
+        guard !peer.isLocal else { return }
+        let identity = peer.customerUserID ?? peer.peerID
+
+        switch update {
+        case .trackAdded:
+            // Apply video subscription state to newly added tracks
+            if track.kind == .video && !isVideoSubscriptionEnabled,
+               let remoteVideo = track as? HMSRemoteVideoTrack {
+                remoteVideo.setPlaybackAllowed(false)
+            }
+            onTrackPublished?(identity)
+        case .trackRemoved:
+            onTrackUnpublished?(identity)
+        default:
+            break
+        }
+    }
+
+    func on(error: any Error) {
+        print("100ms error: \(error.localizedDescription)")
+        CrashReportingService.shared.captureError(error, context: ["stage": "hms_room"])
+
+        // If this fires during join, resume the continuation with error
+        joinContinuationResumed?()
+        joinContinuation?.resume(throwing: error)
+        joinContinuation = nil
+    }
+
+    func on(message: HMSMessage) {
+        // Handle incoming data messages (moderation commands are now handled
+        // server-side by 100ms via changeTrackState, so no client parsing needed)
+    }
+
+    func on(updated speakers: [HMSSpeaker]) {
+        // Active speaker updates — could be used for UI indicators
+    }
+
+    func onRemovedFromRoom(notification: HMSRemovedFromRoomNotification) {
+        #if DEBUG
+        print("100ms: Removed from room — \(notification.reason)")
+        #endif
+        isConnected = false
+    }
+
+    func on(roleChangeRequest: HMSRoleChangeRequest) {
+        // Accept role changes from host automatically
+        hmsSDK?.accept(changeRole: roleChangeRequest)
+    }
+
+    func on(changeTrackStateRequest: HMSChangeTrackStateRequest) {
+        // Host requested track state change (mute/unmute) — auto-apply
+        if changeTrackStateRequest.mute {
+            if changeTrackStateRequest.track.kind == .audio {
+                disableMicrophone()
+            } else if changeTrackStateRequest.track.kind == .video {
+                disableCamera()
+            }
+        }
+    }
+
+    func onPeerListUpdate(added: [HMSPeer], removed: [HMSPeer]) {
+        for peer in added where !peer.isLocal {
+            let identity = peer.customerUserID ?? peer.peerID
+            if !isVideoSubscriptionEnabled, let videoTrack = peer.videoTrack as? HMSRemoteVideoTrack {
+                videoTrack.setPlaybackAllowed(false)
+            }
+            onParticipantConnected?(identity)
+        }
+        for peer in removed where !peer.isLocal {
+            let identity = peer.customerUserID ?? peer.peerID
+            onParticipantDisconnected?(identity)
+        }
+    }
+
+    func onReconnecting() {
+        #if DEBUG
+        print("100ms: Reconnecting...")
+        #endif
+    }
+
+    func onReconnected() {
+        #if DEBUG
+        print("100ms: Reconnected")
+        #endif
+        isConnected = true
+    }
 }
-#endif

@@ -1,6 +1,6 @@
 # Privacy Policy
 
-**Last Updated: January 3, 2026**
+**Last Updated: March 11, 2026**
 
 PainKiller Labs ("Company," "we," "us," or "our") operates the Language Match mobile application (the "App"). This Privacy Policy explains how we collect, use, disclose, and safeguard your information when you use our App.
 
@@ -12,7 +12,7 @@ Please read this Privacy Policy carefully. By using the App, you agree to the co
 
 **Account Information**
 - Name (first and last)
-- Email address (via Sign in with Apple)
+- Email address (via Sign in with Apple or email registration)
 - Username
 - Profile photo(s)
 - Date of birth
@@ -30,6 +30,11 @@ Please read this Privacy Policy carefully. By using the App, you agree to the co
 - Messages sent to other users
 - Messages sent to AI Muses
 - Feedback and support requests
+
+**Session and Live Audio/Video Data**
+- When you join or host a live session, your audio and/or video streams are transmitted in real time to other participants via our infrastructure provider (LiveKit)
+- Session participation data (role, join/leave times, video slot status)
+- Session chat messages sent during live sessions
 
 ### 1.2 Information Collected Automatically
 
@@ -55,6 +60,10 @@ Please read this Privacy Policy carefully. By using the App, you agree to the co
 - Apple ID (anonymized if you choose to hide your email)
 - Email address (or relay email if hidden)
 - Name (if provided)
+
+**Email Authentication**
+- Email address
+- Encrypted password
 
 ## 2. How We Use Your Information
 
@@ -99,8 +108,11 @@ We share information with third-party service providers who assist us in operati
 | Provider | Purpose | Data Shared |
 |----------|---------|-------------|
 | Supabase | Database and authentication | Account data, messages, profile info |
+| LiveKit | Real-time audio/video sessions | Audio and video streams, session participation metadata |
 | Google Cloud | Text-to-speech services | Message text for audio generation |
 | OpenRouter/AI Providers | Translation and grammar | Message text for processing |
+| RevenueCat | Subscription management | Purchase history, subscription status |
+| Sentry | Crash reporting | Device info, app state at time of crash |
 | Apple | Authentication, payments | Apple ID, subscription data |
 
 These providers are contractually obligated to protect your information and use it only for the services they provide to us.
@@ -135,7 +147,7 @@ We retain your information for as long as your account is active or as needed to
 We implement appropriate security measures including:
 - Encryption of data in transit (TLS/SSL)
 - Encryption of data at rest
-- Secure authentication via Sign in with Apple
+- Secure authentication via Sign in with Apple and email-based authentication
 - Regular security assessments
 - Access controls for employee access to data
 
@@ -183,7 +195,27 @@ We take steps to ensure that your information receives adequate protection in ac
 
 The App may contain links to third-party websites or services. We are not responsible for the privacy practices of these third parties. We encourage you to review their privacy policies before providing any information.
 
-## 9. AI and Automated Processing
+## 9. Live Sessions and Audio/Video
+
+### 9.1 Session Data
+When you participate in live sessions (as a host, speaker, or viewer), we collect:
+- Your role in the session (host, speaker, or listener)
+- Join and leave times
+- Video slot reservation status (confirmed, waitlisted, or active)
+- Chat messages sent during the session
+
+### 9.2 Audio and Video Transmission
+- Audio and video streams are transmitted in real time through LiveKit, our infrastructure provider
+- Streams are routed through LiveKit's servers and are not recorded or stored by Language Match
+- Free-tier users receive audio only; video streams are only delivered to users with an active video viewer slot
+- You can control your camera and microphone at any time during a session
+
+### 9.3 Session Hosting
+- Pro and Broadcaster subscribers can host sessions with video speaker slots
+- As a host, you are responsible for the content shared during your sessions
+- Session metadata (title, language pair, scheduled time, participant count) is visible to other users
+
+## 10. AI and Automated Processing
 
 ### 9.1 AI Features
 The App uses artificial intelligence to provide:
@@ -206,38 +238,38 @@ The App uses automated systems for:
 
 You can contact us if you have concerns about automated decisions affecting your account.
 
-## 10. California Privacy Rights (CCPA)
+## 11. California Privacy Rights (CCPA)
 
 If you are a California resident, you have additional rights:
 
-### 10.1 Right to Know
+### 11.1 Right to Know
 You can request information about:
 - Categories of personal information collected
 - Sources of personal information
 - Purposes for collecting information
 - Categories of third parties with whom we share information
 
-### 10.2 Right to Delete
+### 11.2 Right to Delete
 You can request deletion of your personal information, subject to certain exceptions.
 
-### 10.3 Right to Non-Discrimination
+### 11.3 Right to Non-Discrimination
 We will not discriminate against you for exercising your privacy rights.
 
-### 10.4 Exercising Your Rights
+### 11.4 Exercising Your Rights
 To exercise these rights, contact us at support@painkillerlabs.com or use the in-app data management features.
 
-## 11. European Privacy Rights (GDPR)
+## 12. European Privacy Rights (GDPR)
 
 If you are in the European Economic Area (EEA), you have additional rights under GDPR:
 
-### 11.1 Legal Basis for Processing
+### 12.1 Legal Basis for Processing
 We process your information based on:
 - **Contract:** To provide the Service you requested
 - **Consent:** For optional features and marketing
 - **Legitimate Interest:** For safety, security, and service improvement
 - **Legal Obligation:** When required by law
 
-### 11.2 Your Rights
+### 12.2 Your Rights
 - **Access:** Request a copy of your data
 - **Rectification:** Correct inaccurate data
 - **Erasure:** Request deletion of your data
@@ -246,10 +278,10 @@ We process your information based on:
 - **Objection:** Object to certain processing
 - **Withdraw Consent:** Withdraw consent at any time
 
-### 11.3 Data Protection Authority
+### 12.3 Data Protection Authority
 You have the right to lodge a complaint with a supervisory authority in your country of residence.
 
-## 12. Changes to This Privacy Policy
+## 13. Changes to This Privacy Policy
 
 We may update this Privacy Policy from time to time. We will notify you of material changes by:
 - Posting the updated policy in the App
@@ -258,7 +290,7 @@ We may update this Privacy Policy from time to time. We will notify you of mater
 
 The "Last Updated" date at the top indicates when the policy was last revised. Your continued use of the App after changes become effective constitutes acceptance of the revised policy.
 
-## 13. Contact Us
+## 14. Contact Us
 
 If you have questions about this Privacy Policy or our privacy practices, please contact us:
 

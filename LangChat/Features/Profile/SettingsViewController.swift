@@ -450,7 +450,7 @@ class SettingsViewController: UIViewController {
                 📱 HOW TO CONNECT:
 
                 1️⃣ Download Language Match from the App Store:
-                https://apps.apple.com/app/fluenca/id6740043019
+                https://apps.apple.com/app/language-match/id6740043019
 
                 2️⃣ Create your account and choose the Premium plan ($9.99/mo) to unlock matching with real people
 

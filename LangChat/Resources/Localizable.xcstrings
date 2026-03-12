@@ -124069,7 +124069,7 @@
         "en": {
           "stringUnit": {
             "state": "translated",
-            "value": "50 messages per month"
+            "value": "10 messages/day"
           }
         },
         "fi": {
@@ -124568,6 +124568,78 @@
           "stringUnit": {
             "state": "needs_review",
             "value": "مجانا لمدة 7 أيام لاستكشاف Language Match"
+          }
+        }
+      }
+    },
+    "tier_broadcaster_display_name": {
+      "comment": "Broadcaster tier display name",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Broadcaster"
+          }
+        }
+      }
+    },
+    "tier_broadcaster_feature_1": {
+      "comment": "Broadcaster feature 1",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Everything in Pro"
+          }
+        }
+      }
+    },
+    "tier_broadcaster_feature_2": {
+      "comment": "Broadcaster feature 2",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "15 hosted sessions/month"
+          }
+        }
+      }
+    },
+    "tier_broadcaster_feature_3": {
+      "comment": "Broadcaster feature 3",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "4 video speaker slots/session"
+          }
+        }
+      }
+    },
+    "tier_broadcaster_feature_4": {
+      "comment": "Broadcaster feature 4",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Priority matching & support"
+          }
+        }
+      }
+    },
+    "tier_broadcaster_short_desc": {
+      "comment": "Broadcaster tier short description",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "For power hosts who lead the conversation"
           }
         }
       }
@@ -144517,7 +144589,7 @@
         }
       }
     },
-    "session_role_co_speaker": {
+    "session_role_co_host": {
       "comment": "Co-host role label",
       "extractionState": "manual",
       "localizations": {

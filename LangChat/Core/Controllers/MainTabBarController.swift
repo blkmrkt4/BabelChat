@@ -2,16 +2,37 @@ import UIKit
 
 class MainTabBarController: UITabBarController, UITabBarControllerDelegate {
 
+    private var chatsTabIndex: Int?
+
     override func viewDidLoad() {
         super.viewDidLoad()
         delegate = self
         setupViewControllers()
         setupAppearance()
         setupConnectivityBanner()
+        observeUnreadCount()
 
         // Auto-sync UserDefaults to Supabase if data is out of sync
         // This fixes cases where onboarding data wasn't synced properly
         syncLocalDataToSupabaseIfNeeded()
+    }
+
+    private func observeUnreadCount() {
+        NotificationCenter.default.addObserver(
+            self,
+            selector: #selector(handleUnreadCountUpdate(_:)),
+            name: NSNotification.Name("UnreadMessageCountDidChange"),
+            object: nil
+        )
+    }
+
+    @objc private func handleUnreadCountUpdate(_ notification: Notification) {
+        guard let count = notification.userInfo?["count"] as? Int,
+              let index = chatsTabIndex else { return }
+        DispatchQueue.main.async {
+            self.viewControllers?[index].tabBarItem.badgeValue = count > 0 ? "\(count)" : nil
+            self.viewControllers?[index].tabBarItem.badgeColor = .systemRed
+        }
     }
 
     /// Check if UserDefaults has more complete data than Supabase and sync if needed
@@ -178,6 +199,7 @@ class MainTabBarController: UITabBarController, UITabBarControllerDelegate {
         let sessionsVC = createSessionsViewController()
 
         viewControllers = [discoverVC, languageLabVC, matchesVC, chatsVC, sessionsVC]
+        chatsTabIndex = 3
 
         selectedIndex = 2 // Start on Matches tab
     }
@@ -239,10 +261,6 @@ class MainTabBarController: UITabBarController, UITabBarControllerDelegate {
             image: UIImage(systemName: "message"),
             selectedImage: UIImage(systemName: "message.fill")
         )
-
-        // Add badge for unread messages
-        chatsVC.tabBarItem.badgeValue = "3"
-        chatsVC.tabBarItem.badgeColor = .systemRed
 
         return UINavigationController(rootViewController: chatsVC)
     }

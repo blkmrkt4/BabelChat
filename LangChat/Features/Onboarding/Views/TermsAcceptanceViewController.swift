@@ -1,4 +1,5 @@
 import UIKit
+import Supabase
 
 /// Onboarding step that requires users to accept Terms of Service and Privacy Policy
 /// before they can proceed with creating an account.
@@ -152,9 +153,39 @@ class TermsAcceptanceViewController: BaseOnboardingViewController {
     }
 
     private func saveTermsAcceptanceToSupabase(acceptedAt: Date) async {
-        // This will be called later when user completes authentication
-        // For now, just store locally
-        print("Terms accepted at: \(acceptedAt)")
+        guard let userId = SupabaseService.shared.currentUserId else {
+            // User not yet authenticated — consent will be saved after auth completes
+            #if DEBUG
+            print("Terms accepted locally, will persist after authentication")
+            #endif
+            return
+        }
+
+        await Self.persistConsent(userId: userId, acceptedAt: acceptedAt)
+    }
+
+    /// Persist consent records to Supabase. Called from onboarding completion after auth.
+    static func persistConsent(userId: UUID, acceptedAt: Date) async {
+        let documentVersion = Bundle.main.infoDictionary?["CFBundleShortVersionString"] as? String ?? "1.0"
+        let documents = ["terms_of_service", "privacy_policy", "eula", "community_guidelines"]
+
+        for docType in documents {
+            do {
+                try await SupabaseService.shared.client
+                    .from("consent_records")
+                    .upsert([
+                        "user_id": userId.uuidString,
+                        "document_type": docType,
+                        "document_version": documentVersion,
+                        "accepted_at": ISO8601DateFormatter().string(from: acceptedAt)
+                    ])
+                    .execute()
+            } catch {
+                #if DEBUG
+                print("Failed to save consent for \(docType): \(error.localizedDescription)")
+                #endif
+            }
+        }
     }
 }
 

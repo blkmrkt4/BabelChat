@@ -453,6 +453,14 @@ class ChatsListViewController: UIViewController {
         tableView.reloadData()
         updateEmptyState()
 
+        // Notify tab bar of unread count
+        let unreadCount = loadedChats.filter { $0.hasNewMessage }.count
+        NotificationCenter.default.post(
+            name: NSNotification.Name("UnreadMessageCountDidChange"),
+            object: nil,
+            userInfo: ["count": unreadCount]
+        )
+
         #if DEBUG
         print("📱 ChatsListVC: Displaying \(chats.count) chats")
         #endif

@@ -110,7 +110,9 @@ extension SupabaseService {
         // Persist Apple-provided data IMMEDIATELY before any network calls.
         // Apple only provides name/email on the FIRST sign-in ever — if we lose it, it's gone forever.
         if let email = appleResult.email {
+            #if DEBUG
             print("📧 Apple provided email: \(email)")
+            #endif
             UserDefaults.standard.set(email, forKey: "appleProvidedEmail")
             UserDefaults.standard.set(email, forKey: "email")
         }
@@ -119,7 +121,9 @@ extension SupabaseService {
             let firstName = fullName.givenName ?? ""
             let lastName = fullName.familyName ?? ""
             if !firstName.isEmpty {
+                #if DEBUG
                 print("👤 Apple provided name: \(firstName) \(lastName)")
+                #endif
                 UserDefaults.standard.set(firstName, forKey: "appleProvidedFirstName")
                 UserDefaults.standard.set(lastName, forKey: "appleProvidedLastName")
                 UserDefaults.standard.set(firstName, forKey: "firstName")
@@ -143,13 +147,17 @@ extension SupabaseService {
     /// Sign in with email/password
     func signIn(email: String, password: String) async throws {
         try await client.auth.signIn(email: email, password: password)
+        #if DEBUG
         print("✅ Signed in: \(email)")
+        #endif
     }
 
     /// Sign up with email/password
     func signUp(email: String, password: String) async throws {
         try await client.auth.signUp(email: email, password: password)
+        #if DEBUG
         print("✅ Signed up: \(email)")
+        #endif
     }
 
     /// Sign out
@@ -166,132 +174,64 @@ extension SupabaseService {
         }
 
         let userIdString = userId.uuidString
+        #if DEBUG
         print("🗑️ Starting account deletion for user: \(userIdString)")
+        #endif
 
-        // Delete user data from all tables (order matters for foreign key constraints)
-        // Messages first (references conversations and users)
-        try? await client
-            .from("messages")
-            .delete()
-            .or("sender_id.eq.\(userIdString),receiver_id.eq.\(userIdString)")
-            .execute()
-        print("  ✅ Messages deleted")
+        // Delete all user data atomically via server-side cascade function
+        do {
+            try await client.rpc("delete_user_cascade", params: ["p_user_id": userIdString]).execute()
+            #if DEBUG
+            print("  ✅ User data cascade deleted")
+            #endif
+        } catch {
+            throw NSError(domain: "SupabaseService", code: -2,
+                         userInfo: [NSLocalizedDescriptionKey: "Failed to delete user data: \(error.localizedDescription)"])
+        }
 
-        // Conversations
-        try? await client
-            .from("conversations")
-            .delete()
-            .or("user1_id.eq.\(userIdString),user2_id.eq.\(userIdString)")
-            .execute()
-        print("  ✅ Conversations deleted")
-
-        // Reported users (both reporter and reported)
-        try? await client
-            .from("reported_users")
-            .delete()
-            .or("reporter_id.eq.\(userIdString),reported_user_id.eq.\(userIdString)")
-            .execute()
-        print("  ✅ Reports deleted")
-
-        // Muse interactions
-        try? await client
-            .from("muse_interactions")
-            .delete()
-            .eq("user_id", value: userIdString)
-            .execute()
-        print("  ✅ Muse interactions deleted")
-
-        // Feedback
-        try? await client
-            .from("feedback")
-            .delete()
-            .eq("user_id", value: userIdString)
-            .execute()
-        print("  ✅ Feedback deleted")
-
-        // Matches
-        try? await client
-            .from("matches")
-            .delete()
-            .or("user1_id.eq.\(userIdString),user2_id.eq.\(userIdString)")
-            .execute()
-        print("  ✅ Matches deleted")
-
-        // Swipes
-        try? await client
-            .from("swipes")
-            .delete()
-            .or("swiper_id.eq.\(userIdString),swiped_id.eq.\(userIdString)")
-            .execute()
-        print("  ✅ Swipes deleted")
-
-        // User languages
-        try? await client
-            .from("user_languages")
-            .delete()
-            .eq("user_id", value: userIdString)
-            .execute()
-        print("  ✅ User languages deleted")
-
-        // User preferences
-        try? await client
-            .from("user_preferences")
-            .delete()
-            .eq("user_id", value: userIdString)
-            .execute()
-        print("  ✅ User preferences deleted")
-
-        // Invites
-        try? await client
-            .from("invites")
-            .delete()
-            .eq("inviter_id", value: userIdString)
-            .execute()
-        print("  ✅ Invites deleted")
-
-        // Delete profile (this is the main user record)
-        try? await client
-            .from("profiles")
-            .delete()
-            .eq("id", value: userIdString)
-            .execute()
-        print("  ✅ Profile deleted")
-
-        // Delete profile photos from storage
+        // Delete profile photos from storage (can't be done in SQL)
         do {
             let files = try await client.storage.from("profile-photos").list(path: userIdString)
             if !files.isEmpty {
                 let filePaths = files.map { "\(userIdString)/\($0.name)" }
                 try await client.storage.from("profile-photos").remove(paths: filePaths)
-                print("  ✅ Profile photos deleted")
             }
         } catch {
+            #if DEBUG
             print("  ⚠️ Could not delete photos: \(error.localizedDescription)")
+            #endif
         }
 
         // Delete the auth.users row via server-side function (must be called while still authenticated)
         do {
             try await client.rpc("delete_auth_user").execute()
-            print("  ✅ Auth user deleted")
         } catch {
+            #if DEBUG
             print("  ⚠️ Could not delete auth user: \(error.localizedDescription)")
+            #endif
         }
 
         // Sign out (clears local session tokens)
         try await client.auth.signOut()
+        #if DEBUG
         print("✅ Account deletion complete, signed out")
+        #endif
     }
 
     /// Send magic link to email
     func sendMagicLink(email: String) async throws {
         try await client.auth.signInWithOTP(email: email)
+        #if DEBUG
         print("✅ Magic link sent to: \(email)")
+        #endif
     }
 
     /// Verify OTP
     func verifyOTP(email: String, token: String) async throws {
         try await client.auth.verifyOTP(email: email, token: token, type: .email)
+        #if DEBUG
         print("✅ OTP verified for: \(email)")
+        #endif
     }
 
     /// Check if current user is banned
@@ -682,7 +622,9 @@ extension SupabaseService {
             // Mark that profile has been synced
             UserDefaults.standard.set(true, forKey: "profileSynced")
 
+            #if DEBUG
             print("✅ Synced profile to UserDefaults: \(profile.firstName) (\(profile.email))")
+            #endif
         }
     }
 

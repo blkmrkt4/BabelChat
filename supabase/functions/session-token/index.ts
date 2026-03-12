@@ -1,16 +1,14 @@
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 
-const LIVEKIT_API_KEY = Deno.env.get("LIVEKIT_API_KEY") || "";
-const LIVEKIT_API_SECRET = Deno.env.get("LIVEKIT_API_SECRET") || "";
-const LIVEKIT_URL = Deno.env.get("LIVEKIT_URL") || "";
+const HMS_ACCESS_KEY = Deno.env.get("HMS_ACCESS_KEY") || "";
+const HMS_SECRET = Deno.env.get("HMS_SECRET") || "";
 
-// Simple JWT creation for LiveKit tokens
-async function createLiveKitToken(
-  roomName: string,
-  participantIdentity: string,
-  canPublish: boolean,
-  canSubscribe: boolean
+// Create a 100ms auth token (HS256 JWT)
+async function createHMSToken(
+  roomId: string,
+  userId: string,
+  role: string
 ): Promise<string> {
   const header = {
     alg: "HS256",
@@ -18,19 +16,19 @@ async function createLiveKitToken(
   };
 
   const now = Math.floor(Date.now() / 1000);
+  const jti = crypto.randomUUID();
+
   const payload = {
-    iss: LIVEKIT_API_KEY,
-    sub: participantIdentity,
+    access_key: HMS_ACCESS_KEY,
+    room_id: roomId,
+    user_id: userId,
+    role: role,
+    type: "app",
+    version: 2,
     iat: now,
     nbf: now,
-    exp: now + 3600, // 1 hour
-    video: {
-      roomJoin: true,
-      room: roomName,
-      canPublish,
-      canSubscribe,
-      canPublishData: true,
-    },
+    exp: now + 86400, // 24 hours
+    jti: jti,
   };
 
   const encoder = new TextEncoder();
@@ -47,7 +45,7 @@ async function createLiveKitToken(
   const data = encoder.encode(`${headerB64}.${payloadB64}`);
   const key = await crypto.subtle.importKey(
     "raw",
-    encoder.encode(LIVEKIT_API_SECRET),
+    encoder.encode(HMS_SECRET),
     { name: "HMAC", hash: "SHA-256" },
     false,
     ["sign"]
@@ -62,9 +60,24 @@ async function createLiveKitToken(
   return `${headerB64}.${payloadB64}.${signatureB64}`;
 }
 
+// Map SessionRole to 100ms role name
+function mapRole(dbRole: string): string {
+  switch (dbRole) {
+    case "host":
+      return "host";
+    case "co_host":
+      return "co_host";
+    case "rotating_speaker":
+      return "rotating_speaker";
+    case "listener":
+      return "listener";
+    default:
+      return "listener";
+  }
+}
+
 serve(async (req) => {
   try {
-    // Derive userId from the authenticated Supabase JWT — not from the request body
     const authHeader = req.headers.get("Authorization");
     if (!authHeader || !authHeader.startsWith("Bearer ")) {
       return new Response(
@@ -77,11 +90,14 @@ serve(async (req) => {
     const supabaseAnonKey = Deno.env.get("SUPABASE_ANON_KEY") || "";
     const supabaseServiceKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY") || "";
 
-    // Create a client with the user's JWT to extract their identity
+    // Authenticate the caller
     const userClient = createClient(supabaseUrl, supabaseAnonKey, {
       global: { headers: { Authorization: authHeader } },
     });
-    const { data: { user }, error: authError } = await userClient.auth.getUser();
+    const {
+      data: { user },
+      error: authError,
+    } = await userClient.auth.getUser();
 
     if (authError || !user) {
       return new Response(
@@ -100,13 +116,12 @@ serve(async (req) => {
       );
     }
 
-    // Create Supabase client with service role for DB access
     const supabase = createClient(supabaseUrl, supabaseServiceKey);
 
-    // Look up session and participant role
+    // Look up session
     const { data: session, error: sessionError } = await supabase
       .from("sessions")
-      .select("id, livekit_room_name, status")
+      .select("id, livekit_room_name, hms_room_id, status")
       .eq("id", sessionId)
       .single();
 
@@ -117,7 +132,6 @@ serve(async (req) => {
       );
     }
 
-    // Guard: only issue tokens for active sessions
     if (!["live", "scheduled"].includes(session.status)) {
       return new Response(
         JSON.stringify({ error: "Session is no longer active" }),
@@ -125,6 +139,7 @@ serve(async (req) => {
       );
     }
 
+    // Look up participant role
     const { data: participant, error: participantError } = await supabase
       .from("session_participants")
       .select("role, is_active")
@@ -139,33 +154,30 @@ serve(async (req) => {
       );
     }
 
-    // Speakers can publish, listeners can only subscribe
-    const canPublish = ["host", "co_speaker", "rotating_speaker"].includes(
-      participant.role
-    );
+    const hmsRoomId = session.hms_room_id;
+    if (!hmsRoomId) {
+      return new Response(
+        JSON.stringify({ error: "Room not created yet" }),
+        { status: 400, headers: { "Content-Type": "application/json" } }
+      );
+    }
 
-    const roomName =
-      session.livekit_room_name || `session_${sessionId}`;
+    const roomName = session.livekit_room_name || `session_${sessionId}`;
+    const hmsRole = mapRole(participant.role);
 
-    const token = await createLiveKitToken(
-      roomName,
-      userId,
-      canPublish,
-      true // everyone can subscribe
-    );
+    const token = await createHMSToken(hmsRoomId, userId, hmsRole);
 
     return new Response(
       JSON.stringify({
         token,
         roomName,
-        url: LIVEKIT_URL,
       }),
       { status: 200, headers: { "Content-Type": "application/json" } }
     );
   } catch (error) {
-    return new Response(
-      JSON.stringify({ error: error.message }),
-      { status: 500, headers: { "Content-Type": "application/json" } }
-    );
+    return new Response(JSON.stringify({ error: error.message }), {
+      status: 500,
+      headers: { "Content-Type": "application/json" },
+    });
   }
 });

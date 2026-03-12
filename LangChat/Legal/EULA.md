@@ -53,7 +53,7 @@ We actively moderate user-generated content through a combination of automated f
 ## 4. Subscription Services
 
 ### 4.1 In-App Purchases
-The App offers subscription services ("Premium" and "Pro" tiers) that provide enhanced features. Subscriptions are billed through Apple's App Store and are subject to Apple's terms and conditions.
+The App offers subscription services ("Premium," "Pro," and "Broadcaster" tiers) that provide enhanced features. Subscriptions are billed through Apple's App Store and are subject to Apple's terms and conditions.
 
 ### 4.2 Auto-Renewal
 Subscriptions automatically renew unless canceled at least 24 hours before the end of the current billing period. Your account will be charged for renewal within 24 hours prior to the end of the current period.
@@ -63,6 +63,9 @@ You can manage and cancel your subscription through your Apple ID account settin
 
 ### 4.4 Price Changes
 We reserve the right to change subscription prices. You will be notified of any price changes in advance, and changes will apply to subsequent billing periods.
+
+### 4.5 Fair Use Policy
+Features described as "unlimited" on paid subscription tiers (including messages, swipes, profile views, session joins, and Text-to-Speech plays) are subject to reasonable personal use. Automated, abusive, or commercially exploitative usage patterns may result in temporary throttling, usage review, or account suspension. We reserve the right to define and enforce reasonable usage thresholds to maintain service quality for all users.
 
 ## 5. AI Features and Third-Party Services
 

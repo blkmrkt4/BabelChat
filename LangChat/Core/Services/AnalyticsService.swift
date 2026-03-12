@@ -1,5 +1,6 @@
 import Foundation
 import UIKit
+import Sentry
 
 /// Centralized analytics service for tracking user events
 /// Currently logs to console, but designed to easily integrate with
@@ -44,10 +45,13 @@ final class AnalyticsService {
     func track(_ event: AnalyticsEvent, properties: [String: Any]? = nil) {
         logEvent(event, properties: properties)
 
-        // TODO: Send to analytics backend
-        // When you add Mixpanel/Amplitude/PostHog, add the call here:
-        // Mixpanel.mainInstance().track(event: event.rawValue, properties: properties)
-        // Analytics.track(event.rawValue, properties: properties)
+        // Record as Sentry breadcrumb for crash context
+        let crumb = Breadcrumb(level: .info, category: "analytics")
+        crumb.message = event.rawValue
+        if let props = properties {
+            crumb.data = props.mapValues { "\($0)" }
+        }
+        SentrySDK.addBreadcrumb(crumb)
     }
 
     private func logEvent(_ event: AnalyticsEvent, properties: [String: Any]? = nil) {
