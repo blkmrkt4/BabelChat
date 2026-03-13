@@ -90,7 +90,7 @@ struct Config {
     // MARK: - 100ms
 
     /// 100ms does not require a client-side URL — the endpoint is embedded in the auth token.
-    /// This is kept for API compatibility with LiveKitService.connect(url:token:).
+    /// This is kept for API compatibility with HundredMSService.connect(url:token:).
     static let hmsEndpoint: String = ""
 
     // MARK: - App Store

@@ -1,4 +1,5 @@
 import UIKit
+import HMSSDK
 
 class VideoParticipantView: UIView {
 
@@ -17,6 +18,7 @@ class VideoParticipantView: UIView {
 
     // MARK: - UI
     private let videoContainer = UIView()
+    private let hmsVideoView = HMSVideoView()
     private let placeholderIcon = UIImageView()
     private let nameLabel = UILabel()
     private let roleBadge = UILabel()
@@ -41,10 +43,16 @@ class VideoParticipantView: UIView {
         layer.cornerRadius = 8
         clipsToBounds = true
 
-        // Video container (for LiveKit VideoView)
+        // Video container
         videoContainer.backgroundColor = .systemGray6
         videoContainer.translatesAutoresizingMaskIntoConstraints = false
         addSubview(videoContainer)
+
+        // 100ms video view for rendering camera tracks
+        hmsVideoView.translatesAutoresizingMaskIntoConstraints = false
+        hmsVideoView.videoContentMode = .scaleAspectFill
+        hmsVideoView.isHidden = true
+        videoContainer.addSubview(hmsVideoView)
 
         // Placeholder
         placeholderIcon.image = UIImage(systemName: "person.fill")
@@ -93,6 +101,11 @@ class VideoParticipantView: UIView {
             videoContainer.leadingAnchor.constraint(equalTo: leadingAnchor),
             videoContainer.trailingAnchor.constraint(equalTo: trailingAnchor),
             videoContainer.bottomAnchor.constraint(equalTo: bottomAnchor),
+
+            hmsVideoView.topAnchor.constraint(equalTo: videoContainer.topAnchor),
+            hmsVideoView.leadingAnchor.constraint(equalTo: videoContainer.leadingAnchor),
+            hmsVideoView.trailingAnchor.constraint(equalTo: videoContainer.trailingAnchor),
+            hmsVideoView.bottomAnchor.constraint(equalTo: videoContainer.bottomAnchor),
 
             placeholderIcon.centerXAnchor.constraint(equalTo: videoContainer.centerXAnchor),
             placeholderIcon.centerYAnchor.constraint(equalTo: videoContainer.centerYAnchor),
@@ -176,8 +189,29 @@ class VideoParticipantView: UIView {
         muteIndicator.isHidden = true
         videoOffIndicator.isHidden = true
         placeholderIcon.isHidden = false
+        hmsVideoView.isHidden = true
+        hmsVideoView.setVideoTrack(nil)
         videoContainer.backgroundColor = .systemGray6
         placeholderIcon.image = UIImage(systemName: "plus")
         placeholderIcon.tintColor = .systemGray4
+    }
+
+    // MARK: - Video Track
+
+    /// Attach an HMSVideoTrack (local or remote) to render in this view.
+    func setVideoTrack(_ track: HMSVideoTrack?) {
+        if let track = track {
+            hmsVideoView.setVideoTrack(track)
+            hmsVideoView.isHidden = false
+            placeholderIcon.isHidden = true
+            videoContainer.backgroundColor = .black
+        } else {
+            hmsVideoView.setVideoTrack(nil)
+            hmsVideoView.isHidden = true
+            placeholderIcon.isHidden = false
+            placeholderIcon.image = UIImage(systemName: "person.fill")
+            placeholderIcon.tintColor = .systemGray3
+            videoContainer.backgroundColor = .systemGray6
+        }
     }
 }

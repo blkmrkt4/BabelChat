@@ -4,8 +4,8 @@ import HMSSDK
 
 /// 100ms service wrapper for video/audio room management.
 /// Provides the same interface as the previous LiveKit integration.
-class LiveKitService: HMSUpdateListener {
-    static let shared = LiveKitService()
+class HundredMSService: HMSUpdateListener {
+    static let shared = HundredMSService()
 
     // MARK: - Callbacks
     var onParticipantConnected: ((String) -> Void)?
@@ -107,7 +107,7 @@ class LiveKitService: HMSUpdateListener {
             DispatchQueue.main.asyncAfter(deadline: .now() + 15) { [weak self] in
                 guard !resumed else { return }
                 self?.joinContinuation?.resume(throwing: NSError(
-                    domain: "LiveKitService", code: -1,
+                    domain: "HundredMSService", code: -1,
                     userInfo: [NSLocalizedDescriptionKey: "100ms join timed out"]
                 ))
                 self?.joinContinuation = nil
@@ -161,6 +161,21 @@ class LiveKitService: HMSUpdateListener {
     func disableCamera() {
         hmsSDK?.localPeer?.localVideoTrack()?.setMute(true)
         isCameraEnabled = false
+    }
+
+    func flipCamera() {
+        hmsSDK?.localPeer?.localVideoTrack()?.switchCamera()
+    }
+
+    /// Returns the local peer's video track for rendering.
+    func localVideoTrack() -> HMSVideoTrack? {
+        return hmsSDK?.localPeer?.localVideoTrack()
+    }
+
+    /// Returns a remote peer's video track by user ID.
+    func videoTrack(for userId: String) -> HMSVideoTrack? {
+        guard let peer = findPeer(byUserId: userId) else { return nil }
+        return peer.videoTrack
     }
 
     // MARK: - Host Moderation

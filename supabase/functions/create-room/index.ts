@@ -76,7 +76,7 @@ function mapLocationToRegion(location: string): string {
   if (europe.some((k) => loc.includes(k))) return "eu";
 
   // Americas (default) — US, Canada, Mexico, Central/South America
-  return "us2";
+  return "us";
 }
 
 serve(async (req) => {

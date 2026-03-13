@@ -25,6 +25,7 @@ class SessionViewController: UIViewController {
     private let controlsBar = UIStackView()
     private let micButton = UIButton(type: .system)
     private let cameraButton = UIButton(type: .system)
+    private let flipCameraButton = UIButton(type: .system)
     private let handRaiseButton = UIButton(type: .system)
     private let manageButton = UIButton(type: .system)
     private let addParticipantButton = UIButton(type: .system)
@@ -90,7 +91,7 @@ class SessionViewController: UIViewController {
         sessionTimer?.invalidate()
         videoSlotsChannel?.unsubscribe()
         SessionService.shared.unsubscribeAll()
-        LiveKitService.shared.disconnect()
+        HundredMSService.shared.disconnect()
     }
 
     // MARK: - Setup
@@ -196,6 +197,7 @@ class SessionViewController: UIViewController {
 
         configureControlButton(micButton, systemName: "mic.slash.fill", action: #selector(micTapped))
         configureControlButton(cameraButton, systemName: "video.slash.fill", action: #selector(cameraTapped))
+        configureControlButton(flipCameraButton, systemName: "camera.rotate", action: #selector(flipCameraTapped))
         configureControlButton(handRaiseButton, systemName: "hand.raised", action: #selector(handRaiseTapped))
         configureControlButton(manageButton, systemName: "person.2.badge.gearshape", action: #selector(manageTapped))
         configureControlButton(addParticipantButton, systemName: "person.badge.plus", action: #selector(addParticipantTapped))
@@ -204,6 +206,7 @@ class SessionViewController: UIViewController {
 
         controlsBar.addArrangedSubview(micButton)
         controlsBar.addArrangedSubview(cameraButton)
+        controlsBar.addArrangedSubview(flipCameraButton)
         controlsBar.addArrangedSubview(handRaiseButton)
         controlsBar.addArrangedSubview(manageButton)
         controlsBar.addArrangedSubview(addParticipantButton)
@@ -326,6 +329,7 @@ class SessionViewController: UIViewController {
             navigationItem.rightBarButtonItem = nil
             micButton.isHidden = true
             cameraButton.isHidden = true
+            flipCameraButton.isHidden = true
             handRaiseButton.isHidden = false
         }
     }
@@ -333,10 +337,13 @@ class SessionViewController: UIViewController {
     private func updateMediaControls(canSpeak: Bool) {
         micButton.isHidden = false
         cameraButton.isHidden = false
+        flipCameraButton.isHidden = false
         micButton.isEnabled = canSpeak
         cameraButton.isEnabled = canSpeak
+        flipCameraButton.isEnabled = canSpeak
         micButton.alpha = canSpeak ? 1.0 : 0.5
         cameraButton.alpha = canSpeak ? 1.0 : 0.5
+        flipCameraButton.alpha = canSpeak ? 1.0 : 0.5
 
         if canSpeak {
             isMicOn = true
@@ -380,7 +387,7 @@ class SessionViewController: UIViewController {
         Task {
             do {
                 // Request camera/microphone permissions before connecting
-                let permissions = await LiveKitService.shared.requestMediaPermissions()
+                let permissions = await HundredMSService.shared.requestMediaPermissions()
                 if !permissions.audio {
                     print("[Session] Microphone permission denied — audio will not work")
                 }
@@ -389,10 +396,10 @@ class SessionViewController: UIViewController {
                 }
 
                 // Configure audio session for live voice/video
-                LiveKitService.shared.configureAudioSessionForSession()
+                HundredMSService.shared.configureAudioSessionForSession()
 
                 let tokenResponse = try await fetchSessionToken()
-                try await LiveKitService.shared.connect(
+                try await HundredMSService.shared.connect(
                     url: Config.hmsEndpoint,
                     token: tokenResponse.token
                 )
@@ -402,17 +409,25 @@ class SessionViewController: UIViewController {
 
                 await MainActor.run {
                     // Re-apply role permissions and control state after connection completes
-                    // This ensures controls are correct even if role resolved while connecting
                     print("[Session] 100ms connected — re-applying role: \(self.myRole)")
-                    LiveKitService.shared.applyPermissions(for: self.myRole)
+                    HundredMSService.shared.applyPermissions(for: self.myRole)
                     self.updateUIForRole()
+                    self.attachVideoTracks()
                 }
 
-                LiveKitService.shared.onParticipantConnected = { [weak self] participantId in
+                HundredMSService.shared.onParticipantConnected = { [weak self] participantId in
                     print("[Session] Participant connected: \(participantId)")
+                    DispatchQueue.main.async { self?.attachVideoTracks() }
                 }
-                LiveKitService.shared.onParticipantDisconnected = { [weak self] participantId in
+                HundredMSService.shared.onParticipantDisconnected = { [weak self] participantId in
                     print("[Session] Participant disconnected: \(participantId)")
+                    DispatchQueue.main.async { self?.attachVideoTracks() }
+                }
+                HundredMSService.shared.onTrackPublished = { [weak self] _ in
+                    DispatchQueue.main.async { self?.attachVideoTracks() }
+                }
+                HundredMSService.shared.onTrackUnpublished = { [weak self] _ in
+                    DispatchQueue.main.async { self?.attachVideoTracks() }
                 }
             } catch {
                 print("[Session] 100ms connection failed: \(error)")
@@ -427,14 +442,14 @@ class SessionViewController: UIViewController {
         // Speakers always get video
         if myRole.canSpeak {
             hasVideoAccess = true
-            LiveKitService.shared.setVideoSubscriptionEnabled(true)
+            HundredMSService.shared.setVideoSubscriptionEnabled(true)
             return
         }
 
         // Free users: audio only
         guard tier.canViewSessionVideo else {
             hasVideoAccess = false
-            LiveKitService.shared.setVideoSubscriptionEnabled(false)
+            HundredMSService.shared.setVideoSubscriptionEnabled(false)
             print("[Session] Free tier — audio-only mode")
             return
         }
@@ -449,7 +464,7 @@ class SessionViewController: UIViewController {
 
             await MainActor.run {
                 self.hasVideoAccess = slotActive
-                LiveKitService.shared.setVideoSubscriptionEnabled(slotActive)
+                HundredMSService.shared.setVideoSubscriptionEnabled(slotActive)
                 if !slotActive {
                     print("[Session] No active video slot — audio-only until promoted")
                 }
@@ -457,7 +472,7 @@ class SessionViewController: UIViewController {
         } catch {
             print("[Session] Video slot check failed: \(error) — defaulting to audio-only")
             hasVideoAccess = false
-            LiveKitService.shared.setVideoSubscriptionEnabled(false)
+            HundredMSService.shared.setVideoSubscriptionEnabled(false)
         }
 
         // Subscribe to video slot changes for real-time promotion
@@ -475,7 +490,7 @@ class SessionViewController: UIViewController {
             // Check if this update is for us and we got promoted
             if slot.userId.lowercased() == myUserId && slot.status == .active && !self.hasVideoAccess {
                 self.hasVideoAccess = true
-                LiveKitService.shared.setVideoSubscriptionEnabled(true)
+                HundredMSService.shared.setVideoSubscriptionEnabled(true)
                 self.showVideoGrantedToast()
             }
         }
@@ -542,6 +557,9 @@ class SessionViewController: UIViewController {
             }
         }
 
+        // Attach video tracks to the video views
+        attachVideoTracks()
+
         // Re-evaluate my role based on current participant data
         let previousRole = myRole
         determineRole()
@@ -555,10 +573,10 @@ class SessionViewController: UIViewController {
         // defensively in case handleRoleChange is invoked from other paths
         updateUIForRole()
 
-        // Update LiveKit permissions for the new role without reconnecting
+        // Update 100ms permissions for the new role without reconnecting
         // (connectHMS already happened at session join)
         print("[Session] Role changed to \(myRole) — updating 100ms permissions")
-        LiveKitService.shared.applyPermissions(for: myRole)
+        HundredMSService.shared.applyPermissions(for: myRole)
     }
 
     private func handleSessionStatusChange(_ updatedSession: Session) {
@@ -637,15 +655,42 @@ class SessionViewController: UIViewController {
         }
     }
 
+    // MARK: - Video Track Rendering
+
+    /// Attach 100ms video tracks to the video grid views.
+    /// Matches speakers in `slotSpeakers` to their HMSVideoTrack via user ID.
+    private func attachVideoTracks() {
+        guard HundredMSService.shared.isConnected else { return }
+
+        guard let myId = SupabaseService.shared.currentUserId?.uuidString.lowercased() else { return }
+
+        for (index, videoView) in videoViews.enumerated() {
+            guard let speaker = slotSpeakers[index] else {
+                videoView.setVideoTrack(nil)
+                continue
+            }
+
+            let speakerId = speaker.userId.lowercased()
+
+            if speakerId == myId {
+                // Local user — attach local video track
+                videoView.setVideoTrack(HundredMSService.shared.localVideoTrack())
+            } else {
+                // Remote user — look up their video track
+                videoView.setVideoTrack(HundredMSService.shared.videoTrack(for: speaker.userId))
+            }
+        }
+    }
+
     // MARK: - Actions
 
     @objc private func micTapped() {
         isMicOn.toggle()
         updateMicButtonState()
         if isMicOn {
-            LiveKitService.shared.enableMicrophone()
+            HundredMSService.shared.enableMicrophone()
         } else {
-            LiveKitService.shared.disableMicrophone()
+            HundredMSService.shared.disableMicrophone()
         }
     }
 
@@ -653,10 +698,14 @@ class SessionViewController: UIViewController {
         isCameraOn.toggle()
         updateCameraButtonState()
         if isCameraOn {
-            LiveKitService.shared.enableCamera()
+            HundredMSService.shared.enableCamera()
         } else {
-            LiveKitService.shared.disableCamera()
+            HundredMSService.shared.disableCamera()
         }
+    }
+
+    @objc private func flipCameraTapped() {
+        HundredMSService.shared.flipCamera()
     }
 
     @objc private func handRaiseTapped() {
@@ -754,7 +803,7 @@ class SessionViewController: UIViewController {
     private func leaveSession() {
         sessionTimer?.invalidate()
         SessionService.shared.unsubscribeAll()
-        LiveKitService.shared.disconnect()
+        HundredMSService.shared.disconnect()
 
         Task {
             // Release video slot to free it for next waitlisted user
@@ -769,7 +818,7 @@ class SessionViewController: UIViewController {
 
     private func sessionEnded() {
         sessionTimer?.invalidate()
-        LiveKitService.shared.disconnect()
+        HundredMSService.shared.disconnect()
 
         let alert = UIAlertController(
             title: "session_ended_title".localized,
@@ -935,11 +984,11 @@ class SessionViewController: UIViewController {
         } else if canManageParticipant(participant) {
             // Moderation options based on role permissions
             alert.addAction(UIAlertAction(title: "session_mute_participant".localized, style: .default) { _ in
-                LiveKitService.shared.muteParticipant(identity: participant.userId)
+                HundredMSService.shared.muteParticipant(identity: participant.userId)
             })
 
             alert.addAction(UIAlertAction(title: "session_disable_camera".localized, style: .default) { _ in
-                LiveKitService.shared.disableParticipantCamera(identity: participant.userId)
+                HundredMSService.shared.disableParticipantCamera(identity: participant.userId)
             })
 
             if participant.role.canSpeak {
