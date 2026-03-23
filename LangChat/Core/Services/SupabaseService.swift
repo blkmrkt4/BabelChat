@@ -206,9 +206,10 @@ extension SupabaseService {
         do {
             try await client.rpc("delete_auth_user").execute()
         } catch {
-            #if DEBUG
-            print("  ⚠️ Could not delete auth user: \(error.localizedDescription)")
-            #endif
+            // Data is already deleted — sign out regardless, but surface the auth failure
+            try? await client.auth.signOut()
+            throw NSError(domain: "SupabaseService", code: -3,
+                          userInfo: [NSLocalizedDescriptionKey: "Account data deleted but auth cleanup failed. Please contact support."])
         }
 
         // Sign out (clears local session tokens)
@@ -1439,6 +1440,17 @@ extension SupabaseService {
             .execute()
 
         print("✅ Message sent as \(senderId)")
+    }
+
+    /// Delete a message (own messages only)
+    func deleteMessage(messageId: String) async throws {
+        guard let userId = currentUserId else { return }
+        try await client
+            .from("messages")
+            .delete()
+            .eq("id", value: messageId)
+            .eq("sender_id", value: userId.uuidString)
+            .execute()
     }
 
     /// Get messages for a conversation

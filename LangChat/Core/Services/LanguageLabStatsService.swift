@@ -229,7 +229,7 @@ class LanguageLabStatsService {
             .value
 
         // Calculate totals
-        let totalMessages = activity.reduce(0) { $0 + $1.messagesSent }
+        let totalMessages = activity.reduce(0) { $0 + $1.messagesSent + $1.messagesReceived }
         let totalPartners = streaks.count
         let totalPracticeMinutes = activity.reduce(0) { $0 + $1.practiceMinutes }
 
@@ -296,7 +296,7 @@ class LanguageLabStatsService {
         for day in activity {
             let monthKey = monthFormatter.string(from: day.activityDate)
             var current = monthlyData[monthKey] ?? (0, 0, 0, 0)
-            current.messages += day.messagesSent
+            current.messages += day.messagesSent + day.messagesReceived
             current.minutes += day.practiceMinutes
             current.target += day.targetLanguageMessages
             current.native += day.nativeLanguageMessages
@@ -501,7 +501,7 @@ class LanguageLabStatsService {
 
             try await supabase.client
                 .from("user_daily_activity")
-                .upsert(activityUpsert)
+                .upsert(activityUpsert, onConflict: "user_id,activity_date")
                 .execute()
 
             // Clear cache so next fetch gets updated data

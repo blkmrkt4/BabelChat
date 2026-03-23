@@ -74,8 +74,8 @@ class LanguageSettingsViewController: UIViewController {
         // Show confirmation alert
         let languageName = LocalizationService.shared.nativeName(for: code)
         let alert = UIAlertController(
-            title: "Language Changed",
-            message: "The app language has been changed to \(languageName). Some screens may need to be reopened to see the change.",
+            title: "settings_language_changed_title".localized,
+            message: String(format: "settings_language_changed_message".localized, languageName),
             preferredStyle: .alert
         )
         alert.addAction(UIAlertAction(title: "common_ok".localized, style: .default))

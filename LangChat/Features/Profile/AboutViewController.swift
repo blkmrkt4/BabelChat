@@ -11,7 +11,7 @@ class AboutViewController: UIViewController {
     }
 
     private func setupViews() {
-        title = "About"
+        title = "about_title".localized
         navigationItem.largeTitleDisplayMode = .never
         view.backgroundColor = .systemBackground
 
@@ -57,7 +57,7 @@ class AboutViewController: UIViewController {
         let build = Bundle.main.infoDictionary?["CFBundleVersion"] as? String ?? "1"
 
         let versionLabel = UILabel()
-        versionLabel.text = "Version \(version) (\(build))"
+        versionLabel.text = String(format: "about_version_format".localized, version, build)
         versionLabel.font = .systemFont(ofSize: 16)
         versionLabel.textColor = .secondaryLabel
         versionLabel.textAlignment = .center
@@ -65,11 +65,7 @@ class AboutViewController: UIViewController {
 
         // Description
         let descriptionLabel = UILabel()
-        descriptionLabel.text = """
-        Connect with language learners around the world.
-        Practice conversations with native speakers.
-        Learn naturally through real interactions.
-        """
+        descriptionLabel.text = "about_description".localized
         descriptionLabel.font = .systemFont(ofSize: 16)
         descriptionLabel.textColor = .label
         descriptionLabel.textAlignment = .center
@@ -84,11 +80,11 @@ class AboutViewController: UIViewController {
         contentView.addSubview(linksStack)
 
         let linkButtons = [
-            ("Terms of Service", #selector(showTerms)),
-            ("Privacy Policy", #selector(showPrivacy)),
-            ("Acknowledgments", #selector(showAcknowledgments)),
-            ("Rate on App Store", #selector(rateApp)),
-            ("Contact Support", #selector(contactSupport))
+            ("terms_of_service_title".localized, #selector(showTerms)),
+            ("privacy_policy_title".localized, #selector(showPrivacy)),
+            ("about_acknowledgments".localized, #selector(showAcknowledgments)),
+            ("about_rate_app".localized, #selector(rateApp)),
+            ("about_contact_support".localized, #selector(contactSupport))
         ]
 
         for (title, action) in linkButtons {
@@ -158,8 +154,8 @@ class AboutViewController: UIViewController {
 
     @objc private func showAcknowledgments() {
         let alert = UIAlertController(
-            title: "Acknowledgments",
-            message: "Language Match uses the following open source libraries:\n\n• Supabase Swift SDK\n• RevenueCat Purchases SDK",
+            title: "about_acknowledgments".localized,
+            message: "about_acknowledgments_message".localized,
             preferredStyle: .alert
         )
         alert.addAction(UIAlertAction(title: "common_ok".localized, style: .default))
@@ -171,8 +167,8 @@ class AboutViewController: UIViewController {
             UIApplication.shared.open(url)
         } else {
             let alert = UIAlertController(
-                title: "Coming Soon",
-                message: "Rating will be available once the app is live on the App Store.",
+                title: "about_coming_soon_title".localized,
+                message: "about_coming_soon_message".localized,
                 preferredStyle: .alert
             )
             alert.addAction(UIAlertAction(title: "common_ok".localized, style: .default))
@@ -181,7 +177,7 @@ class AboutViewController: UIViewController {
     }
 
     @objc private func contactSupport() {
-        let email = "support@ByZyB.ai"
+        let email = "Support-LM@byzyb.ai"
         if let url = URL(string: "mailto:\(email)") {
             UIApplication.shared.open(url)
         }

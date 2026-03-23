@@ -89,6 +89,8 @@ enum AnalyticsEvent: String {
     case loginCompleted = "login_completed"
     case loginFailed = "login_failed"
     case logoutCompleted = "logout_completed"
+    case accountDeletionStarted = "account_deletion_started"
+    case accountDeletionCompleted = "account_deletion_completed"
 
     // Profile
     case profileViewed = "profile_viewed"

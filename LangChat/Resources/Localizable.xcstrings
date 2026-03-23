@@ -145218,6 +145218,1277 @@
           }
         }
       }
+    },
+    "session_reserve_video": {
+      "comment": "Button to reserve a video spot in a session",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Reserve Video Spot"
+          }
+        }
+      }
+    },
+    "session_video_spots_available": {
+      "comment": "Label showing available video spots",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "video spots available"
+          }
+        }
+      }
+    },
+    "session_video_spots_full": {
+      "comment": "Label when all video spots are taken",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "All video spots taken"
+          }
+        }
+      }
+    },
+    "session_video_spot_confirmed": {
+      "comment": "Label when video spot is confirmed",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Video Spot Confirmed"
+          }
+        }
+      }
+    },
+    "session_video_waitlisted": {
+      "comment": "Label when user is waitlisted for video spot",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Waitlisted"
+          }
+        }
+      }
+    },
+    "session_hosted_by": {
+      "comment": "Prefix for host name in session cell",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Hosted by"
+          }
+        }
+      }
+    },
+    "auto_4999mo": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "$49.99/mo"
+          }
+        }
+      }
+    },
+    "button_upgrade_broadcaster": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Upgrade to Broadcaster"
+          }
+        }
+      }
+    },
+    "button_upgrade_pro": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Upgrade to Pro"
+          }
+        }
+      }
+    },
+    "common_cancelled": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Cancelled"
+          }
+        }
+      }
+    },
+    "content_blocked_message": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "This message was blocked because it may contain inappropriate content."
+          }
+        }
+      }
+    },
+    "content_blocked_title": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Content Blocked"
+          }
+        }
+      }
+    },
+    "lab_empty_heat": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Start chatting to see your fluency heat map"
+          }
+        }
+      }
+    },
+    "lab_empty_pulse": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Start chatting to see your language pulse"
+          }
+        }
+      }
+    },
+    "lab_empty_streaks": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Start chatting with partners to build streaks"
+          }
+        }
+      }
+    },
+    "lab_error_loading": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Unable to load Language Lab data. Please try again."
+          }
+        }
+      }
+    },
+    "lab_next_milestone_days": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%d days to next milestone"
+          }
+        }
+      }
+    },
+    "pricing_broadcaster_banner": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Go live with video sessions"
+          }
+        }
+      }
+    },
+    "pricing_start_broadcaster": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Start Broadcaster"
+          }
+        }
+      }
+    },
+    "privacy_delete_confirm_placeholder": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Type DELETE to confirm"
+          }
+        }
+      }
+    },
+    "profile_native_language": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Native language"
+          }
+        }
+      }
+    },
+    "session_demote_to_listener": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Demote to Listener"
+          }
+        }
+      }
+    },
+    "session_disable_camera": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Disable Camera"
+          }
+        }
+      }
+    },
+    "session_host_limit_message": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "You've hosted %d of %d sessions this month. Upgrade to host more."
+          }
+        }
+      }
+    },
+    "session_host_limit_title": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Host Limit Reached"
+          }
+        }
+      }
+    },
+    "session_mute_participant": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Mute Participant"
+          }
+        }
+      }
+    },
+    "session_video_granted": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Video access granted"
+          }
+        }
+      }
+    },
+    "sync_issue_message": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Some of your data couldn't be synced. Please check your connection and try again."
+          }
+        }
+      }
+    },
+    "sync_issue_title": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Sync Issue"
+          }
+        }
+      }
+    },
+    "tier_broadcaster_name": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Broadcaster"
+          }
+        }
+      }
+    },
+    "chat_connection_error_title": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Connection Error"
+          }
+        }
+      }
+    },
+    "chat_connection_error_message": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Failed to setup conversation. Please try again."
+          }
+        }
+      }
+    },
+    "chat_what_to_say": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "What would you like to say in %@?"
+          }
+        }
+      }
+    },
+    "chat_muse_thinking": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Muse is thinking..."
+          }
+        }
+      }
+    },
+    "chat_muse_suggests": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Muse suggests:"
+          }
+        }
+      }
+    },
+    "chat_muse_error_title": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Muse couldn't help"
+          }
+        }
+      }
+    },
+    "chat_muse_error_message": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Please try again."
+          }
+        }
+      }
+    },
+    "chat_setting_up_conversation": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Setting up conversation..."
+          }
+        }
+      }
+    },
+    "chat_message_not_sent_title": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Message Not Sent"
+          }
+        }
+      }
+    },
+    "chat_message_not_sent_message": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Your message couldn't be delivered. Please check your connection and try again."
+          }
+        }
+      }
+    },
+    "chat_delete_message_title": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Delete Message"
+          }
+        }
+      }
+    },
+    "chat_delete_message_confirm": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Are you sure you want to delete this message?"
+          }
+        }
+      }
+    },
+    "profile_select_native_language": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Select Native Language"
+          }
+        }
+      }
+    },
+    "profile_add_learning_language": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Add Learning Language"
+          }
+        }
+      }
+    },
+    "profile_how_well_speak_language": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "How well do you speak %@?"
+          }
+        }
+      }
+    },
+    "profile_add_match_language_title": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Add Language to Match In"
+          }
+        }
+      }
+    },
+    "profile_add_match_language_message": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Select a language you want to match and chat in"
+          }
+        }
+      }
+    },
+    "profile_proficiency_level": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Proficiency Level"
+          }
+        }
+      }
+    },
+    "profile_communicate_level": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "How well can you communicate in %@?"
+          }
+        }
+      }
+    },
+    "profile_missing_info_title": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Missing Information"
+          }
+        }
+      }
+    },
+    "profile_missing_info_message": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Please enter your first and last name."
+          }
+        }
+      }
+    },
+    "profile_save_failed_title": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Save Failed"
+          }
+        }
+      }
+    },
+    "profile_save_failed_message": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Could not save your profile. Please try again."
+          }
+        }
+      }
+    },
+    "profile_upload_complete": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Upload Complete"
+          }
+        }
+      }
+    },
+    "settings_update_failed_title": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Update Failed"
+          }
+        }
+      }
+    },
+    "settings_update_failed_message": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Could not update your preference. Please try again."
+          }
+        }
+      }
+    },
+    "settings_generating_invite": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Generating invite link..."
+          }
+        }
+      }
+    },
+    "settings_invite_error_title": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Couldn't Generate Invite"
+          }
+        }
+      }
+    },
+    "settings_invite_error_message": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Please check your connection and try again."
+          }
+        }
+      }
+    },
+    "settings_load_error": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Could not load %@"
+          }
+        }
+      }
+    },
+    "subscription_subscribe_to": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Subscribe to %@"
+          }
+        }
+      }
+    },
+    "subscription_charge_message": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "You'll be charged %@"
+          }
+        }
+      }
+    },
+    "subscription_subscribe_button": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Subscribe"
+          }
+        }
+      }
+    },
+    "subscription_welcome_title": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Welcome to %@!"
+          }
+        }
+      }
+    },
+    "subscription_welcome_message": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Your subscription is now active."
+          }
+        }
+      }
+    },
+    "subscription_purchase_failed": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Purchase Failed"
+          }
+        }
+      }
+    },
+    "subscription_manage_message": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "To cancel or change your subscription, go to Settings > Apple ID > Subscriptions on your device."
+          }
+        }
+      }
+    },
+    "subscription_open_settings": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Open Settings"
+          }
+        }
+      }
+    },
+    "subscription_restored_title": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Purchases Restored"
+          }
+        }
+      }
+    },
+    "subscription_restored_message": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Your %@ subscription has been restored."
+          }
+        }
+      }
+    },
+    "subscription_no_purchases_title": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "No Purchases Found"
+          }
+        }
+      }
+    },
+    "subscription_no_purchases_message": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "No previous subscriptions were found for this account."
+          }
+        }
+      }
+    },
+    "about_acknowledgments": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Acknowledgments"
+          }
+        }
+      }
+    },
+    "about_acknowledgments_message": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Language Match uses the following open source libraries:\n\n• Supabase Swift SDK\n• RevenueCat Purchases SDK"
+          }
+        }
+      }
+    },
+    "about_coming_soon_title": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Coming Soon"
+          }
+        }
+      }
+    },
+    "about_coming_soon_message": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Rating will be available once the app is live on the App Store."
+          }
+        }
+      }
+    },
+    "about_rate_app": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Rate on App Store"
+          }
+        }
+      }
+    },
+    "about_contact_support": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Contact Support"
+          }
+        }
+      }
+    },
+    "profile_select_proficiency_message": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Select your %@ proficiency level"
+          }
+        }
+      }
+    },
+    "profile_select_language_to_learn": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Select a language to learn"
+          }
+        }
+      }
+    },
+    "profile_remove_language_confirm": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Remove %@ from your learning languages?"
+          }
+        }
+      }
+    },
+    "profile_select_native_message": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Select your native language"
+          }
+        }
+      }
+    },
+    "settings_language_changed_title": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Language Changed"
+          }
+        }
+      }
+    },
+    "settings_language_changed_message": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "The app language has been changed to %@. Some screens may need to be reopened to see the change."
+          }
+        }
+      }
+    },
+    "profile_unblock_user_title": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Unblock User"
+          }
+        }
+      }
+    },
+    "profile_unblock_user_message": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Are you sure you want to unblock %@?"
+          }
+        }
+      }
+    },
+    "profile_upload_cancelled": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Upload Cancelled"
+          }
+        }
+      }
+    },
+    "feature_request_too_short_title": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Too Short"
+          }
+        }
+      }
+    },
+    "feature_request_too_short_message": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Please write at least %d characters describing the feature."
+          }
+        }
+      }
+    },
+    "feature_request_submit_error": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Failed to submit your feature request. Please try again."
+          }
+        }
+      }
+    },
+    "feature_request_submitted_message": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Your feature request has been submitted. We appreciate your feedback!"
+          }
+        }
+      }
+    },
+    "chat_tts_too_long_title": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Message Too Long"
+          }
+        }
+      }
+    },
+    "chat_tts_too_long_message": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Message too long for text-to-speech (%d words).\n\nMessages over %d words cannot be played. Try breaking into shorter messages for better learning!"
+          }
+        }
+      }
+    },
+    "chat_tts_limit_title": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "TTS Limit Reached"
+          }
+        }
+      }
+    },
+    "chat_tts_limit_free_message": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "You've used all %d TTS plays this month.\n\nUpgrade to Premium for 200 plays with natural-sounding voices!"
+          }
+        }
+      }
+    },
+    "chat_tts_limit_premium_message": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "You've used all %d premium TTS plays this month.\n\nAdditional plays will use standard voice quality.\n\nUpgrade to Pro for unlimited premium voices!"
+          }
+        }
+      }
+    },
+    "profile_unmatch_title": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Unmatch %@?"
+          }
+        }
+      }
+    },
+    "profile_unmatch_message": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Are you sure you want to unmatch? This will remove %@ from your matches and delete your conversation history."
+          }
+        }
+      }
+    },
+    "profile_report_photo_title": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Report Photo"
+          }
+        }
+      }
+    },
+    "profile_report_photo_message": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Why are you reporting this photo?"
+          }
+        }
+      }
+    },
+    "profile_confirm_report_title": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Confirm Report"
+          }
+        }
+      }
+    },
+    "profile_confirm_report_message": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Are you sure you want to report this photo for \"%@\"?"
+          }
+        }
+      }
+    },
+    "profile_add_caption_message": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Add a caption for this photo"
+          }
+        }
+      }
+    },
+    "onboarding_location_not_found_title": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Location Not Found"
+          }
+        }
+      }
+    },
+    "onboarding_location_not_found_message": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "We couldn't find that location. Please try a different search."
+          }
+        }
+      }
+    },
+    "pricing_free": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Free"
+          }
+        }
+      }
+    },
+    "invite_received_title": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Invite Link Received"
+          }
+        }
+      }
+    },
+    "invite_received_message": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "You've received an invite code: %@. Would you like to connect with this person?"
+          }
+        }
+      }
+    },
+    "invite_connected_title": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "You're Connected!"
+          }
+        }
+      }
+    },
+    "invite_connected_message": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "You're now matched with %@. Start chatting!"
+          }
+        }
+      }
+    },
+    "invite_error_title": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Invite Error"
+          }
+        }
+      }
+    },
+    "profile_languages_footer": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Tap a language to change proficiency level. Swipe left to remove."
+          }
+        }
+      }
+    },
+    "profile_languages_learning": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Languages I'm Learning"
+          }
+        }
+      }
+    },
+    "profile_open_to_match_in": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Open to Match In"
+          }
+        }
+      }
+    },
+    "profile_photo_caption": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Photo Caption"
+          }
+        }
+      }
     }
   },
   "version": "1.0"

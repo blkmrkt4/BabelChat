@@ -141,7 +141,7 @@ extension PhotosViewController: PHPickerViewControllerDelegate {
         guard !results.isEmpty else { return }
 
         // Show loading indicator with cancel option
-        let loadingAlert = UIAlertController(title: "Uploading Photos", message: "Please wait...", preferredStyle: .alert)
+        let loadingAlert = UIAlertController(title: "profile_uploading_photo".localized, message: "common_please_wait".localized, preferredStyle: .alert)
         var isCancelled = false
         loadingAlert.addAction(UIAlertAction(title: "common_cancel".localized, style: .cancel) { _ in
             isCancelled = true
@@ -217,7 +217,7 @@ extension PhotosViewController: PHPickerViewControllerDelegate {
     private func showUploadResult(uploaded: Int, failed: Int, cancelled: Bool) {
         if cancelled {
             let alert = UIAlertController(
-                title: "Upload Cancelled",
+                title: "profile_upload_cancelled".localized,
                 message: uploaded > 0 ? "\(uploaded) photo(s) were uploaded before cancellation." : nil,
                 preferredStyle: .alert
             )
@@ -225,7 +225,7 @@ extension PhotosViewController: PHPickerViewControllerDelegate {
             present(alert, animated: true)
         } else if failed > 0 {
             let alert = UIAlertController(
-                title: "Upload Complete",
+                title: "profile_upload_complete".localized,
                 message: "\(uploaded) photo(s) uploaded. \(failed) failed.",
                 preferredStyle: .alert
             )

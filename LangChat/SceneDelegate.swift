@@ -87,8 +87,8 @@ class SceneDelegate: UIResponder, UIWindowSceneDelegate {
     /// Show alert when invite received while app is active
     private func showInviteReceivedAlert(code: String, on viewController: UIViewController) {
         let alert = UIAlertController(
-            title: "Invite Link Received",
-            message: "You've received an invite code: \(code). Would you like to connect with this person?",
+            title: "invite_received_title".localized,
+            message: String(format: "invite_received_message".localized, code),
             preferredStyle: .alert
         )
 
@@ -134,8 +134,8 @@ class SceneDelegate: UIResponder, UIWindowSceneDelegate {
         guard let rootVC = window?.rootViewController else { return }
 
         let alert = UIAlertController(
-            title: "You're Connected!",
-            message: "You're now matched with \(inviterName). Start chatting!",
+            title: "invite_connected_title".localized,
+            message: String(format: "invite_connected_message".localized, inviterName),
             preferredStyle: .alert
         )
 
@@ -221,7 +221,7 @@ class SceneDelegate: UIResponder, UIWindowSceneDelegate {
         guard let rootVC = window?.rootViewController else { return }
 
         let alert = UIAlertController(
-            title: "Invite Error",
+            title: "invite_error_title".localized,
             message: error,
             preferredStyle: .alert
         )

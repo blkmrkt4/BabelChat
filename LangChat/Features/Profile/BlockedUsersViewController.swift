@@ -48,8 +48,8 @@ class BlockedUsersViewController: UIViewController {
         let userName = blockedUsers[indexPath.row]
 
         let alert = UIAlertController(
-            title: "Unblock User",
-            message: "Are you sure you want to unblock \(userName)?",
+            title: "profile_unblock_user_title".localized,
+            message: String(format: "profile_unblock_user_message".localized, userName),
             preferredStyle: .alert
         )
 
@@ -105,7 +105,7 @@ extension BlockedUsersViewController: UITableViewDelegate {
     func tableView(_ tableView: UITableView, trailingSwipeActionsConfigurationForRowAt indexPath: IndexPath) -> UISwipeActionsConfiguration? {
         guard !blockedUsers.isEmpty else { return nil }
 
-        let unblockAction = UIContextualAction(style: .destructive, title: "Unblock") { [weak self] (_, _, completion) in
+        let unblockAction = UIContextualAction(style: .destructive, title: "common_unblock".localized) { [weak self] (_, _, completion) in
             self?.unblockUser(at: indexPath)
             completion(true)
         }

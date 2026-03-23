@@ -291,9 +291,9 @@ class SessionsListViewController: UIViewController {
     private func autoSelectBestFilter() {
         let currentUserId = SupabaseService.shared.currentUserId?.uuidString.lowercased() ?? ""
 
-        // If user has any sessions (hosting or participating), default to "My Sessions"
+        // If user has any sessions they host, default to "My Sessions"
         let mySessionCount = allSessions.filter { session in
-            session.hostId.lowercased() == currentUserId || session.status == .live || session.status == .scheduled
+            !session.isExpired && session.hostId.lowercased() == currentUserId
         }.count
         if mySessionCount > 0 {
             if let myIndex = filters.firstIndex(of: .mySessions) {
@@ -303,7 +303,7 @@ class SessionsListViewController: UIViewController {
         }
 
         // If there are live sessions, show those
-        let liveCount = allSessions.filter { $0.status == .live }.count
+        let liveCount = allSessions.filter { $0.status == .live && !$0.isExpired }.count
         if liveCount > 0 {
             if let liveIndex = filters.firstIndex(of: .liveNow) {
                 selectedFilterIndex = liveIndex
@@ -329,13 +329,10 @@ class SessionsListViewController: UIViewController {
 
         switch filter {
         case .mySessions:
-            // Show all sessions the user hosts or is a participant in, sorted by date
-            // Exclude expired sessions whose duration has been exceeded
+            // Show sessions the user hosts, excluding expired ones
             filteredSessions = allSessions.filter { session in
                 guard !session.isExpired else { return false }
-                return session.hostId.lowercased() == currentUserId ||
-                    session.status == .live ||
-                    session.status == .scheduled
+                return session.hostId.lowercased() == currentUserId
             }
 
         case .liveNow:
@@ -468,10 +465,10 @@ extension SessionsListViewController: UICollectionViewDataSource, UICollectionVi
         switch filter {
         case .mySessions:
             let currentUserId = SupabaseService.shared.currentUserId?.uuidString.lowercased() ?? ""
-            let count = allSessions.filter { $0.hostId.lowercased() == currentUserId || $0.status == .live || $0.status == .scheduled }.count
+            let count = allSessions.filter { !$0.isExpired && $0.hostId.lowercased() == currentUserId }.count
             if count > 0 { title += " (\(count))" }
         case .liveNow:
-            let count = allSessions.filter { $0.status == .live }.count
+            let count = allSessions.filter { $0.status == .live && !$0.isExpired }.count
             if count > 0 { title += " (\(count))" }
         case .pastSessions:
             if !pastSessions.isEmpty { title += " (\(pastSessions.count))" }

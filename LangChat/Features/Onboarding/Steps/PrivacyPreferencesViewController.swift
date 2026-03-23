@@ -37,8 +37,8 @@ class PrivacyPreferencesViewController: BaseOnboardingViewController {
 
         // Strictly Platonic Toggle
         let platonicCard = createPreferenceCard(
-            title: "Strictly Platonic",
-            subtitle: "Only match with users who want platonic language exchange - no dating intentions",
+            title: "intent_strictly_platonic".localized,
+            subtitle: "intent_strictly_platonic_desc".localized,
             icon: "person.2.fill",
             isOn: isStrictlyPlatonic
         ) { [weak self] isOn in
@@ -50,8 +50,8 @@ class PrivacyPreferencesViewController: BaseOnboardingViewController {
 
         // Blur Photos Toggle
         let blurCard = createPreferenceCard(
-            title: "Blur Photos Until Matched",
-            subtitle: "Focus on language skills first - your photos will be revealed once you match",
+            title: "intent_blur_photos".localized,
+            subtitle: "intent_blur_photos_desc".localized,
             icon: "eye.slash.fill",
             isOn: blurPhotosUntilMatch
         ) { [weak self] isOn in

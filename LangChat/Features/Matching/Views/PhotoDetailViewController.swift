@@ -261,8 +261,8 @@ class PhotoDetailViewController: UIViewController {
 
     private func showReportOptions(userId: String, photoURL: String) {
         let alertController = UIAlertController(
-            title: "Report Photo",
-            message: "Why are you reporting this photo?",
+            title: "profile_report_photo_title".localized,
+            message: "profile_report_photo_message".localized,
             preferredStyle: .actionSheet
         )
 
@@ -295,8 +295,8 @@ class PhotoDetailViewController: UIViewController {
 
     private func confirmReport(userId: String, photoURL: String, reason: String) {
         let confirmAlert = UIAlertController(
-            title: "Confirm Report",
-            message: "Are you sure you want to report this photo for \"\(reason.lowercased())\"?",
+            title: "profile_confirm_report_title".localized,
+            message: String(format: "profile_confirm_report_message".localized, reason.lowercased()),
             preferredStyle: .alert
         )
 
@@ -321,8 +321,8 @@ class PhotoDetailViewController: UIViewController {
 
                 await MainActor.run {
                     let successAlert = UIAlertController(
-                        title: "Report Submitted",
-                        message: "Thank you for helping keep our community safe. We'll review this report shortly.",
+                        title: "report_submitted_title".localized,
+                        message: "report_submitted_message".localized,
                         preferredStyle: .alert
                     )
                     successAlert.addAction(UIAlertAction(title: "common_ok".localized, style: .default))
@@ -331,8 +331,8 @@ class PhotoDetailViewController: UIViewController {
             } catch {
                 await MainActor.run {
                     let errorAlert = UIAlertController(
-                        title: "Report Failed",
-                        message: "Failed to submit report: \(error.localizedDescription). Please try again.",
+                        title: "report_failed_title".localized,
+                        message: "report_failed_message".localized,
                         preferredStyle: .alert
                     )
                     errorAlert.addAction(UIAlertAction(title: "common_ok".localized, style: .default))
@@ -356,7 +356,7 @@ class PhotoDetailViewController: UIViewController {
         })
 
         let currentCaption = currentIndex < captions.count ? captions[currentIndex] : nil
-        let captionTitle = currentCaption?.isEmpty == false ? "Edit Caption" : "Add Caption"
+        let captionTitle = currentCaption?.isEmpty == false ? "profile_edit_caption".localized : "profile_add_caption".localized
 
         alertController.addAction(UIAlertAction(title: captionTitle, style: .default) { [weak self] _ in
             self?.editCaption(currentCaption: currentCaption)
@@ -388,8 +388,8 @@ class PhotoDetailViewController: UIViewController {
 
     private func editCaption(currentCaption: String?) {
         let alertController = UIAlertController(
-            title: "Photo Caption",
-            message: "Add a caption for this photo",
+            title: "profile_photo_caption".localized,
+            message: "profile_add_caption_message".localized,
             preferredStyle: .alert
         )
 
@@ -440,8 +440,8 @@ class PhotoDetailViewController: UIViewController {
                 print("❌ Error saving caption: \(error)")
                 await MainActor.run {
                     let alert = UIAlertController(
-                        title: "Error",
-                        message: "Failed to save caption. Please try again.",
+                        title: "common_error".localized,
+                        message: "profile_save_caption_error".localized,
                         preferredStyle: .alert
                     )
                     alert.addAction(UIAlertAction(title: "common_ok".localized, style: .default))
@@ -453,8 +453,8 @@ class PhotoDetailViewController: UIViewController {
 
     private func removePhoto() {
         let confirmAlert = UIAlertController(
-            title: "Remove Photo",
-            message: "Are you sure you want to remove this photo?",
+            title: "common_remove_photo".localized,
+            message: "profile_remove_photo_confirm".localized,
             preferredStyle: .alert
         )
 

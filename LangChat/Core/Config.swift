@@ -33,7 +33,7 @@ struct Config {
                 """)
             return ""
         }
-        print("✅ Loaded OPENROUTER_API_KEY from Info.plist")
+        debugLog("✅ Loaded OPENROUTER_API_KEY from Info.plist")
         return key
     }()
 
@@ -50,7 +50,7 @@ struct Config {
                 """)
             return ""
         }
-        print("✅ Loaded SUPABASE_URL from Info.plist: \(url)")
+        debugLog("✅ Loaded SUPABASE_URL from Info.plist: \(url)")
         return url
     }()
 
@@ -67,7 +67,7 @@ struct Config {
                 """)
             return ""
         }
-        print("✅ Loaded SUPABASE_ANON_KEY from Info.plist")
+        debugLog("✅ Loaded SUPABASE_ANON_KEY from Info.plist")
         return key
     }()
 
@@ -77,13 +77,13 @@ struct Config {
 
     static let googleCloudAPIKey: String? = {
         let rawValue = Bundle.main.infoDictionary?["GOOGLE_CLOUD_API_KEY"] as? String
-        print("🔑 Config: GOOGLE_CLOUD_API_KEY raw value: '\(rawValue ?? "nil")'")
+        debugLog("🔑 Config: GOOGLE_CLOUD_API_KEY raw value: '\(rawValue ?? "nil")'")
 
         if let value = rawValue, !value.isEmpty, !value.hasPrefix("$(") {
-            print("🔑 Config: Google API key loaded successfully (\(value.prefix(10))...)")
+            debugLog("🔑 Config: Google API key loaded successfully (\(value.prefix(10))...)")
             return value
         }
-        print("⚠️ Config: Google API key NOT found or not substituted")
+        debugLog("⚠️ Config: Google API key NOT found or not substituted")
         return nil
     }()
 

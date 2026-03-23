@@ -761,21 +761,21 @@ class SwipeableMessageCell: UITableViewCell {
         switch error {
         case .messageTooLong(let wordCount, let limit):
             showTTSLimitAlert(
-                title: "Message Too Long",
-                message: "Message too long for text-to-speech (\(wordCount) words).\n\nMessages over \(limit) words cannot be played. Try breaking into shorter messages for better learning!",
+                title: "chat_tts_too_long_title".localized,
+                message: String(format: "chat_tts_too_long_message".localized, wordCount, limit),
                 showUpgrade: false
             )
         case .limitReached(_, let limit):
             if currentTier == .free {
                 showTTSLimitAlert(
-                    title: "TTS Limit Reached",
-                    message: "You've used all \(limit) TTS plays this month.\n\nUpgrade to Premium for 200 plays with natural-sounding voices!",
+                    title: "chat_tts_limit_title".localized,
+                    message: String(format: "chat_tts_limit_free_message".localized, limit),
                     showUpgrade: true
                 )
             } else {
                 showTTSLimitAlert(
-                    title: "TTS Limit Reached",
-                    message: "You've used all \(limit) premium TTS plays this month.\n\nAdditional plays will use standard voice quality.\n\nUpgrade to Pro for unlimited premium voices!",
+                    title: "chat_tts_limit_title".localized,
+                    message: String(format: "chat_tts_limit_premium_message".localized, limit),
                     showUpgrade: true
                 )
             }
@@ -1351,7 +1351,7 @@ extension SwipeableMessageCell: UIContextMenuInteractionDelegate {
         return UIContextMenuConfiguration(identifier: nil, previewProvider: nil) { _ in
             // Copy action
             let copyAction = UIAction(
-                title: "Copy",
+                title: "common_copy".localized,
                 image: UIImage(systemName: "doc.on.doc")
             ) { [weak self] _ in
                 UIPasteboard.general.string = message.text
@@ -1360,7 +1360,7 @@ extension SwipeableMessageCell: UIContextMenuInteractionDelegate {
 
             // Reply action
             let replyAction = UIAction(
-                title: "Reply",
+                title: "common_reply".localized,
                 image: UIImage(systemName: "arrowshape.turn.up.left")
             ) { [weak self] _ in
                 guard let self = self else { return }
@@ -1369,7 +1369,7 @@ extension SwipeableMessageCell: UIContextMenuInteractionDelegate {
 
             // Delete action (only for own messages)
             let deleteAction = UIAction(
-                title: "Delete",
+                title: "common_delete".localized,
                 image: UIImage(systemName: "trash"),
                 attributes: .destructive
             ) { [weak self] _ in

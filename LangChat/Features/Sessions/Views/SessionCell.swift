@@ -6,6 +6,7 @@ class SessionCell: UITableViewCell {
 
     private let hostAvatarView = UIImageView()
     private let titleLabel = UILabel()
+    private let hostInfoLabel = UILabel()
     private let languagePairLabel = UILabel()
     private let participantCountLabel = UILabel()
     private let statusBadge = UILabel()
@@ -37,11 +38,15 @@ class SessionCell: UITableViewCell {
 
         // Title
         titleLabel.font = .systemFont(ofSize: 16, weight: .semibold)
-        titleLabel.numberOfLines = 1
+        titleLabel.numberOfLines = 2
+
+        // Host info (e.g. "Hosted by Hannah & Aviella")
+        hostInfoLabel.font = .systemFont(ofSize: 13, weight: .regular)
+        hostInfoLabel.textColor = .secondaryLabel
 
         // Language pair
-        languagePairLabel.font = .systemFont(ofSize: 14, weight: .regular)
-        languagePairLabel.textColor = .secondaryLabel
+        languagePairLabel.font = .systemFont(ofSize: 13, weight: .regular)
+        languagePairLabel.textColor = .tertiaryLabel
 
         // Participant count
         participantCountLabel.font = .systemFont(ofSize: 13, weight: .regular)
@@ -55,14 +60,15 @@ class SessionCell: UITableViewCell {
         statusBadge.textColor = .white
 
         // Time label
-        timeLabel.font = .systemFont(ofSize: 13, weight: .regular)
+        timeLabel.font = .systemFont(ofSize: 12, weight: .regular)
         timeLabel.textColor = .secondaryLabel
         timeLabel.textAlignment = .right
+        timeLabel.numberOfLines = 2
 
         // Info stack
-        let infoStack = UIStackView(arrangedSubviews: [titleLabel, languagePairLabel, participantCountLabel])
+        let infoStack = UIStackView(arrangedSubviews: [titleLabel, hostInfoLabel, languagePairLabel, participantCountLabel])
         infoStack.axis = .vertical
-        infoStack.spacing = 2
+        infoStack.spacing = 3
         contentView.addSubview(infoStack)
 
         // Right side stack
@@ -90,8 +96,9 @@ class SessionCell: UITableViewCell {
 
             rightStack.trailingAnchor.constraint(equalTo: contentView.trailingAnchor, constant: -8),
             rightStack.centerYAnchor.constraint(equalTo: contentView.centerYAnchor),
+            rightStack.widthAnchor.constraint(lessThanOrEqualToConstant: 100),
 
-            contentView.heightAnchor.constraint(greaterThanOrEqualToConstant: 72),
+            contentView.heightAnchor.constraint(greaterThanOrEqualToConstant: 104),
 
             statusBadge.widthAnchor.constraint(greaterThanOrEqualToConstant: 40),
             statusBadge.heightAnchor.constraint(equalToConstant: 20),
@@ -104,6 +111,20 @@ class SessionCell: UITableViewCell {
 
     func configure(with session: Session) {
         titleLabel.text = session.displayTitle
+
+        // Host info line: "Hosted by Hannah" or "Hosted by Hannah & Aviella"
+        if let hostName = session.host?.firstName {
+            var hostText = "\("session_hosted_by".localized) \(hostName)"
+            if let coHost = session.participants?.first(where: { $0.role == .coHost }),
+               let coHostName = coHost.user?.firstName {
+                hostText += " & \(coHostName)"
+            }
+            hostInfoLabel.text = hostText
+            hostInfoLabel.isHidden = false
+        } else {
+            hostInfoLabel.isHidden = true
+        }
+
         languagePairLabel.text = "\(session.languagePair.displayString) · \(session.maxDurationMinutes) min"
 
         let maxP = session.maxParticipants
@@ -188,26 +209,26 @@ class SessionCell: UITableViewCell {
         let hours = Int(interval / 3600)
         let days = Int(interval / 86400)
 
+        let timeFormatter = DateFormatter()
+        timeFormatter.dateFormat = "h:mm a"
+
         if minutes < 60 {
             return String(format: "session_starts_in_minutes".localized, minutes)
         } else if hours < 24 {
-            let formatter = DateFormatter()
-            formatter.dateFormat = "h:mm a"
-            return String(format: "session_starts_in_hours".localized, hours) + " · " + formatter.string(from: date)
+            return "In \(hours)h\n\(timeFormatter.string(from: date))"
         } else if days == 1 {
-            let formatter = DateFormatter()
-            formatter.dateFormat = "h:mm a"
-            return String(format: "session_starts_tomorrow".localized, formatter.string(from: date))
+            return String(format: "session_starts_tomorrow".localized, timeFormatter.string(from: date))
         } else {
-            let formatter = DateFormatter()
-            formatter.dateFormat = "MMM d, h:mm a"
-            return String(format: "session_starts_in_days".localized, days) + " · " + formatter.string(from: date)
+            let dateFormatter = DateFormatter()
+            dateFormatter.dateFormat = "MMM d"
+            return "\(dateFormatter.string(from: date))\n\(timeFormatter.string(from: date))"
         }
     }
 
     override func prepareForReuse() {
         super.prepareForReuse()
         hostAvatarView.image = UIImage(systemName: "person.circle.fill")
+        hostInfoLabel.isHidden = true
         statusBadge.isHidden = true
         timeLabel.isHidden = true
     }

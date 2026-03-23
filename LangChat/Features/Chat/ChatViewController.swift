@@ -118,6 +118,7 @@ class ChatViewController: UIViewController {
         super.viewWillDisappear(animated)
         tabBarController?.tabBar.isHidden = false
         saveMessages() // Save messages when leaving chat
+        LanguageLabStatsService.shared.endChatSession() // End Language Lab session tracking
     }
 
     private func setupNavigationBar() {
@@ -629,6 +630,9 @@ class ChatViewController: UIViewController {
                     // Re-enable if there's text
                     self.sendButton.isEnabled = !(self.inputTextField.text?.isEmpty ?? true)
                     print("✅ Conversation ready: \(conversation.id)")
+
+                    // Track chat session for Language Lab
+                    LanguageLabStatsService.shared.startChatSession(conversationId: conversation.id)
                 }
             } catch is CancellationError {
                 // Task was cancelled (view dismissed), silently ignore
@@ -644,8 +648,8 @@ class ChatViewController: UIViewController {
 
                     // Show error alert with detailed message
                     let alert = UIAlertController(
-                        title: "Connection Error",
-                        message: "Failed to setup conversation: \(error.localizedDescription)\n\nUser: \(self.user.id)\nAuthenticated: \(SupabaseService.shared.isAuthenticated)",
+                        title: "chat_connection_error_title".localized,
+                        message: "chat_connection_error_message".localized,
                         preferredStyle: .alert
                     )
                     alert.addAction(UIAlertAction(title: "common_retry".localized, style: .default) { _ in
@@ -688,7 +692,7 @@ class ChatViewController: UIViewController {
 
         // Subtitle
         let subtitleLabel = UILabel()
-        subtitleLabel.text = "What would you like to say in \(conversationLearningLanguage.name)?"
+        subtitleLabel.text = String(format: "chat_what_to_say".localized, conversationLearningLanguage.name)
         subtitleLabel.font = .systemFont(ofSize: 14)
         subtitleLabel.textColor = .secondaryLabel
         subtitleLabel.textAlignment = .center
@@ -823,7 +827,7 @@ class ChatViewController: UIViewController {
     private func askMuse(query: String) {
         // Show loading indicator
         let loadingAlert = UIAlertController(
-            title: "Muse is thinking...",
+            title: "chat_muse_thinking".localized,
             message: nil,
             preferredStyle: .alert
         )
@@ -891,7 +895,7 @@ class ChatViewController: UIViewController {
 
     private func showMuseResponse(_ response: String) {
         let alert = UIAlertController(
-            title: "Muse suggests:",
+            title: "chat_muse_suggests".localized,
             message: response,
             preferredStyle: .alert
         )
@@ -919,8 +923,8 @@ class ChatViewController: UIViewController {
 
     private func showMuseError(_ error: Error) {
         let alert = UIAlertController(
-            title: "Muse couldn't help",
-            message: "Please try again. Error: \(error.localizedDescription)",
+            title: "chat_muse_error_title".localized,
+            message: "chat_muse_error_message".localized,
             preferredStyle: .alert
         )
         alert.addAction(UIAlertAction(title: "common_ok".localized, style: .default))
@@ -970,8 +974,8 @@ class ChatViewController: UIViewController {
         guard isConversationReady, let conversationId = conversationId else {
             print("❌ Conversation not ready yet")
             let alert = UIAlertController(
-                title: "Please Wait",
-                message: "Setting up conversation...",
+                title: "common_please_wait".localized,
+                message: "chat_setting_up_conversation".localized,
                 preferredStyle: .alert
             )
             alert.addAction(UIAlertAction(title: "common_ok".localized, style: .default))
@@ -1000,6 +1004,9 @@ class ChatViewController: UIViewController {
         saveMessages()
         inputTextField.text = ""
         sendButton.isEnabled = false
+
+        // Track message for Language Lab session
+        LanguageLabStatsService.shared.incrementSessionMessageCount()
 
         // Track message sent
         // Increment usage counter
@@ -1088,8 +1095,8 @@ class ChatViewController: UIViewController {
     /// Show error alert when message fails to send
     private func showMessageSendError(failedMessage: Message, originalText: String) {
         let alert = UIAlertController(
-            title: "Message Not Sent",
-            message: "Your message couldn't be delivered. Please check your connection and try again.",
+            title: "chat_message_not_sent_title".localized,
+            message: "chat_message_not_sent_message".localized,
             preferredStyle: .alert
         )
 
@@ -1398,8 +1405,8 @@ extension ChatViewController: SwipeableMessageCellDelegate {
 
     func cell(_ cell: SwipeableMessageCell, didRequestDeleteMessage message: Message) {
         let alert = UIAlertController(
-            title: "Delete Message",
-            message: "Are you sure you want to delete this message?",
+            title: "chat_delete_message_title".localized,
+            message: "chat_delete_message_confirm".localized,
             preferredStyle: .alert
         )
 
@@ -1418,7 +1425,12 @@ extension ChatViewController: SwipeableMessageCellDelegate {
                 // Save messages
                 self.saveMessages()
 
-                // TODO: Delete from Supabase when real-time is implemented
+                // Delete from Supabase (own messages only, skip local/AI conversations)
+                if let conversationId = self.conversationId, !conversationId.hasPrefix("local_") {
+                    Task {
+                        try? await SupabaseService.shared.deleteMessage(messageId: message.id)
+                    }
+                }
             }
         })
 

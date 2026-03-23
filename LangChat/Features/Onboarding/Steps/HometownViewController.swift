@@ -319,8 +319,8 @@ class HometownViewController: BaseOnboardingViewController {
         searchTextField.isHidden = false
 
         let alert = UIAlertController(
-            title: "Location Not Found",
-            message: "We couldn't find that location. Please try a different search.",
+            title: "onboarding_location_not_found_title".localized,
+            message: "onboarding_location_not_found_message".localized,
             preferredStyle: .alert
         )
         alert.addAction(UIAlertAction(title: "common_ok".localized, style: .default))

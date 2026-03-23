@@ -181,7 +181,7 @@ class PricingViewController: UIViewController {
         freeTierLabel.textColor = .white
         headerStack.addArrangedSubview(freeTierLabel)
 
-        freePriceLabel.text = "Free"
+        freePriceLabel.text = "pricing_free".localized
         freePriceLabel.font = .systemFont(ofSize: 20, weight: .heavy)
         freePriceLabel.textColor = .systemGreen
         headerStack.addArrangedSubview(freePriceLabel)
@@ -748,7 +748,7 @@ class PricingViewController: UIViewController {
 
     private func showError(_ error: Error) {
         let alert = UIAlertController(
-            title: "Purchase Failed",
+            title: "subscription_purchase_failed".localized,
             message: error.localizedDescription,
             preferredStyle: .alert
         )

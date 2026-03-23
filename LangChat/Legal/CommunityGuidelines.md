@@ -109,7 +109,7 @@ We may update these guidelines periodically. Continued use of Language Match ind
 
 ## Questions?
 
-If you have questions about these guidelines, please contact us at support@painkillerlabs.com
+If you have questions about these guidelines, please contact us at Support-LM@byzyb.ai
 
 ---
 

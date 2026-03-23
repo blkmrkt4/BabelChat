@@ -24,12 +24,12 @@ class FeatureRequestViewController: UIViewController {
     }
 
     private func setupViews() {
-        title = "Request a Feature"
+        title = "feature_request_title".localized
         view.backgroundColor = .systemBackground
 
         // Navigation bar buttons
         navigationItem.leftBarButtonItem = UIBarButtonItem(
-            title: "Cancel",
+            title: "common_cancel".localized,
             style: .plain,
             target: self,
             action: #selector(cancelTapped)
@@ -165,7 +165,7 @@ class FeatureRequestViewController: UIViewController {
 
     @objc private func submitTapped() {
         guard let message = textView.text, message.count >= minCharacters else {
-            showAlert(title: "Too Short", message: "Please write at least \(minCharacters) characters describing the feature.")
+            showAlert(title: "feature_request_too_short_title".localized, message: String(format: "feature_request_too_short_message".localized, minCharacters))
             return
         }
 
@@ -186,7 +186,7 @@ class FeatureRequestViewController: UIViewController {
                 await MainActor.run {
                     self.submitButton.isEnabled = true
                     self.submitButton.setTitle("feature_request_submit".localized, for: .normal)
-                    self.showAlert(title: "Error", message: "Failed to submit your feature request. Please try again.")
+                    self.showAlert(title: "common_error".localized, message: "feature_request_submit_error".localized)
                 }
             }
         }
@@ -194,8 +194,8 @@ class FeatureRequestViewController: UIViewController {
 
     private func showSuccessAndDismiss() {
         let alert = UIAlertController(
-            title: "Thank You!",
-            message: "Your feature request has been submitted. We appreciate your feedback!",
+            title: "feature_request_submitted".localized,
+            message: "feature_request_submitted_message".localized,
             preferredStyle: .alert
         )
         alert.addAction(UIAlertAction(title: "common_ok".localized, style: .default) { [weak self] _ in

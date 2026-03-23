@@ -928,8 +928,8 @@ class UserDetailViewController: UIViewController, PhotoGridViewDelegate {
         guard let user = user, let match = match else { return }
 
         let alert = UIAlertController(
-            title: "Unmatch \(user.firstName)?",
-            message: "Are you sure you want to unmatch? This will remove \(user.firstName) from your matches and delete your conversation history.",
+            title: String(format: "profile_unmatch_title".localized, user.firstName),
+            message: String(format: "profile_unmatch_message".localized, user.firstName),
             preferredStyle: .alert
         )
 
@@ -1462,8 +1462,8 @@ class UserDetailViewController: UIViewController, PhotoGridViewDelegate {
 
     private func showReportOptions(for user: User, photoURL: String) {
         let alertController = UIAlertController(
-            title: "Report Photo",
-            message: "Why are you reporting this photo?",
+            title: "profile_report_photo_title".localized,
+            message: "profile_report_photo_message".localized,
             preferredStyle: .actionSheet
         )
 
@@ -1496,8 +1496,8 @@ class UserDetailViewController: UIViewController, PhotoGridViewDelegate {
 
     private func confirmReport(user: User, photoURL: String, reason: String) {
         let confirmAlert = UIAlertController(
-            title: "Confirm Report",
-            message: "Are you sure you want to report this photo for \"\(reason.lowercased())\"?",
+            title: "profile_confirm_report_title".localized,
+            message: String(format: "profile_confirm_report_message".localized, reason.lowercased()),
             preferredStyle: .alert
         )
 
@@ -1522,8 +1522,8 @@ class UserDetailViewController: UIViewController, PhotoGridViewDelegate {
 
                 await MainActor.run {
                     let successAlert = UIAlertController(
-                        title: "Report Submitted",
-                        message: "Thank you for helping keep our community safe. We'll review this report shortly.",
+                        title: "report_submitted_title".localized,
+                        message: "report_submitted_message".localized,
                         preferredStyle: .alert
                     )
                     successAlert.addAction(UIAlertAction(title: "common_ok".localized, style: .default))
@@ -1532,8 +1532,8 @@ class UserDetailViewController: UIViewController, PhotoGridViewDelegate {
             } catch {
                 await MainActor.run {
                     let errorAlert = UIAlertController(
-                        title: "Report Failed",
-                        message: "Failed to submit report: \(error.localizedDescription). Please try again.",
+                        title: "report_failed_title".localized,
+                        message: "report_failed_message".localized,
                         preferredStyle: .alert
                     )
                     errorAlert.addAction(UIAlertAction(title: "common_ok".localized, style: .default))

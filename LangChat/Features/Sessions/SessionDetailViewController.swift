@@ -11,8 +11,11 @@ class SessionDetailViewController: UIViewController {
     // MARK: - UI
     private let scrollView = UIScrollView()
     private let contentStack = UIStackView()
+    private let hostsContainer = UIStackView()
     private let hostAvatarView = UIImageView()
     private let hostNameLabel = UILabel()
+    private let coHostAvatarView = UIImageView()
+    private let coHostNameLabel = UILabel()
     private let titleLabel = UILabel()
     private let languagePairLabel = UILabel()
     private let statusLabel = UILabel()
@@ -79,22 +82,74 @@ class SessionDetailViewController: UIViewController {
             contentStack.widthAnchor.constraint(equalTo: scrollView.widthAnchor, constant: -48),
         ])
 
-        // Host avatar
+        // Hosts container — shows host (and co-host when available) side by side
+        hostsContainer.axis = .horizontal
+        hostsContainer.spacing = 24
+        hostsContainer.alignment = .top
+        hostsContainer.distribution = .equalCentering
+        hostsContainer.translatesAutoresizingMaskIntoConstraints = false
+
+        // Host column (avatar + name)
+        let hostColumn = UIStackView()
+        hostColumn.axis = .vertical
+        hostColumn.spacing = 6
+        hostColumn.alignment = .center
+
         hostAvatarView.contentMode = .scaleAspectFill
         hostAvatarView.clipsToBounds = true
-        hostAvatarView.layer.cornerRadius = 40
+        hostAvatarView.layer.cornerRadius = 36
         hostAvatarView.backgroundColor = .systemGray5
         hostAvatarView.image = UIImage(systemName: "person.circle.fill")
         hostAvatarView.tintColor = .systemGray3
         hostAvatarView.translatesAutoresizingMaskIntoConstraints = false
-        hostAvatarView.widthAnchor.constraint(equalToConstant: 80).isActive = true
-        hostAvatarView.heightAnchor.constraint(equalToConstant: 80).isActive = true
-        contentStack.addArrangedSubview(hostAvatarView)
+        hostAvatarView.widthAnchor.constraint(equalToConstant: 72).isActive = true
+        hostAvatarView.heightAnchor.constraint(equalToConstant: 72).isActive = true
+        hostColumn.addArrangedSubview(hostAvatarView)
 
-        // Host name
-        hostNameLabel.font = .systemFont(ofSize: 18, weight: .semibold)
+        hostNameLabel.font = .systemFont(ofSize: 15, weight: .semibold)
         hostNameLabel.textAlignment = .center
-        contentStack.addArrangedSubview(hostNameLabel)
+        hostColumn.addArrangedSubview(hostNameLabel)
+
+        let hostRoleLabel = UILabel()
+        hostRoleLabel.font = .systemFont(ofSize: 12, weight: .medium)
+        hostRoleLabel.textColor = .tertiaryLabel
+        hostRoleLabel.text = "session_role_host".localized
+        hostColumn.addArrangedSubview(hostRoleLabel)
+
+        hostsContainer.addArrangedSubview(hostColumn)
+
+        // Co-host column (avatar + name) — hidden by default
+        let coHostColumn = UIStackView()
+        coHostColumn.axis = .vertical
+        coHostColumn.spacing = 6
+        coHostColumn.alignment = .center
+        coHostColumn.tag = 100 // tag for lookup later
+
+        coHostAvatarView.contentMode = .scaleAspectFill
+        coHostAvatarView.clipsToBounds = true
+        coHostAvatarView.layer.cornerRadius = 36
+        coHostAvatarView.backgroundColor = .systemGray5
+        coHostAvatarView.image = UIImage(systemName: "person.circle.fill")
+        coHostAvatarView.tintColor = .systemGray3
+        coHostAvatarView.translatesAutoresizingMaskIntoConstraints = false
+        coHostAvatarView.widthAnchor.constraint(equalToConstant: 72).isActive = true
+        coHostAvatarView.heightAnchor.constraint(equalToConstant: 72).isActive = true
+        coHostColumn.addArrangedSubview(coHostAvatarView)
+
+        coHostNameLabel.font = .systemFont(ofSize: 15, weight: .semibold)
+        coHostNameLabel.textAlignment = .center
+        coHostColumn.addArrangedSubview(coHostNameLabel)
+
+        let coHostRoleLabel = UILabel()
+        coHostRoleLabel.font = .systemFont(ofSize: 12, weight: .medium)
+        coHostRoleLabel.textColor = .tertiaryLabel
+        coHostRoleLabel.text = "session_role_co_host".localized
+        coHostColumn.addArrangedSubview(coHostRoleLabel)
+
+        coHostColumn.isHidden = true
+        hostsContainer.addArrangedSubview(coHostColumn)
+
+        contentStack.addArrangedSubview(hostsContainer)
 
         // Title
         titleLabel.font = .systemFont(ofSize: 24, weight: .bold)
@@ -211,6 +266,11 @@ class SessionDetailViewController: UIViewController {
             ImageService.shared.loadImage(from: urlString, into: hostAvatarView)
         }
 
+        // Show co-host avatar immediately if co-host data is already enriched
+        if let coHost = session.participants?.first(where: { $0.role == .coHost }) {
+            showCoHost(coHost)
+        }
+
         // Show viewer count for live sessions
         if session.isLive && session.viewerCount > 0 {
             viewerCountLabel.text = "\(session.viewerCount) \("session_users_watching".localized)"
@@ -218,13 +278,37 @@ class SessionDetailViewController: UIViewController {
         }
 
         if let goal = session.goal, !goal.isEmpty {
-            let goalDetailLabel = UILabel()
-            goalDetailLabel.font = .systemFont(ofSize: 14)
-            goalDetailLabel.textColor = .secondaryLabel
-            goalDetailLabel.textAlignment = .center
-            goalDetailLabel.numberOfLines = 0
-            goalDetailLabel.text = "\("session_goal_label".localized): \(goal)"
-            contentStack.insertArrangedSubview(goalDetailLabel, at: contentStack.arrangedSubviews.firstIndex(of: languagePairLabel)! + 1)
+            let goalCard = UIView()
+            goalCard.backgroundColor = .secondarySystemGroupedBackground
+            goalCard.layer.cornerRadius = 10
+            goalCard.translatesAutoresizingMaskIntoConstraints = false
+
+            let goalPrefixLabel = UILabel()
+            goalPrefixLabel.font = .systemFont(ofSize: 12, weight: .semibold)
+            goalPrefixLabel.textColor = .tertiaryLabel
+            goalPrefixLabel.text = "session_goal_label".localized.uppercased()
+
+            let goalTextLabel = UILabel()
+            goalTextLabel.font = .systemFont(ofSize: 15, weight: .regular)
+            goalTextLabel.textColor = .label
+            goalTextLabel.numberOfLines = 0
+            goalTextLabel.text = goal
+
+            let goalStack = UIStackView(arrangedSubviews: [goalPrefixLabel, goalTextLabel])
+            goalStack.axis = .vertical
+            goalStack.spacing = 4
+            goalStack.translatesAutoresizingMaskIntoConstraints = false
+            goalCard.addSubview(goalStack)
+
+            NSLayoutConstraint.activate([
+                goalStack.topAnchor.constraint(equalTo: goalCard.topAnchor, constant: 12),
+                goalStack.leadingAnchor.constraint(equalTo: goalCard.leadingAnchor, constant: 14),
+                goalStack.trailingAnchor.constraint(equalTo: goalCard.trailingAnchor, constant: -14),
+                goalStack.bottomAnchor.constraint(equalTo: goalCard.bottomAnchor, constant: -12),
+            ])
+
+            contentStack.insertArrangedSubview(goalCard, at: contentStack.arrangedSubviews.firstIndex(of: languagePairLabel)! + 1)
+            goalCard.widthAnchor.constraint(equalTo: contentStack.widthAnchor).isActive = true
         }
 
         if session.isLive {
@@ -289,17 +373,48 @@ class SessionDetailViewController: UIViewController {
     private func loadParticipants() {
         Task {
             do {
-                let fetched = try await SessionService.shared.getSessionParticipants(sessionId: session.id)
+                let fetched = try await SessionService.shared.getSessionParticipantsWithProfiles(sessionId: session.id)
                 await MainActor.run {
                     self.participants = fetched
+
+                    // Show co-host avatar + name if one exists
+                    if let coHost = fetched.first(where: { $0.role == .coHost }) {
+                        self.showCoHost(coHost)
+                    }
+
+                    // Build speaker/listener summary with names
                     let speakers = fetched.filter { $0.role.canSpeak }
+                    let listeners = fetched.filter { !$0.role.canSpeak }
+
                     if !speakers.isEmpty {
-                        self.speakersLabel.text = "Speakers: \(speakers.count) | Listeners: \(fetched.count - speakers.count)"
+                        let speakerNames = speakers.compactMap { p -> String? in
+                            guard let name = p.user?.firstName else { return nil }
+                            if p.role == .host {
+                                return "\(name) (\("session_role_host".localized))"
+                            } else if p.role == .coHost {
+                                return "\(name) (\("session_role_co_host".localized))"
+                            }
+                            return name
+                        }
+                        var text = "\("session_role_speaker".localized)s: \(speakerNames.joined(separator: ", "))"
+                        if !listeners.isEmpty {
+                            text += "\n\("session_role_listener".localized)s: \(listeners.count)"
+                        }
+                        self.speakersLabel.text = text
                     }
                 }
             } catch {
                 print("Failed to load participants: \(error)")
             }
+        }
+    }
+
+    private func showCoHost(_ coHost: SessionParticipant) {
+        guard let coHostColumn = hostsContainer.viewWithTag(100) else { return }
+        coHostColumn.isHidden = false
+        coHostNameLabel.text = coHost.user?.firstName ?? "session_role_co_host".localized
+        if let urlString = coHost.user?.profileImageURL {
+            ImageService.shared.loadImage(from: urlString, into: coHostAvatarView)
         }
     }
 

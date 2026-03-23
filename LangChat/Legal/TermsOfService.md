@@ -94,7 +94,7 @@ We employ a combination of automated content filtering and human review to detec
 We reserve the right to remove any content that violates these Terms or that we deem inappropriate, without prior notice.
 
 ### 4.5 Reporting
-If you encounter content or behavior that violates these Terms, please report it using the in-app reporting feature or by contacting us at support@painkillerlabs.com. We review all reports and take appropriate action, which may include content removal, user warnings, or account termination.
+If you encounter content or behavior that violates these Terms, please report it using the in-app reporting feature or by contacting us at Support-LM@byzyb.ai. We review all reports and take appropriate action, which may include content removal, user warnings, or account termination.
 
 ## 5. Privacy and Data
 
@@ -272,7 +272,7 @@ Nothing in these Terms creates any agency, partnership, or joint venture between
 
 For questions about these Terms, please contact us:
 
-**Email:** support@painkillerlabs.com
+**Email:** Support-LM@byzyb.ai
 
 **Mailing Address:**
 PainKiller Labs

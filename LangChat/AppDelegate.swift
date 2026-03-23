@@ -16,6 +16,16 @@ class AppDelegate: UIResponder, UIApplicationDelegate {
 
 
     func application(_ application: UIApplication, didFinishLaunchingWithOptions launchOptions: [UIApplication.LaunchOptionsKey: Any]?) -> Bool {
+        // Release config preflight — fail fast if required keys are missing
+        #if !DEBUG
+        if !Config.isConfigured {
+            fatalError("Missing required configuration keys: \(Config.missingConfigKeys.joined(separator: ", ")). Cannot launch in Release mode.")
+        }
+        if Config.revenueCatAPIKey == nil {
+            fatalError("Missing REVENUECAT_API_KEY. Cannot launch in Release mode.")
+        }
+        #endif
+
         // Configure crash reporting FIRST (to catch any startup crashes)
         CrashReportingService.shared.configure()
 
@@ -31,7 +41,7 @@ class AppDelegate: UIResponder, UIApplicationDelegate {
                 options: [.duckOthers, .defaultToSpeaker]  // Duck music, play even when muted
             )
             try AVAudioSession.sharedInstance().setActive(true, options: .notifyOthersOnDeactivation)
-            print("✅ Audio session configured for text-to-speech")
+            debugLog("✅ Audio session configured for text-to-speech")
         } catch {
             print("❌ Failed to configure audio session: \(error.localizedDescription)")
             CrashReportingService.shared.captureError(error, context: ["stage": "audio_session_setup"])
@@ -62,20 +72,20 @@ class AppDelegate: UIResponder, UIApplicationDelegate {
         PushNotificationService.shared.checkAuthorizationStatus { status in
             switch status {
             case .authorized:
-                print("✅ Push notifications already authorized")
+                debugLog("✅ Push notifications already authorized")
                 DispatchQueue.main.async {
                     UIApplication.shared.registerForRemoteNotifications()
                 }
             case .notDetermined:
-                print("⏳ Push notification permission not yet requested")
+                debugLog("⏳ Push notification permission not yet requested")
             case .denied:
-                print("⚠️ Push notifications denied by user")
+                debugLog("⚠️ Push notifications denied by user")
             case .provisional:
-                print("📱 Push notifications provisionally authorized")
+                debugLog("📱 Push notifications provisionally authorized")
             case .ephemeral:
-                print("⏱️ Push notifications ephemeral authorization")
+                debugLog("⏱️ Push notifications ephemeral authorization")
             @unknown default:
-                print("❓ Unknown push notification authorization status")
+                debugLog("❓ Unknown push notification authorization status")
             }
         }
     }
@@ -95,9 +105,9 @@ class AppDelegate: UIResponder, UIApplicationDelegate {
         guard let revenueCatAPIKey = Bundle.main.infoDictionary?["REVENUECAT_API_KEY"] as? String,
               !revenueCatAPIKey.isEmpty,
               !revenueCatAPIKey.hasPrefix("$(") else {
-            print("⚠️ REVENUECAT_API_KEY not found in Info.plist!")
-            print("   Make sure Secrets.xcconfig contains REVENUECAT_API_KEY = your-key")
-            print("   Subscriptions will not work until this is configured.")
+            debugLog("⚠️ REVENUECAT_API_KEY not found in Info.plist!")
+            debugLog("   Make sure Secrets.xcconfig contains REVENUECAT_API_KEY = your-key")
+            debugLog("   Subscriptions will not work until this is configured.")
             // Don't crash - just skip RevenueCat initialization
             // This allows the app to run without subscriptions configured
             return
@@ -106,7 +116,7 @@ class AppDelegate: UIResponder, UIApplicationDelegate {
         // Initialize subscription service
         SubscriptionService.shared.configure(apiKey: revenueCatAPIKey)
 
-        print("💳 RevenueCat configured successfully")
+        debugLog("💳 RevenueCat configured successfully")
     }
 
     // MARK: UISceneSession Lifecycle

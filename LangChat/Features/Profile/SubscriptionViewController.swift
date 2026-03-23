@@ -78,7 +78,7 @@ class SubscriptionViewController: UIViewController {
     }
 
     private func setupViews() {
-        title = "Subscription"
+        title = "subscription_title".localized
         view.backgroundColor = .systemBackground
 
         navigationItem.rightBarButtonItem = UIBarButtonItem(
@@ -88,7 +88,7 @@ class SubscriptionViewController: UIViewController {
         )
 
         navigationItem.leftBarButtonItem = UIBarButtonItem(
-            title: "Restore",
+            title: "pricing_restore".localized,
             style: .plain,
             target: self,
             action: #selector(restorePurchases)
@@ -298,8 +298,8 @@ class SubscriptionViewController: UIViewController {
         ])
 
         let alert = UIAlertController(
-            title: "Subscribe to \(tier.displayName)",
-            message: "You'll be charged \(subscriptionService.localizedPricePerPeriod(for: tier))",
+            title: String(format: "subscription_subscribe_to".localized, tier.displayName),
+            message: String(format: "subscription_charge_message".localized, subscriptionService.localizedPricePerPeriod(for: tier)),
             preferredStyle: .alert
         )
 
@@ -307,7 +307,7 @@ class SubscriptionViewController: UIViewController {
             // Track paywall dismissed
             AnalyticsService.shared.track(.paywallDismissed, properties: ["tier": tier.displayName])
         })
-        alert.addAction(UIAlertAction(title: "Subscribe", style: .default) { [weak self] _ in
+        alert.addAction(UIAlertAction(title: "subscription_subscribe_button".localized, style: .default) { [weak self] _ in
             self?.performPurchase(tier: tier)
         })
 
@@ -361,8 +361,8 @@ class SubscriptionViewController: UIViewController {
 
     private func showPurchaseSuccess(tier: SubscriptionTier) {
         let alert = UIAlertController(
-            title: "Welcome to \(tier.displayName)!",
-            message: "Your subscription is now active.",
+            title: String(format: "subscription_welcome_title".localized, tier.displayName),
+            message: "subscription_welcome_message".localized,
             preferredStyle: .alert
         )
         alert.addAction(UIAlertAction(title: "common_ok".localized, style: .default) { [weak self] _ in
@@ -390,7 +390,7 @@ class SubscriptionViewController: UIViewController {
         print("❌ Purchase error: \(error)")
 
         let alert = UIAlertController(
-            title: "Purchase Failed",
+            title: "subscription_purchase_failed".localized,
             message: errorMessage,
             preferredStyle: .alert
         )
@@ -400,11 +400,11 @@ class SubscriptionViewController: UIViewController {
 
     private func showManageSubscription() {
         let alert = UIAlertController(
-            title: "Manage Subscription",
-            message: "To cancel or change your subscription, go to Settings > Apple ID > Subscriptions on your device.",
+            title: "subscription_manage".localized,
+            message: "subscription_manage_message".localized,
             preferredStyle: .alert
         )
-        alert.addAction(UIAlertAction(title: "Open Settings", style: .default) { _ in
+        alert.addAction(UIAlertAction(title: "subscription_open_settings".localized, style: .default) { _ in
             if let url = URL(string: "https://apps.apple.com/account/subscriptions") {
                 UIApplication.shared.open(url)
             }
@@ -434,8 +434,8 @@ class SubscriptionViewController: UIViewController {
                         ])
 
                         let alert = UIAlertController(
-                            title: "Purchases Restored",
-                            message: "Your \(status.tier.displayName) subscription has been restored.",
+                            title: "subscription_restored_title".localized,
+                            message: String(format: "subscription_restored_message".localized, status.tier.displayName),
                             preferredStyle: .alert
                         )
                         alert.addAction(UIAlertAction(title: "common_ok".localized, style: .default) { _ in
@@ -444,8 +444,8 @@ class SubscriptionViewController: UIViewController {
                         self?.present(alert, animated: true)
                     } else {
                         let alert = UIAlertController(
-                            title: "No Purchases Found",
-                            message: "No previous subscriptions were found for this account.",
+                            title: "subscription_no_purchases_title".localized,
+                            message: "subscription_no_purchases_message".localized,
                             preferredStyle: .alert
                         )
                         alert.addAction(UIAlertAction(title: "common_ok".localized, style: .default))

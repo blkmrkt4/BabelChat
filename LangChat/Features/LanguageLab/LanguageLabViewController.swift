@@ -61,7 +61,10 @@ class LanguageLabViewController: UIViewController {
         ])
     }
 
+    private var lastLoadError: Error?
+
     private func loadData() {
+        lastLoadError = nil
         loadingIndicator.startAnimating()
         containerView.alpha = 0.3
 
@@ -76,14 +79,100 @@ class LanguageLabViewController: UIViewController {
                 }
             } catch {
                 await MainActor.run {
+                    self.lastLoadError = error
                     self.labData = .empty
                     self.loadingIndicator.stopAnimating()
                     self.containerView.alpha = 1.0
-                    self.showSelectedView(index: self.segmentedControl.selectedSegmentIndex)
+                    self.showErrorState()
                     print("❌ Failed to load Language Lab data: \(error)")
                 }
             }
         }
+    }
+
+    private func showErrorState() {
+        containerView.subviews.forEach { $0.removeFromSuperview() }
+
+        let errorView = UIView()
+        containerView.addSubview(errorView)
+        errorView.translatesAutoresizingMaskIntoConstraints = false
+
+        let stack = UIStackView()
+        stack.axis = .vertical
+        stack.alignment = .center
+        stack.spacing = 16
+        errorView.addSubview(stack)
+        stack.translatesAutoresizingMaskIntoConstraints = false
+
+        let iconLabel = UILabel()
+        iconLabel.text = "⚠️"
+        iconLabel.font = .systemFont(ofSize: 48)
+        stack.addArrangedSubview(iconLabel)
+
+        let messageLabel = UILabel()
+        messageLabel.text = "lab_error_loading".localized
+        messageLabel.font = .systemFont(ofSize: 16)
+        messageLabel.textColor = UIColor.white.withAlphaComponent(0.7)
+        messageLabel.textAlignment = .center
+        messageLabel.numberOfLines = 0
+        stack.addArrangedSubview(messageLabel)
+
+        let retryButton = UIButton(type: .system)
+        retryButton.setTitle("common_retry".localized, for: .normal)
+        retryButton.setTitleColor(.white, for: .normal)
+        retryButton.titleLabel?.font = .systemFont(ofSize: 16, weight: .semibold)
+        retryButton.backgroundColor = BrandColors.primary
+        retryButton.layer.cornerRadius = 12
+        retryButton.addTarget(self, action: #selector(retryLoadData), for: .touchUpInside)
+        stack.addArrangedSubview(retryButton)
+
+        NSLayoutConstraint.activate([
+            errorView.topAnchor.constraint(equalTo: containerView.topAnchor),
+            errorView.leadingAnchor.constraint(equalTo: containerView.leadingAnchor),
+            errorView.trailingAnchor.constraint(equalTo: containerView.trailingAnchor),
+            errorView.bottomAnchor.constraint(equalTo: containerView.bottomAnchor),
+            stack.centerXAnchor.constraint(equalTo: errorView.centerXAnchor),
+            stack.centerYAnchor.constraint(equalTo: errorView.centerYAnchor),
+            stack.leadingAnchor.constraint(greaterThanOrEqualTo: errorView.leadingAnchor, constant: 32),
+            retryButton.widthAnchor.constraint(equalToConstant: 160),
+            retryButton.heightAnchor.constraint(equalToConstant: 44)
+        ])
+    }
+
+    @objc private func retryLoadData() {
+        loadData()
+    }
+
+    private func createEmptyStateView(message: String) -> UIView {
+        let emptyView = UIView()
+
+        let stack = UIStackView()
+        stack.axis = .vertical
+        stack.alignment = .center
+        stack.spacing = 12
+        emptyView.addSubview(stack)
+        stack.translatesAutoresizingMaskIntoConstraints = false
+
+        let iconLabel = UILabel()
+        iconLabel.text = "💬"
+        iconLabel.font = .systemFont(ofSize: 48)
+        stack.addArrangedSubview(iconLabel)
+
+        let messageLabel = UILabel()
+        messageLabel.text = message
+        messageLabel.font = .systemFont(ofSize: 16)
+        messageLabel.textColor = UIColor.white.withAlphaComponent(0.6)
+        messageLabel.textAlignment = .center
+        messageLabel.numberOfLines = 0
+        stack.addArrangedSubview(messageLabel)
+
+        NSLayoutConstraint.activate([
+            stack.centerXAnchor.constraint(equalTo: emptyView.centerXAnchor),
+            stack.centerYAnchor.constraint(equalTo: emptyView.centerYAnchor),
+            stack.leadingAnchor.constraint(greaterThanOrEqualTo: emptyView.leadingAnchor, constant: 32)
+        ])
+
+        return emptyView
     }
 
     override func viewWillAppear(_ animated: Bool) {
@@ -242,23 +331,37 @@ class LanguageLabViewController: UIViewController {
 
         switch index {
         case 0:
-            // Recreate view with fresh data
-            streaksView = SparkStreaksView(
-                partnerStreaks: labData.partnerStreaks,
-                dailyActivity: labData.dailyActivity
-            )
-            selectedView = streaksView!
+            if labData.partnerStreaks.isEmpty && labData.dailyActivity.isEmpty {
+                selectedView = createEmptyStateView(message: "lab_empty_streaks".localized)
+            } else {
+                streaksView = SparkStreaksView(
+                    partnerStreaks: labData.partnerStreaks,
+                    dailyActivity: labData.dailyActivity
+                )
+                selectedView = streaksView!
+            }
         case 1:
-            heatView = FluencyHeatView(fluencyHeat: labData.fluencyHeat)
-            selectedView = heatView!
+            if labData.dailyActivity.isEmpty {
+                selectedView = createEmptyStateView(message: "lab_empty_heat".localized)
+            } else {
+                heatView = FluencyHeatView(fluencyHeat: labData.fluencyHeat)
+                selectedView = heatView!
+            }
         case 2:
-            pulseView = LearningPulseView(
-                learningPulse: labData.learningPulse,
-                dailyActivity: labData.dailyActivity
-            )
-            selectedView = pulseView!
+            if labData.learningPulse.isEmpty {
+                selectedView = createEmptyStateView(message: "lab_empty_pulse".localized)
+            } else {
+                pulseView = LearningPulseView(
+                    learningPulse: labData.learningPulse,
+                    dailyActivity: labData.dailyActivity
+                )
+                selectedView = pulseView!
+            }
         case 3:
             statsView = StatsOverviewView(wrappedStats: labData.wrappedStats)
+            statsView?.onShareTapped = { [weak self] in
+                self?.shareWrappedCard()
+            }
             selectedView = statsView!
         default:
             return
@@ -296,6 +399,13 @@ class LanguageLabViewController: UIViewController {
     @objc private func settingsTapped() {
         let settingsVC = SettingsViewController()
         navigationController?.pushViewController(settingsVC, animated: true)
+    }
+
+    private func shareWrappedCard() {
+        guard let image = statsView?.renderWrappedCardImage() else { return }
+        let activityVC = UIActivityViewController(activityItems: [image], applicationActivities: nil)
+        activityVC.popoverPresentationController?.sourceView = view
+        present(activityVC, animated: true)
     }
 }
 
@@ -412,14 +522,19 @@ private class SparkStreaksView: UIView {
         milestoneView.addSubview(milestoneStack)
 
         let nextLabel = UILabel()
-        nextLabel.text = "lab_next_milestone".localized
+        let streakForLabel = partners[selectedPartnerIndex].streak
+        let milestonesForLabel = [7, 14, 30, 60, 90, 180, 365]
+        let nextMilestoneForLabel = milestonesForLabel.first(where: { $0 > streakForLabel }) ?? (streakForLabel + 30)
+        nextLabel.text = String(format: "lab_next_milestone_days".localized, nextMilestoneForLabel)
         nextLabel.font = .systemFont(ofSize: 14, weight: .medium)
         nextLabel.textColor = BrandColors.secondary
         milestoneStack.addArrangedSubview(nextLabel)
 
         let daysLabel = UILabel()
         let currentStreak = partners[selectedPartnerIndex].streak
-        let daysToMilestone = 30 - currentStreak
+        let milestones = [7, 14, 30, 60, 90, 180, 365]
+        let nextMilestone = milestones.first(where: { $0 > currentStreak }) ?? (currentStreak + 30)
+        let daysToMilestone = nextMilestone - currentStreak
         daysLabel.text = String(format: "lab_streak_milestone_format".localized, daysToMilestone)
         daysLabel.font = .systemFont(ofSize: 16, weight: .bold)
         daysLabel.textColor = .white
@@ -553,9 +668,25 @@ private class SparkStreaksView: UIView {
 
     private func createCalendarGrid() {
         let weekDays = ["M", "T", "W", "T", "F", "S", "S"]
-        let daysInMonth = 31
-        let currentDay = Calendar.current.component(.day, from: Date())
+        let calendar = Calendar.current
+        let now = Date()
+        let currentDay = calendar.component(.day, from: now)
+        let currentMonth = calendar.component(.month, from: now)
+        let currentYear = calendar.component(.year, from: now)
+        let range = calendar.range(of: .day, in: .month, for: now)
+        let daysInMonth = range?.count ?? 31
         let streak = partners[selectedPartnerIndex].streak
+
+        // Build set of active days from real daily activity data for current month
+        var activeDays: Set<Int> = []
+        for activity in dailyActivity {
+            let actMonth = calendar.component(.month, from: activity.activityDate)
+            let actYear = calendar.component(.year, from: activity.activityDate)
+            if actMonth == currentMonth && actYear == currentYear {
+                let day = calendar.component(.day, from: activity.activityDate)
+                activeDays.insert(day)
+            }
+        }
 
         // Week day headers
         let weekDayStack = UIStackView()
@@ -590,7 +721,7 @@ private class SparkStreaksView: UIView {
             for _ in 0..<7 {
                 dayIndex += 1
                 if dayIndex <= daysInMonth {
-                    let dayView = createDayView(day: dayIndex, currentDay: currentDay, streak: streak)
+                    let dayView = createDayView(day: dayIndex, currentDay: currentDay, streak: streak, activeDays: activeDays)
                     rowStack.addArrangedSubview(dayView)
                 } else {
                     let emptyView = UIView()
@@ -617,9 +748,12 @@ private class SparkStreaksView: UIView {
         ])
     }
 
-    private func createDayView(day: Int, currentDay: Int, streak: Int) -> UIView {
+    private func createDayView(day: Int, currentDay: Int, streak: Int, activeDays: Set<Int>) -> UIView {
         let container = UIView()
-        let isActive = day <= currentDay && day > currentDay - streak
+        // Use real activity data if available, fall back to streak-based painting
+        let isActive = !activeDays.isEmpty
+            ? activeDays.contains(day)
+            : (day <= currentDay && day > currentDay - streak)
         let isToday = day == currentDay
 
         container.backgroundColor = isActive
@@ -1262,7 +1396,9 @@ private class LearningPulseView: UIView {
 // MARK: - Stats Overview View
 private class StatsOverviewView: UIView {
 
+    var onShareTapped: (() -> Void)?
     private let wrappedStats: WrappedStats
+    private var wrappedCardRef: UIView?
 
     init(wrappedStats: WrappedStats) {
         self.wrappedStats = wrappedStats
@@ -1389,7 +1525,9 @@ private class StatsOverviewView: UIView {
         shareButton.titleLabel?.font = .systemFont(ofSize: 16, weight: .semibold)
         shareButton.backgroundColor = .white.withAlphaComponent(0.95)
         shareButton.layer.cornerRadius = 12
+        shareButton.addTarget(self, action: #selector(shareButtonTapped), for: .touchUpInside)
         wrappedCard.addSubview(shareButton)
+        wrappedCardRef = wrappedCard
 
         // Achievements section
         let achievementsLabel = UILabel()
@@ -1479,6 +1617,19 @@ private class StatsOverviewView: UIView {
         // Update gradient frame after layout
         DispatchQueue.main.async {
             gradient.frame = wrappedCard.bounds
+        }
+    }
+
+    @objc private func shareButtonTapped() {
+        onShareTapped?()
+    }
+
+    /// Render the wrapped card as a shareable image
+    func renderWrappedCardImage() -> UIImage? {
+        guard let card = wrappedCardRef else { return nil }
+        let renderer = UIGraphicsImageRenderer(bounds: card.bounds)
+        return renderer.image { ctx in
+            card.drawHierarchy(in: card.bounds, afterScreenUpdates: true)
         }
     }
 

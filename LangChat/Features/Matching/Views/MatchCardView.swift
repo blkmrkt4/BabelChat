@@ -269,12 +269,12 @@ class MatchCardView: UIView {
         photoGridView.configure(with: user.photoURLs)
 
         let languageNames = user.openToLanguages.map { $0.name }.joined(separator: ", ")
-        openToMatchLabel.text = "Open to match in: \(languageNames)"
+        openToMatchLabel.text = String(format: "match_open_to_format".localized, languageNames)
 
         bioLabel.text = user.bio ?? ""
         matchDateLabel.text = user.formattedMatchDate
 
-        aboutLabel.text = "About \(user.firstName)"
+        aboutLabel.text = String(format: "match_about_format".localized, user.firstName)
     }
 
     private func updateBlurState() {

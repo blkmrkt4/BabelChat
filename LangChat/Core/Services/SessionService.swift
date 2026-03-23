@@ -87,12 +87,13 @@ class SessionService {
 
     // MARK: - Host Enrichment
 
-    /// Batch-fetch host profiles and assign to sessions
+    /// Batch-fetch host profiles and co-host participants, then assign to sessions
     private func enrichWithHosts(_ sessions: inout [Session]) async {
         let hostIds = Array(Set(sessions.map { $0.hostId }))
         guard !hostIds.isEmpty else { return }
 
         do {
+            // Fetch host profiles
             let profiles: [ProfileResponse] = try await supabase.client
                 .from("profiles")
                 .select()
@@ -109,6 +110,99 @@ class SessionService {
 
             for i in sessions.indices {
                 sessions[i].host = userMap[sessions[i].hostId]
+            }
+
+            // Fetch co-host participants for all sessions
+            let sessionIds = sessions.map { $0.id }
+            let coHostParticipants: [SessionParticipant] = try await supabase.client
+                .from("session_participants")
+                .select()
+                .in("session_id", values: sessionIds)
+                .eq("role", value: SessionRole.coHost.rawValue)
+                .eq("is_active", value: true)
+                .execute()
+                .value
+
+            // Track which sessions already have co-host participants
+            let sessionsWithCoHosts = Set(coHostParticipants.map { $0.sessionId })
+
+            if !coHostParticipants.isEmpty {
+                // Fetch co-host profiles
+                let coHostUserIds = Array(Set(coHostParticipants.map { $0.userId }))
+                let coHostProfiles: [ProfileResponse] = try await supabase.client
+                    .from("profiles")
+                    .select()
+                    .in("id", values: coHostUserIds)
+                    .execute()
+                    .value
+
+                for profile in coHostProfiles {
+                    if let user = profile.toUser() {
+                        userMap[profile.id] = user
+                    }
+                }
+
+                // Assign co-host participants (with user data) to each session
+                for i in sessions.indices {
+                    var sessionCoHosts = coHostParticipants.filter { $0.sessionId == sessions[i].id }
+                    for j in sessionCoHosts.indices {
+                        sessionCoHosts[j].user = userMap[sessionCoHosts[j].userId]
+                    }
+                    if !sessionCoHosts.isEmpty {
+                        sessions[i].participants = sessionCoHosts
+                    }
+                }
+            }
+
+            // Fallback: for sessions without co-host participants, check session_invites
+            let sessionsNeedingInviteCheck = sessionIds.filter { !sessionsWithCoHosts.contains($0) }
+            if !sessionsNeedingInviteCheck.isEmpty {
+                let coHostInvites: [SessionInvite] = try await supabase.client
+                    .from("session_invites")
+                    .select()
+                    .in("session_id", values: sessionsNeedingInviteCheck)
+                    .eq("role", value: SessionRole.coHost.rawValue)
+                    .in("status", values: ["pending", "accepted"])
+                    .execute()
+                    .value
+
+                if !coHostInvites.isEmpty {
+                    // Fetch invitee profiles
+                    let inviteeIds = Array(Set(coHostInvites.map { $0.inviteeId }))
+                    let inviteeProfiles: [ProfileResponse] = try await supabase.client
+                        .from("profiles")
+                        .select()
+                        .in("id", values: inviteeIds)
+                        .execute()
+                        .value
+
+                    for profile in inviteeProfiles {
+                        if let user = profile.toUser() {
+                            userMap[profile.id] = user
+                        }
+                    }
+
+                    // Create synthetic co-host participant entries from invites
+                    for i in sessions.indices {
+                        guard sessions[i].participants == nil else { continue }
+                        let invitesForSession = coHostInvites.filter { $0.sessionId == sessions[i].id }
+                        if let invite = invitesForSession.first, let user = userMap[invite.inviteeId] {
+                            var syntheticParticipant = SessionParticipant(
+                                id: invite.id,
+                                sessionId: invite.sessionId,
+                                userId: invite.inviteeId,
+                                role: .coHost,
+                                isHandRaised: false,
+                                handRaisedAt: nil,
+                                joinedAt: invite.createdAt,
+                                leftAt: nil,
+                                isActive: true
+                            )
+                            syntheticParticipant.user = user
+                            sessions[i].participants = [syntheticParticipant]
+                        }
+                    }
+                }
             }
         } catch {
             print("Failed to enrich sessions with host data: \(error)")
@@ -239,6 +333,34 @@ class SessionService {
             .value
 
         return response
+    }
+
+    /// Fetch participants with their profile data (names, avatars)
+    func getSessionParticipantsWithProfiles(sessionId: String) async throws -> [SessionParticipant] {
+        var participants = try await getSessionParticipants(sessionId: sessionId)
+
+        let userIds = participants.map { $0.userId }
+        guard !userIds.isEmpty else { return participants }
+
+        let profiles: [ProfileResponse] = try await supabase.client
+            .from("profiles")
+            .select()
+            .in("id", values: userIds)
+            .execute()
+            .value
+
+        var userMap: [String: User] = [:]
+        for profile in profiles {
+            if let user = profile.toUser() {
+                userMap[profile.id] = user
+            }
+        }
+
+        for i in participants.indices {
+            participants[i].user = userMap[participants[i].userId]
+        }
+
+        return participants
     }
 
     func startSession(id: String) async throws {

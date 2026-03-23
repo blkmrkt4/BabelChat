@@ -168,7 +168,9 @@ class DataPrivacyViewController: UIViewController {
         Task {
             do {
                 // Delete account from server
+                AnalyticsService.shared.track(.accountDeletionStarted)
                 try await SupabaseService.shared.deleteAccount()
+                AnalyticsService.shared.track(.accountDeletionCompleted)
 
                 await MainActor.run {
                     // Clear all local user data

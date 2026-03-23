@@ -164,7 +164,7 @@ Apple and its subsidiaries are third-party beneficiaries of this Agreement, and 
 
 If you have any questions about this Agreement, please contact us at:
 
-**Email:** support@painkillerlabs.com
+**Email:** Support-LM@byzyb.ai
 
 **Mailing Address:**
 PainKiller Labs

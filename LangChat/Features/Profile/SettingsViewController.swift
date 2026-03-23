@@ -193,6 +193,7 @@ class SettingsViewController: UIViewController {
                 do {
                     // Sign out from Supabase
                     try await SupabaseService.shared.signOut()
+                    AnalyticsService.shared.track(.logoutCompleted)
                     print("✅ Signed out from Supabase")
                 } catch {
                     print("⚠️ Sign out error: \(error)")
@@ -353,8 +354,8 @@ class SettingsViewController: UIViewController {
                     self.tableView.reloadData()
 
                     let alert = UIAlertController(
-                        title: "Update Failed",
-                        message: "Could not update your preference. Please try again.",
+                        title: "settings_update_failed_title".localized,
+                        message: "settings_update_failed_message".localized,
                         preferredStyle: .alert
                     )
                     alert.addAction(UIAlertAction(title: "common_ok".localized, style: .default))
@@ -385,8 +386,8 @@ class SettingsViewController: UIViewController {
                     self.tableView.reloadData()
 
                     let alert = UIAlertController(
-                        title: "Update Failed",
-                        message: "Could not update your preference. Please try again.",
+                        title: "settings_update_failed_title".localized,
+                        message: "settings_update_failed_message".localized,
                         preferredStyle: .alert
                     )
                     alert.addAction(UIAlertAction(title: "common_ok".localized, style: .default))
@@ -426,7 +427,7 @@ class SettingsViewController: UIViewController {
 
     private func showInviteFriends() {
         // Show loading indicator
-        let loadingAlert = UIAlertController(title: nil, message: "Generating invite link...", preferredStyle: .alert)
+        let loadingAlert = UIAlertController(title: nil, message: "settings_generating_invite".localized, preferredStyle: .alert)
         let loadingIndicator = UIActivityIndicatorView(frame: CGRect(x: 10, y: 5, width: 50, height: 50))
         loadingIndicator.hidesWhenStopped = true
         loadingIndicator.style = .medium
@@ -486,8 +487,8 @@ class SettingsViewController: UIViewController {
                     loadingAlert.dismiss(animated: true) {
                         // Show error alert
                         let errorAlert = UIAlertController(
-                            title: "Couldn't Generate Invite",
-                            message: "Please check your connection and try again.",
+                            title: "settings_invite_error_title".localized,
+                            message: "settings_invite_error_message".localized,
                             preferredStyle: .alert
                         )
                         errorAlert.addAction(UIAlertAction(title: "common_ok".localized, style: .default))
@@ -650,7 +651,9 @@ class SettingsViewController: UIViewController {
 
         Task {
             do {
+                AnalyticsService.shared.track(.accountDeletionStarted)
                 try await SupabaseService.shared.deleteAccount()
+                AnalyticsService.shared.track(.accountDeletionCompleted)
 
                 await MainActor.run {
                     // Clear local data
@@ -796,15 +799,15 @@ class SettingsViewController: UIViewController {
     }
 
     private func showTermsOfService() {
-        showLegalDocument(title: "Terms of Service", filename: "TermsOfService")
+        showLegalDocument(title: "terms_of_service_title".localized, filename: "TermsOfService")
     }
 
     private func showPrivacyPolicy() {
-        showLegalDocument(title: "Privacy Policy", filename: "PrivacyPolicy")
+        showLegalDocument(title: "privacy_policy_title".localized, filename: "PrivacyPolicy")
     }
 
     private func showOpenSourceLibraries() {
-        showLegalDocument(title: "Open Source Libraries", filename: "ThirdPartyLicenses")
+        showLegalDocument(title: "settings_open_source".localized, filename: "ThirdPartyLicenses")
     }
 
     private func showLegalDocument(title: String, filename: String) {
@@ -813,8 +816,8 @@ class SettingsViewController: UIViewController {
               let content = try? String(contentsOf: url, encoding: .utf8) else {
             // Fallback: show error
             let alert = UIAlertController(
-                title: "Error",
-                message: "Could not load \(title)",
+                title: "common_error".localized,
+                message: String(format: "settings_load_error".localized, title),
                 preferredStyle: .alert
             )
             alert.addAction(UIAlertAction(title: "common_ok".localized, style: .default))

@@ -166,7 +166,7 @@ You can delete your account using the "Delete Account" feature in Settings > Dat
 - Delete your message history
 
 ### 5.3 Data Export
-You can request a copy of your data by contacting us at support@painkillerlabs.com.
+You can request a copy of your data by contacting us at Support-LM@byzyb.ai.
 
 ### 5.4 Location Settings
 You can control location sharing:
@@ -183,7 +183,7 @@ You can opt out of promotional communications by contacting us. Note that you wi
 
 The App is intended for users who are at least 18 years old. We do not knowingly collect information from children under 18. If we discover that we have collected information from a child under 18, we will delete it promptly.
 
-If you believe we have information from a child under 18, please contact us at support@painkillerlabs.com.
+If you believe we have information from a child under 18, please contact us at Support-LM@byzyb.ai.
 
 ## 7. International Data Transfers
 
@@ -256,7 +256,7 @@ You can request deletion of your personal information, subject to certain except
 We will not discriminate against you for exercising your privacy rights.
 
 ### 11.4 Exercising Your Rights
-To exercise these rights, contact us at support@painkillerlabs.com or use the in-app data management features.
+To exercise these rights, contact us at Support-LM@byzyb.ai or use the in-app data management features.
 
 ## 12. European Privacy Rights (GDPR)
 
@@ -294,9 +294,9 @@ The "Last Updated" date at the top indicates when the policy was last revised. Y
 
 If you have questions about this Privacy Policy or our privacy practices, please contact us:
 
-**Email:** support@painkillerlabs.com
+**Email:** Support-LM@byzyb.ai
 
-**For Data Requests:** support@painkillerlabs.com
+**For Data Requests:** Support-LM@byzyb.ai
 
 **Mailing Address:**
 PainKiller Labs

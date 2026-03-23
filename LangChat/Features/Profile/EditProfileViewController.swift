@@ -113,7 +113,7 @@ class EditProfileViewController: UIViewController {
         )
 
         navigationItem.rightBarButtonItem = UIBarButtonItem(
-            title: "Save",
+            title: "common_save".localized,
             style: .plain,
             target: self,
             action: #selector(saveTapped)
@@ -848,7 +848,7 @@ class EditProfileViewController: UIViewController {
 
     private func showLanguagePicker(isNative: Bool) {
         let alertController = UIAlertController(
-            title: isNative ? "Select Native Language" : "Add Learning Language",
+            title: isNative ? "profile_select_native_language".localized : "profile_add_learning_language".localized,
             message: nil,
             preferredStyle: .actionSheet
         )
@@ -882,8 +882,8 @@ class EditProfileViewController: UIViewController {
 
     private func showProficiencyPicker(for language: Language) {
         let alertController = UIAlertController(
-            title: "Select Proficiency Level",
-            message: "How well do you speak \(language.name)?",
+            title: "profile_select_proficiency".localized,
+            message: String(format: "profile_how_well_speak_language".localized, language.name),
             preferredStyle: .actionSheet
         )
 
@@ -910,8 +910,8 @@ class EditProfileViewController: UIViewController {
 
     private func showPracticeLanguagePicker() {
         let alertController = UIAlertController(
-            title: "Add Language to Match In",
-            message: "Select a language you want to match and chat in",
+            title: "profile_add_match_language_title".localized,
+            message: "profile_add_match_language_message".localized,
             preferredStyle: .actionSheet
         )
 
@@ -938,8 +938,8 @@ class EditProfileViewController: UIViewController {
 
     private func showPracticeProficiencyPicker(for language: Language) {
         let alertController = UIAlertController(
-            title: "Proficiency Level",
-            message: "How well can you communicate in \(language.name)?",
+            title: "profile_proficiency_level".localized,
+            message: String(format: "profile_communicate_level".localized, language.name),
             preferredStyle: .actionSheet
         )
 
@@ -963,7 +963,7 @@ class EditProfileViewController: UIViewController {
 
     @objc private func selectGenderTapped() {
         let alertController = UIAlertController(
-            title: "My Gender",
+            title: "profile_my_gender".localized,
             message: nil,
             preferredStyle: .actionSheet
         )
@@ -997,7 +997,7 @@ class EditProfileViewController: UIViewController {
 
     @objc private func selectGenderPreferenceTapped() {
         let alertController = UIAlertController(
-            title: "Interested in Matching With",
+            title: "profile_interested_in".localized,
             message: nil,
             preferredStyle: .actionSheet
         )
@@ -1037,7 +1037,7 @@ class EditProfileViewController: UIViewController {
     @objc private func saveTapped() {
         guard let firstName = firstNameTextField.text, !firstName.isEmpty,
               let lastName = lastNameTextField.text, !lastName.isEmpty else {
-            showAlert(title: "Missing Information", message: "Please enter your first and last name.")
+            showAlert(title: "profile_missing_info_title".localized, message: "profile_missing_info_message".localized)
             return
         }
 
@@ -1114,7 +1114,7 @@ class EditProfileViewController: UIViewController {
             } catch {
                 print("❌ Failed to save profile to Supabase: \(error)")
                 await MainActor.run {
-                    self.showAlert(title: "Save Failed", message: "Could not save your profile. Please try again.")
+                    self.showAlert(title: "profile_save_failed_title".localized, message: "profile_save_failed_message".localized)
                 }
                 return
             }
@@ -1310,7 +1310,7 @@ extension EditProfileViewController: PHPickerViewControllerDelegate {
                         self.present(alert, animated: true)
                     } else if failedCount > 0 {
                         let alert = UIAlertController(
-                            title: "Upload Complete",
+                            title: "profile_upload_complete".localized,
                             message: "\(uploadedCount) photo(s) uploaded. \(failedCount) failed.",
                             preferredStyle: .alert
                         )

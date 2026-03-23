@@ -66,8 +66,8 @@ class LanguagesViewController: UIViewController {
         let language = learningLanguages[index]
 
         let alertController = UIAlertController(
-            title: "Change Proficiency",
-            message: "Select your \(language.language.name) proficiency level",
+            title: "profile_change_proficiency".localized,
+            message: String(format: "profile_select_proficiency_message".localized, language.language.name),
             preferredStyle: .actionSheet
         )
 
@@ -110,8 +110,8 @@ class LanguagesViewController: UIViewController {
 
     private func showAddLanguagePicker() {
         let alertController = UIAlertController(
-            title: "Add Learning Language",
-            message: "Select a language to learn",
+            title: "profile_add_learning_language".localized,
+            message: "profile_select_language_to_learn".localized,
             preferredStyle: .actionSheet
         )
 
@@ -139,8 +139,8 @@ class LanguagesViewController: UIViewController {
 
     private func showProficiencyPickerForNewLanguage(_ language: Language) {
         let alertController = UIAlertController(
-            title: "Select Proficiency Level",
-            message: "How well do you speak \(language.name)?",
+            title: "profile_select_proficiency".localized,
+            message: String(format: "profile_how_well_speak_language".localized, language.name),
             preferredStyle: .actionSheet
         )
 
@@ -174,8 +174,8 @@ class LanguagesViewController: UIViewController {
         let language = learningLanguages[index]
 
         let alert = UIAlertController(
-            title: "Remove Language",
-            message: "Remove \(language.language.name) from your learning languages?",
+            title: "profile_remove_language".localized,
+            message: String(format: "profile_remove_language_confirm".localized, language.language.name),
             preferredStyle: .alert
         )
 
@@ -194,8 +194,8 @@ class LanguagesViewController: UIViewController {
 
     private func showNativeLanguagePicker() {
         let alertController = UIAlertController(
-            title: "Native Language",
-            message: "Select your native language",
+            title: "profile_native_language".localized,
+            message: "profile_select_native_message".localized,
             preferredStyle: .actionSheet
         )
 
@@ -285,16 +285,16 @@ extension LanguagesViewController: UITableViewDataSource {
 
     func tableView(_ tableView: UITableView, titleForHeaderInSection section: Int) -> String? {
         switch section {
-        case 0: return "Native Language"
-        case 1: return "Languages I'm Learning"
-        case 2: return "Open to Match In"
+        case 0: return "profile_native_language".localized
+        case 1: return "profile_languages_learning".localized
+        case 2: return "profile_open_to_match_in".localized
         default: return nil
         }
     }
 
     func tableView(_ tableView: UITableView, titleForFooterInSection section: Int) -> String? {
         switch section {
-        case 1: return "Tap a language to change proficiency level. Swipe left to remove."
+        case 1: return "profile_languages_footer".localized
         default: return nil
         }
     }
