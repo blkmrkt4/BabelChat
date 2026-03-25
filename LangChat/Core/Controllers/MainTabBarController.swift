@@ -120,6 +120,7 @@ class MainTabBarController: UITabBarController, UITabBarControllerDelegate {
     override func viewDidAppear(_ animated: Bool) {
         super.viewDidAppear(animated)
         showWelcomeBackPromptIfNeeded()
+        showDeferredPricingIfNeeded()
     }
 
     // MARK: - Welcome Back Prompt (one-time for returning users)
@@ -139,6 +140,24 @@ class MainTabBarController: UITabBarController, UITabBarControllerDelegate {
         UserDefaults.standard.set(true, forKey: "has_seen_welcome_back_prompt")
 
         // Present dismissible upgrade prompt
+        let pricingVC = PricingViewController()
+        let navController = UINavigationController(rootViewController: pricingVC)
+        navController.modalPresentationStyle = .pageSheet
+        present(navController, animated: true)
+    }
+
+    // MARK: - Deferred Pricing (after user has experienced value)
+
+    private func showDeferredPricingIfNeeded() {
+        let hasSeenDeferredPricing = UserDefaults.standard.bool(forKey: "has_seen_deferred_pricing")
+        guard !hasSeenDeferredPricing else { return }
+        guard SubscriptionService.shared.isFreeTier else { return }
+
+        let swipeSessionCount = UserDefaults.standard.integer(forKey: "swipe_session_count")
+        guard swipeSessionCount >= 3 else { return }
+
+        UserDefaults.standard.set(true, forKey: "has_seen_deferred_pricing")
+
         let pricingVC = PricingViewController()
         let navController = UINavigationController(rootViewController: pricingVC)
         navController.modalPresentationStyle = .pageSheet

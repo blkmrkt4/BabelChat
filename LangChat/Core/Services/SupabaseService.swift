@@ -1776,6 +1776,46 @@ struct ProfileUpdate: Codable {
         case learningContexts = "learning_contexts"
         case museLanguages = "muse_languages"
     }
+
+    /// Custom encoder that skips nil values instead of sending JSON null.
+    /// This prevents overwriting existing DB values with NULL and avoids
+    /// NOT NULL constraint violations on partial updates.
+    func encode(to encoder: Encoder) throws {
+        var container = encoder.container(keyedBy: CodingKeys.self)
+        try firstName.map { try container.encode($0, forKey: .firstName) }
+        try lastName.map { try container.encode($0, forKey: .lastName) }
+        try bio.map { try container.encode($0, forKey: .bio) }
+        try birthYear.map { try container.encode($0, forKey: .birthYear) }
+        try birthMonth.map { try container.encode($0, forKey: .birthMonth) }
+        try location.map { try container.encode($0, forKey: .location) }
+        try city.map { try container.encode($0, forKey: .city) }
+        try country.map { try container.encode($0, forKey: .country) }
+        try latitude.map { try container.encode($0, forKey: .latitude) }
+        try longitude.map { try container.encode($0, forKey: .longitude) }
+        try showCityInProfile.map { try container.encode($0, forKey: .showCityInProfile) }
+        try nativeLanguage.map { try container.encode($0, forKey: .nativeLanguage) }
+        try learningLanguages.map { try container.encode($0, forKey: .learningLanguages) }
+        try proficiencyLevels.map { try container.encode($0, forKey: .proficiencyLevels) }
+        try gender.map { try container.encode($0, forKey: .gender) }
+        try genderPreference.map { try container.encode($0, forKey: .genderPreference) }
+        try minAge.map { try container.encode($0, forKey: .minAge) }
+        try maxAge.map { try container.encode($0, forKey: .maxAge) }
+        try granularityLevel.map { try container.encode($0, forKey: .granularityLevel) }
+        try strictlyPlatonic.map { try container.encode($0, forKey: .strictlyPlatonic) }
+        try blurPhotosUntilMatch.map { try container.encode($0, forKey: .blurPhotosUntilMatch) }
+        try minProficiencyLevel.map { try container.encode($0, forKey: .minProficiencyLevel) }
+        try maxProficiencyLevel.map { try container.encode($0, forKey: .maxProficiencyLevel) }
+        try openToLanguages.map { try container.encode($0, forKey: .openToLanguages) }
+        try profilePhotos.map { try container.encode($0, forKey: .profilePhotos) }
+        try relationshipIntents.map { try container.encode($0, forKey: .relationshipIntents) }
+        try onboardingCompleted.map { try container.encode($0, forKey: .onboardingCompleted) }
+        try locationPreference.map { try container.encode($0, forKey: .locationPreference) }
+        try preferredCountries.map { try container.encode($0, forKey: .preferredCountries) }
+        try excludedCountries.map { try container.encode($0, forKey: .excludedCountries) }
+        try travelDestination.map { try container.encode($0, forKey: .travelDestination) }
+        try learningContexts.map { try container.encode($0, forKey: .learningContexts) }
+        try museLanguages.map { try container.encode($0, forKey: .museLanguages) }
+    }
 }
 
 struct SwipeCreate: Codable {

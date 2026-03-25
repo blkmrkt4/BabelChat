@@ -7,6 +7,7 @@ class MuseLanguageSelectionViewController: BaseOnboardingViewController {
     private let searchBar = UISearchBar()
     private let tableView = UITableView()
     private let selectionCountLabel = UILabel()
+    private let skipButton = UIButton(type: .system)
 
     // MARK: - Properties
     private var availableLanguages: [Language] = []
@@ -93,8 +94,26 @@ class MuseLanguageSelectionViewController: BaseOnboardingViewController {
             tableView.bottomAnchor.constraint(equalTo: contentView.bottomAnchor)
         ])
 
+        // Skip button — placed below the continue button
+        skipButton.setTitle("common_skip".localized, for: .normal)
+        skipButton.titleLabel?.font = .systemFont(ofSize: 16, weight: .regular)
+        skipButton.setTitleColor(.secondaryLabel, for: .normal)
+        skipButton.addTarget(self, action: #selector(skipTapped), for: .touchUpInside)
+        view.addSubview(skipButton)
+
+        skipButton.translatesAutoresizingMaskIntoConstraints = false
+        NSLayoutConstraint.activate([
+            skipButton.topAnchor.constraint(equalTo: continueButton.bottomAnchor, constant: 8),
+            skipButton.centerXAnchor.constraint(equalTo: view.centerXAnchor),
+        ])
+
         // Enable continue button by default (selection is optional)
         updateContinueButton(enabled: true)
+    }
+
+    @objc private func skipTapped() {
+        // Pass nil — autoDeriveMuse() in the coordinator will handle it
+        delegate?.didCompleteStep(withData: nil)
     }
 
     private func updateSelectionLabel() {

@@ -247,7 +247,12 @@ class BaseOnboardingViewController: UIViewController {
 
     // MARK: - Actions
     @objc private func backButtonTapped() {
-        delegate?.didRequestPreviousStep()
+        if delegate != nil {
+            delegate?.didRequestPreviousStep()
+        } else {
+            // Fallback for when used outside onboarding (e.g., from Settings)
+            navigationController?.popViewController(animated: true)
+        }
     }
 
     @objc func continueButtonTapped() {

@@ -38,6 +38,10 @@ class MatchingPreferencesViewController: UIViewController {
     private var lookingForButtons: [UIButton] = []
     private let lookingForIntents = RelationshipIntent.allCases
 
+    // Learning Goals
+    private var learningGoalButtons: [UIButton] = []
+    private let learningGoalContexts = LearningContext.allCases
+
     // Save confirmation
     private let saveConfirmationLabel = UILabel()
 
@@ -45,6 +49,7 @@ class MatchingPreferencesViewController: UIViewController {
     private var isStrictlyPlatonic: Bool = false
     private var blurPhotosUntilMatch: Bool = false
     private var selectedRelationshipIntents: Set<String> = []
+    private var selectedLearningGoals: Set<String> = []
     private var selectedGender: Gender?
     private var selectedGenderPreference: GenderPreference = .all
     private var selectedLocationPreference: LocationPreference = .anywhere
@@ -116,6 +121,11 @@ class MatchingPreferencesViewController: UIViewController {
         if let intents = UserDefaults.standard.array(forKey: "relationshipIntents") as? [String] {
             selectedRelationshipIntents = Set(intents)
         }
+
+        // Learning goals
+        if let goals = UserDefaults.standard.array(forKey: "learningContexts") as? [String] {
+            selectedLearningGoals = Set(goals)
+        }
     }
 
     // MARK: - Setup
@@ -149,6 +159,9 @@ class MatchingPreferencesViewController: UIViewController {
 
         // 5. Proficiency Level section
         stackView.addArrangedSubview(createProficiencySection())
+
+        // 6. Learning Goals section
+        stackView.addArrangedSubview(createLearningGoalsSection())
 
         // Save confirmation label (floating)
         setupSaveConfirmation()
@@ -418,6 +431,109 @@ class MatchingPreferencesViewController: UIViewController {
                 print("✅ Saved relationship intents: \(selectedRelationshipIntents)")
             } catch {
                 print("❌ Failed to save relationship intents: \(error)")
+            }
+        }
+    }
+
+    // MARK: - Learning Goals Section
+    private func createLearningGoalsSection() -> UIView {
+        let container = UIView()
+        container.backgroundColor = .secondarySystemBackground
+        container.layer.cornerRadius = 12
+
+        let innerStack = UIStackView()
+        innerStack.axis = .vertical
+        innerStack.spacing = 12
+        innerStack.alignment = .fill
+        container.addSubview(innerStack)
+
+        // Title
+        let titleLabel = UILabel()
+        titleLabel.text = "Learning Goals"
+        titleLabel.font = .systemFont(ofSize: 17, weight: .semibold)
+        titleLabel.textColor = .label
+        innerStack.addArrangedSubview(titleLabel)
+
+        // Subtitle
+        let subtitleLabel = UILabel()
+        subtitleLabel.text = "matching_select_all".localized
+        subtitleLabel.font = .systemFont(ofSize: 14, weight: .regular)
+        subtitleLabel.textColor = .secondaryLabel
+        innerStack.addArrangedSubview(subtitleLabel)
+
+        // Options - horizontal row (only 3 items)
+        let optionsStack = UIStackView()
+        optionsStack.axis = .horizontal
+        optionsStack.spacing = 8
+        optionsStack.distribution = .fillEqually
+
+        for (index, context) in learningGoalContexts.enumerated() {
+            let button = createLearningGoalButton(title: context.displayName, tag: index)
+            learningGoalButtons.append(button)
+            optionsStack.addArrangedSubview(button)
+
+            if selectedLearningGoals.contains(context.rawValue) {
+                button.layer.borderColor = UIColor.systemBlue.cgColor
+                button.backgroundColor = UIColor.systemBlue.withAlphaComponent(0.1)
+            }
+        }
+
+        innerStack.addArrangedSubview(optionsStack)
+
+        // Layout
+        innerStack.translatesAutoresizingMaskIntoConstraints = false
+        NSLayoutConstraint.activate([
+            innerStack.topAnchor.constraint(equalTo: container.topAnchor, constant: 16),
+            innerStack.leadingAnchor.constraint(equalTo: container.leadingAnchor, constant: 16),
+            innerStack.trailingAnchor.constraint(equalTo: container.trailingAnchor, constant: -16),
+            innerStack.bottomAnchor.constraint(equalTo: container.bottomAnchor, constant: -16)
+        ])
+
+        return container
+    }
+
+    private func createLearningGoalButton(title: String, tag: Int) -> UIButton {
+        let button = UIButton(type: .system)
+        button.setTitle(title, for: .normal)
+        button.titleLabel?.font = .systemFont(ofSize: 14, weight: .medium)
+        button.setTitleColor(.label, for: .normal)
+        button.backgroundColor = .tertiarySystemBackground
+        button.layer.cornerRadius = 8
+        button.layer.borderWidth = 2
+        button.layer.borderColor = UIColor.clear.cgColor
+        button.tag = tag
+        button.heightAnchor.constraint(equalToConstant: 44).isActive = true
+        button.addTarget(self, action: #selector(learningGoalButtonTapped(_:)), for: .touchUpInside)
+        return button
+    }
+
+    @objc private func learningGoalButtonTapped(_ sender: UIButton) {
+        let context = learningGoalContexts[sender.tag]
+
+        if selectedLearningGoals.contains(context.rawValue) {
+            selectedLearningGoals.remove(context.rawValue)
+            sender.layer.borderColor = UIColor.clear.cgColor
+            sender.backgroundColor = .tertiarySystemBackground
+        } else {
+            selectedLearningGoals.insert(context.rawValue)
+            sender.layer.borderColor = UIColor.systemBlue.cgColor
+            sender.backgroundColor = UIColor.systemBlue.withAlphaComponent(0.1)
+        }
+
+        saveLearningGoals()
+        UIImpactFeedbackGenerator(style: .light).impactOccurred()
+    }
+
+    private func saveLearningGoals() {
+        UserDefaults.standard.set(Array(selectedLearningGoals), forKey: "learningContexts")
+
+        Task {
+            do {
+                try await SupabaseService.shared.updateProfile(ProfileUpdate(learningContexts: Array(selectedLearningGoals)))
+                await MainActor.run { showSaveConfirmation() }
+                print("✅ Saved learning goals: \(selectedLearningGoals)")
+            } catch {
+                print("❌ Failed to save learning goals: \(error)")
             }
         }
     }

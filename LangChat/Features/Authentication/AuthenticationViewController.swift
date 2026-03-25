@@ -17,8 +17,9 @@ class AuthenticationViewController: UIViewController {
     private let dividerLabel = UILabel()
 
     #if DEBUG
-    private let debugLoginButton = UIButton(type: .system)
-    private let resetButton = UIButton(type: .system)
+    private let devLoginButton = UIButton(type: .system)
+    private let freshStartButton = UIButton(type: .system)
+    private let debugStackView = UIStackView()
     #endif
 
     private var onboardingCoordinator: OnboardingCoordinator?
@@ -155,24 +156,24 @@ class AuthenticationViewController: UIViewController {
         buttonsStackView.addArrangedSubview(emailButton)
 
         #if DEBUG
-        // Reset button (development only) - appears at top
-        resetButton.setTitle("auto_reset_all_data".localized, for: .normal)
-        resetButton.titleLabel?.font = .systemFont(ofSize: 16, weight: .semibold)
-        resetButton.backgroundColor = .systemRed.withAlphaComponent(0.8)
-        resetButton.setTitleColor(.white, for: .normal)
-        resetButton.layer.cornerRadius = 25
-        resetButton.addTarget(self, action: #selector(resetAllDataTapped), for: .touchUpInside)
-        view.addSubview(resetButton)
+        // Dev Login — triggers Apple Sign In for real account access
+        devLoginButton.setTitle("Dev Login", for: .normal)
+        devLoginButton.titleLabel?.font = .systemFont(ofSize: 13, weight: .medium)
+        devLoginButton.setTitleColor(.systemBlue.withAlphaComponent(0.6), for: .normal)
+        devLoginButton.addTarget(self, action: #selector(devLoginTapped), for: .touchUpInside)
 
-        // Debug login button (development only)
-        // Uses credentials from DebugConfig.swift - change them there if needed
-        debugLoginButton.setTitle("auto_dev_quick_login".localized, for: .normal)
-        debugLoginButton.titleLabel?.font = .systemFont(ofSize: 16, weight: .semibold)
-        debugLoginButton.backgroundColor = .systemOrange.withAlphaComponent(0.8)
-        debugLoginButton.setTitleColor(.white, for: .normal)
-        debugLoginButton.layer.cornerRadius = 25
-        debugLoginButton.addTarget(self, action: #selector(debugLoginTapped), for: .touchUpInside)
-        buttonsStackView.addArrangedSubview(debugLoginButton)
+        // Fresh Start — resets everything and creates a temp account for onboarding
+        freshStartButton.setTitle("Fresh Start", for: .normal)
+        freshStartButton.titleLabel?.font = .systemFont(ofSize: 13, weight: .medium)
+        freshStartButton.setTitleColor(.systemOrange.withAlphaComponent(0.6), for: .normal)
+        freshStartButton.addTarget(self, action: #selector(freshStartTapped), for: .touchUpInside)
+
+        debugStackView.axis = .horizontal
+        debugStackView.spacing = 24
+        debugStackView.distribution = .fillEqually
+        debugStackView.addArrangedSubview(devLoginButton)
+        debugStackView.addArrangedSubview(freshStartButton)
+        view.addSubview(debugStackView)
         #endif
     }
 
@@ -230,16 +231,11 @@ class AuthenticationViewController: UIViewController {
         ])
 
         #if DEBUG
-        debugLoginButton.translatesAutoresizingMaskIntoConstraints = false
-        resetButton.translatesAutoresizingMaskIntoConstraints = false
+        debugStackView.translatesAutoresizingMaskIntoConstraints = false
         NSLayoutConstraint.activate([
-            debugLoginButton.heightAnchor.constraint(equalToConstant: 50),
-
-            // Reset button in top-right corner
-            resetButton.topAnchor.constraint(equalTo: view.safeAreaLayoutGuide.topAnchor, constant: 20),
-            resetButton.trailingAnchor.constraint(equalTo: view.trailingAnchor, constant: -20),
-            resetButton.widthAnchor.constraint(equalToConstant: 180),
-            resetButton.heightAnchor.constraint(equalToConstant: 44)
+            debugStackView.topAnchor.constraint(equalTo: buttonsStackView.bottomAnchor, constant: 16),
+            debugStackView.centerXAnchor.constraint(equalTo: view.centerXAnchor),
+            debugStackView.widthAnchor.constraint(equalToConstant: 200)
         ])
         #endif
     }
@@ -565,88 +561,59 @@ class AuthenticationViewController: UIViewController {
     }
 
     #if DEBUG
-    @objc private func resetAllDataTapped() {
-        print("🔄 DEBUG: Reset all data tapped")
-
-        let alert = UIAlertController(
-            title: "Reset All Data?",
-            message: "This will sign you out and clear all app data. You'll see the full onboarding flow again.",
-            preferredStyle: .alert
-        )
-
-        alert.addAction(UIAlertAction(title: "common_cancel".localized, style: .cancel))
-
-        alert.addAction(UIAlertAction(title: "common_reset".localized, style: .destructive) { [weak self] _ in
-            Task {
-                do {
-                    // Sign out from Supabase
-                    try await SupabaseService.shared.signOut()
-                    print("✅ Signed out from Supabase")
-                } catch {
-                    print("⚠️ Sign out error (may not be logged in): \(error)")
-                }
-
-                await MainActor.run {
-                    // Clear all user data
-                    DebugConfig.resetAllUserData()
-
-                    // Reload the app to see welcome screen - find key window for iPad support
-                    guard let windowScene = UIApplication.shared.connectedScenes
-                        .compactMap({ $0 as? UIWindowScene })
-                        .first(where: { $0.activationState == .foregroundActive }),
-                          let window = windowScene.windows.first(where: { $0.isKeyWindow }) ?? windowScene.windows.first else {
-                        print("❌ Could not find window for reset")
-                        return
-                    }
-
-                    let welcomeVC = WelcomeViewController()
-                    let navController = UINavigationController(rootViewController: welcomeVC)
-                    window.rootViewController = navController
-
-                    UIView.transition(with: window,
-                                    duration: 0.3,
-                                    options: .transitionCrossDissolve,
-                                    animations: nil,
-                                    completion: nil)
-
-                    print("✅ App reset complete - showing welcome screen")
-                }
-            }
-        })
-
-        present(alert, animated: true)
+    @objc private func devLoginTapped() {
+        print("🔧 DEBUG: Dev Login tapped — launching Apple Sign In")
+        appleSignInTapped()
     }
 
-    @objc private func debugLoginTapped() {
-        print("🔧 DEBUG: Quick login tapped")
+    @objc private func freshStartTapped() {
+        print("🔧 DEBUG: Fresh Start tapped")
 
         Task {
+            // 1. Sign out of any current session
             do {
-                try await SupabaseService.shared.signIn(email: DebugConfig.testEmail, password: DebugConfig.testPassword)
-                print("✅ DEBUG: Auto-login successful!")
+                try await SupabaseService.shared.signOut()
+                print("✅ DEBUG: Signed out from Supabase")
+            } catch {
+                print("⚠️ DEBUG: Sign out error (may not be logged in): \(error)")
+            }
 
-                // Check if user has completed profile in Supabase
-                let hasCompletedProfile = try await SupabaseService.shared.hasCompletedProfile()
+            await MainActor.run {
+                // 2. Clear all local state
+                DebugConfig.resetAllUserData()
+            }
+
+            // 3. Create a fresh temp account
+            let shortUUID = UUID().uuidString.prefix(8).lowercased()
+            let tempEmail = "test-\(shortUUID)@byzyb.ai"
+            let tempPassword = DebugConfig.devFreshStartPassword
+
+            do {
+                try await SupabaseService.shared.signUp(email: tempEmail, password: tempPassword)
+                print("✅ DEBUG: Fresh account created — \(tempEmail)")
+
+                // Sign in immediately — signUp may not establish a session
+                // if email confirmations are enabled
+                if SupabaseService.shared.currentUserId == nil {
+                    print("⚠️ DEBUG: No session after signUp, signing in explicitly...")
+                    try await SupabaseService.shared.signIn(email: tempEmail, password: tempPassword)
+                    print("✅ DEBUG: Signed in as \(tempEmail), userId: \(SupabaseService.shared.currentUserId?.uuidString ?? "nil")")
+                }
 
                 await MainActor.run {
-                    if hasCompletedProfile {
-                        print("✅ DEBUG: Profile found - going to main app")
-                        transitionToMainApp()
-                    } else {
-                        print("⚠️ DEBUG: No profile found - starting onboarding")
-                        startOnboarding()
-                    }
+                    // 4. Route to onboarding
+                    startOnboarding()
                 }
             } catch {
-                print("❌ DEBUG: Auto-login failed: \(error)")
+                print("❌ DEBUG: Fresh Start signup failed: \(error)")
                 await MainActor.run {
                     let alert = UIAlertController(
-                        title: "Debug Login Failed",
-                        message: "Could not sign in with test credentials: \(error.localizedDescription)",
+                        title: "Fresh Start Failed",
+                        message: "Could not create temp account: \(error.localizedDescription)",
                         preferredStyle: .alert
                     )
                     alert.addAction(UIAlertAction(title: "common_ok".localized, style: .default))
-                    present(alert, animated: true)
+                    self.present(alert, animated: true)
                 }
             }
         }

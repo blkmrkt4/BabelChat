@@ -21,6 +21,7 @@ enum OnboardingStep: Int, CaseIterable {
     case privacyPreferences
     case profilePhoto
     case notifications
+    case completion
 
     var title: String {
         switch self {
@@ -44,12 +45,15 @@ enum OnboardingStep: Int, CaseIterable {
         case .datingPreferences: return "Dating Preferences"
         case .privacyPreferences: return "Privacy Settings"
         case .notifications: return "Stay Connected"
+        case .completion: return "Get Started"
         }
     }
 
     /// Steps required during onboarding (the rest are optional, completed post-onboarding)
     static let requiredSteps: [OnboardingStep] = [
-        .interfaceLanguage, .termsAcceptance, .name, .nativeLanguage, .learningLanguages
+        .interfaceLanguage, .termsAcceptance, .name, .birthYear, .hometown,
+        .nativeLanguage, .learningLanguages, .museLanguages, .learningGoals,
+        .profilePhoto, .completion
     ]
 
     var progress: Float {
@@ -186,6 +190,11 @@ class OnboardingCoordinator {
             let vc = NotificationsPermissionViewController()
             vc.delegate = self
             viewController = vc
+
+        case .completion:
+            let vc = OnboardingCompletionViewController()
+            vc.delegate = self
+            viewController = vc
         }
 
         print("📍 OnboardingCoordinator: About to push \(type(of: viewController))")
@@ -245,8 +254,12 @@ class OnboardingCoordinator {
         showStep(next)
     }
 
-    /// Auto-derive Muse languages from native + learning languages
+    /// Auto-derive Muse languages from native + learning languages (only if user didn't select any)
     private func autoDeriveMuse() {
+        guard userData.museLanguages.isEmpty else {
+            print("📍 OnboardingCoordinator: Muse languages already selected by user: \(userData.museLanguages.map { $0.rawValue })")
+            return
+        }
         var museLanguages: [Language] = []
         if let native = userData.nativeLanguage {
             museLanguages.append(native)
@@ -302,8 +315,8 @@ class OnboardingCoordinator {
             }
         }
 
-        // Show pricing page before transitioning to main app
-        showPricingPage()
+        // Go directly to main app — pricing is deferred until user has experienced value
+        syncAndTransition()
     }
 
     private func showPricingPage() {
@@ -530,6 +543,9 @@ extension OnboardingCoordinator: OnboardingStepDelegate {
         case .notifications:
             // Permission handled
             break
+        case .completion:
+            // No data to store — just proceed
+            break
         }
 
         print("📍 OnboardingCoordinator: About to call nextStep()")
@@ -662,22 +678,35 @@ extension OnboardingCoordinator: PricingViewControllerDelegate {
                 }
             } catch {
                 print("❌ Failed to sync onboarding data: \(error)")
+                #if DEBUG
+                print("❌ SYNC ERROR DETAILS: \(String(describing: error))")
+                if let nsError = error as NSError? {
+                    print("❌ SYNC ERROR domain: \(nsError.domain), code: \(nsError.code), userInfo: \(nsError.userInfo)")
+                }
+                #endif
                 await MainActor.run {
-                    self.showSyncFailureAlert()
+                    self.showSyncFailureAlert(debugError: error)
                 }
             }
         }
     }
 
-    private func showSyncFailureAlert() {
+    private func showSyncFailureAlert(debugError: Error? = nil) {
         guard let nav = navigationController else {
             transitionToMainApp()
             return
         }
 
+        var message = "sync_issue_message".localized
+        #if DEBUG
+        if let error = debugError {
+            message += "\n\nDEBUG: \(error.localizedDescription)"
+        }
+        #endif
+
         let alert = UIAlertController(
             title: "sync_issue_title".localized,
-            message: "sync_issue_message".localized,
+            message: message,
             preferredStyle: .alert
         )
         alert.addAction(UIAlertAction(title: "common_retry".localized, style: .default) { [weak self] _ in

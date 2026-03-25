@@ -8,14 +8,12 @@ class ProfileSettingsViewController: UIViewController {
         case basicInfo
         case location
         case languages
-        case preferences
 
         var title: String? {
             switch self {
             case .basicInfo: return "profile_section_basic_info".localized
             case .location: return "common_location".localized
             case .languages: return "profile_section_languages".localized
-            case .preferences: return "profile_section_preferences".localized
             }
         }
 
@@ -27,8 +25,6 @@ class ProfileSettingsViewController: UIViewController {
                 return [.hometown, .travelPlans]
             case .languages:
                 return [.nativeLanguage, .learningLanguages]
-            case .preferences:
-                return [.learningGoals, .relationshipIntent, .strictlyPlatonic]
             }
         }
     }
@@ -41,9 +37,6 @@ class ProfileSettingsViewController: UIViewController {
         case travelPlans
         case nativeLanguage
         case learningLanguages
-        case relationshipIntent
-        case learningGoals
-        case strictlyPlatonic
 
         var title: String {
             switch self {
@@ -54,9 +47,6 @@ class ProfileSettingsViewController: UIViewController {
             case .travelPlans: return "profile_field_travel_plans".localized
             case .nativeLanguage: return "profile_field_native_language".localized
             case .learningLanguages: return "profile_field_learning_languages".localized
-            case .relationshipIntent: return "profile_field_looking_for".localized
-            case .learningGoals: return "profile_field_learning_goals".localized
-            case .strictlyPlatonic: return "profile_field_strictly_platonic".localized
             }
         }
 
@@ -69,9 +59,6 @@ class ProfileSettingsViewController: UIViewController {
             case .travelPlans: return "airplane"
             case .nativeLanguage: return "flag"
             case .learningLanguages: return "globe"
-            case .relationshipIntent: return "heart"
-            case .learningGoals: return "target"
-            case .strictlyPlatonic: return "hand.raised"
             }
         }
 
@@ -84,14 +71,11 @@ class ProfileSettingsViewController: UIViewController {
             case .travelPlans: return "profile_placeholder_travel_plans".localized
             case .nativeLanguage: return "profile_placeholder_native_language".localized
             case .learningLanguages: return "profile_placeholder_learning_languages".localized
-            case .relationshipIntent: return "profile_placeholder_looking_for".localized
-            case .learningGoals: return "profile_placeholder_learning_goals".localized
-            case .strictlyPlatonic: return "profile_placeholder_strictly_platonic".localized
             }
         }
 
         var isToggle: Bool {
-            return self == .strictlyPlatonic
+            return false
         }
     }
 
@@ -189,31 +173,6 @@ class ProfileSettingsViewController: UIViewController {
             }
             return ""
 
-        case .relationshipIntent:
-            // Try plural key first, then singular key (onboarding stores singular)
-            if let intents = UserDefaults.standard.array(forKey: "relationshipIntents") as? [String], !intents.isEmpty {
-                let displayNames = intents.compactMap { intentRawToDisplayName($0) }
-                return displayNames.isEmpty ? intents.joined(separator: ", ") : displayNames.joined(separator: ", ")
-            } else if let intent = UserDefaults.standard.string(forKey: "relationshipIntent"), !intent.isEmpty {
-                return intentRawToDisplayName(intent) ?? intent
-            }
-            return ""
-
-        case .learningGoals:
-            if let goals = UserDefaults.standard.array(forKey: "learningContexts") as? [String] {
-                // Convert raw values to display names if needed
-                let displayGoals = goals.map { goal -> String in
-                    if let context = LearningContext(rawValue: goal) {
-                        return context.displayName
-                    }
-                    return goal
-                }
-                return displayGoals.joined(separator: ", ")
-            }
-            return ""
-
-        case .strictlyPlatonic:
-            return UserDefaults.standard.bool(forKey: "strictlyPlatonic") ? "common_yes".localized : "common_no".localized
         }
     }
 
@@ -226,9 +185,6 @@ class ProfileSettingsViewController: UIViewController {
         case .travelPlans: showTravelPlansEditor()
         case .nativeLanguage: showNativeLanguagePicker()
         case .learningLanguages: showLearningLanguagesPicker()
-        case .relationshipIntent: showRelationshipIntentPicker()
-        case .learningGoals: showLearningGoalsPicker()
-        case .strictlyPlatonic: break // Handled by toggle
         }
     }
 

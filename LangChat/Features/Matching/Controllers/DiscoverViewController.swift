@@ -288,6 +288,10 @@ class DiscoverViewController: UIViewController {
                         emptyStateLabel.isHidden = true
                         reloadButton.isHidden = true
                         applySnapshot()
+
+                        // Track browse session for deferred pricing trigger
+                        let count = UserDefaults.standard.integer(forKey: "swipe_session_count")
+                        UserDefaults.standard.set(count + 1, forKey: "swipe_session_count")
                     }
                 }
             } catch {
