@@ -14,31 +14,44 @@ export async function GET(request: Request) {
     const stringKey = searchParams.get('string_key')
     const verified = searchParams.get('verified')
 
-    let query = supabase
-      .from('app_translations')
-      .select('*')
-      .order('string_key', { ascending: true })
+    // Supabase defaults to 1000 rows max. Paginate to fetch all.
+    const pageSize = 1000
+    let allData: any[] = []
+    let from = 0
+    let hasMore = true
 
-    if (languageCode) {
-      query = query.eq('language_code', languageCode)
+    while (hasMore) {
+      let query = supabase
+        .from('app_translations')
+        .select('*')
+        .order('string_key', { ascending: true })
+        .range(from, from + pageSize - 1)
+
+      if (languageCode) {
+        query = query.eq('language_code', languageCode)
+      }
+
+      if (stringKey) {
+        query = query.eq('string_key', stringKey)
+      }
+
+      if (verified !== null && verified !== undefined) {
+        query = query.eq('verified', verified === 'true')
+      }
+
+      const { data, error } = await query
+
+      if (error) {
+        console.error('Error fetching translations:', error)
+        return NextResponse.json({ error: error.message }, { status: 500 })
+      }
+
+      allData = allData.concat(data || [])
+      hasMore = (data?.length || 0) === pageSize
+      from += pageSize
     }
 
-    if (stringKey) {
-      query = query.eq('string_key', stringKey)
-    }
-
-    if (verified !== null && verified !== undefined) {
-      query = query.eq('verified', verified === 'true')
-    }
-
-    const { data, error } = await query
-
-    if (error) {
-      console.error('Error fetching translations:', error)
-      return NextResponse.json({ error: error.message }, { status: 500 })
-    }
-
-    return NextResponse.json({ data })
+    return NextResponse.json({ data: allData })
   } catch (error) {
     console.error('Error:', error)
     return NextResponse.json({ error: 'Failed to fetch translations' }, { status: 500 })

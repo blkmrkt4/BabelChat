@@ -62,9 +62,11 @@ export default function LocalizationPage() {
   const [loading, setLoading] = useState(true)
   const [selectedLanguage, setSelectedLanguage] = useState<string>('en')
   const [filter, setFilter] = useState('')
+  const [categoryFilter, setCategoryFilter] = useState<'all' | 'app' | 'appstore'>('all')
   const [editingId, setEditingId] = useState<string | null>(null)
   const [editValue, setEditValue] = useState('')
   const [saving, setSaving] = useState(false)
+  const [retranslating, setRetranslating] = useState<string | null>(null) // string_key being re-translated
   const [showImportModal, setShowImportModal] = useState(false)
   const [importText, setImportText] = useState('')
   const [importOverwrite, setImportOverwrite] = useState(false)
@@ -84,10 +86,45 @@ export default function LocalizationPage() {
     total?: number
   } | null>(null)
 
+  // Sync state
+  const [syncing, setSyncing] = useState(false)
+  const [syncResult, setSyncResult] = useState<{ xcstringsTotal: number; synced: number; totalInDb: number } | null>(null)
+
+  // Translate-all state
+  const [showTranslateAllModal, setShowTranslateAllModal] = useState(false)
+  const [translatingAll, setTranslatingAll] = useState(false)
+  const [translateAllProgress, setTranslateAllProgress] = useState<{
+    status: string
+    totalTranslated?: number
+    totalFailed?: number
+    totalSkipped?: number
+    currentLanguage?: string
+    currentProgress?: number
+    languageResults?: Array<{
+      language: string
+      languageName: string
+      missing: number
+      translated: number
+      failed: number
+      skipped: number
+    }>
+  } | null>(null)
+  const [logLines, setLogLines] = useState<Array<{ time: string; type: string; message: string }>>([])
+  const logEndRef = useRef<HTMLDivElement>(null)
+  const abortControllerRef = useRef<AbortController | null>(null)
+
   useEffect(() => {
-    loadStats()
-    loadEnglishStrings()
+    // Auto-sync from xcstrings on page load, then load stats
+    syncFromXcstrings().then(() => {
+      loadStats()
+      loadEnglishStrings()
+    })
   }, [])
+
+  // Auto-scroll log to bottom
+  useEffect(() => {
+    logEndRef.current?.scrollIntoView({ behavior: 'smooth' })
+  }, [logLines])
 
   useEffect(() => {
     if (selectedLanguage) {
@@ -120,6 +157,196 @@ export default function LocalizationPage() {
     } catch (error) {
       console.error('Failed to load English strings:', error)
     }
+  }
+
+  async function syncFromXcstrings() {
+    try {
+      setSyncing(true)
+      const response = await fetch('/api/localization/sync-xcstrings', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({}),
+      })
+      const result = await response.json()
+      if (response.ok) {
+        setSyncResult(result)
+      } else {
+        console.error('Sync failed:', result.error)
+      }
+    } catch (error) {
+      console.error('Sync error:', error)
+    } finally {
+      setSyncing(false)
+    }
+  }
+
+  function addLog(type: string, message: string) {
+    const time = new Date().toLocaleTimeString()
+    setLogLines(prev => [...prev, { time, type, message: message || '' }])
+  }
+
+  function cancelTranslation() {
+    if (abortControllerRef.current) {
+      abortControllerRef.current.abort()
+      abortControllerRef.current = null
+      addLog('warn', 'Translation cancelled by user.')
+      setTranslatingAll(false)
+    }
+  }
+
+  async function runTranslateAll() {
+    if (englishStrings.length === 0) return
+
+    setTranslatingAll(true)
+    setLogLines([])
+    const controller = new AbortController()
+    abortControllerRef.current = controller
+
+    const nonEnglishLangs = SUPPORTED_LANGUAGES.filter(l => l.code !== 'en')
+    const results: Array<{
+      language: string; languageName: string; missing: number; translated: number; failed: number; skipped: number
+    }> = []
+    let totalTranslated = 0
+    let totalFailed = 0
+    let totalSkipped = 0
+
+    const strings = englishStrings.map(s => ({
+      string_key: s.string_key,
+      value: s.value,
+      context: s.context,
+    }))
+
+    addLog('info', `Starting translation for ${nonEnglishLangs.length} languages, ${strings.length} source strings`)
+
+    for (let idx = 0; idx < nonEnglishLangs.length; idx++) {
+      if (controller.signal.aborted) break
+      const lang = nonEnglishLangs[idx]
+
+      addLog('info', `--- ${lang.name} (${idx + 1}/${nonEnglishLangs.length}) ---`)
+
+      setTranslateAllProgress({
+        status: `Translating ${lang.name} (${idx + 1}/${nonEnglishLangs.length})...`,
+        totalTranslated,
+        totalFailed,
+        totalSkipped,
+        currentLanguage: lang.name,
+        currentProgress: 0,
+        languageResults: [...results],
+      })
+
+      try {
+        const response = await fetch('/api/localization/translate', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            strings,
+            targetLanguage: lang.code,
+            retranslateAll: false,
+            stream: true,
+          }),
+          signal: controller.signal,
+        })
+
+        if (!response.ok) {
+          const errText = await response.text()
+          addLog('error', `${lang.name}: HTTP ${response.status} — ${errText.substring(0, 200)}`)
+          results.push({ language: lang.code, languageName: lang.name, missing: 0, translated: 0, failed: 0, skipped: 0 })
+          continue
+        }
+
+        const reader = response.body?.getReader()
+        if (!reader) {
+          addLog('error', `${lang.name}: No response stream`)
+          continue
+        }
+
+        const decoder = new TextDecoder()
+        let buffer = ''
+        let langTranslated = 0
+        let langFailed = 0
+        let langSkipped = 0
+
+        while (true) {
+          if (controller.signal.aborted) break
+          const { done, value } = await reader.read()
+          if (done) break
+
+          buffer += decoder.decode(value, { stream: true })
+          const lines = buffer.split('\n')
+          buffer = lines.pop() || ''
+
+          for (const line of lines) {
+            if (!line.startsWith('data: ')) continue
+            try {
+              const event = JSON.parse(line.slice(6))
+
+              if (event.type === 'info' || event.type === 'warn') {
+                addLog(event.type, event.message)
+              } else if (event.type === 'error') {
+                addLog('error', event.message)
+              } else if (event.type === 'batch_start') {
+                addLog('info', event.message)
+              } else if (event.type === 'batch_done') {
+                addLog('info', event.message)
+                langTranslated = event.successful || 0
+                langFailed = event.failed || 0
+                setTranslateAllProgress(prev => prev ? {
+                  ...prev,
+                  currentProgress: event.progress || 0,
+                  totalTranslated: totalTranslated + langTranslated,
+                  totalFailed: totalFailed + langFailed,
+                } : prev)
+              } else if (event.type === 'done') {
+                addLog('info', event.message)
+                langTranslated = event.successful || 0
+                langFailed = event.failed || 0
+                langSkipped = event.skipped || 0
+              }
+            } catch {}
+          }
+        }
+
+        results.push({
+          language: lang.code, languageName: lang.name,
+          missing: langTranslated + langFailed, translated: langTranslated,
+          failed: langFailed, skipped: langSkipped,
+        })
+        totalTranslated += langTranslated
+        totalFailed += langFailed
+        totalSkipped += langSkipped
+
+      } catch (error) {
+        if (controller.signal.aborted) {
+          addLog('warn', `${lang.name}: Cancelled`)
+          break
+        }
+        addLog('error', `${lang.name}: ${error instanceof Error ? error.message : String(error)}`)
+        results.push({ language: lang.code, languageName: lang.name, missing: 0, translated: 0, failed: 0, skipped: 0 })
+      }
+    }
+
+    const finalStatus = controller.signal.aborted
+      ? `Cancelled. ${totalTranslated} translated before cancellation.`
+      : `Complete! ${totalTranslated} new translations across ${nonEnglishLangs.length} languages.`
+
+    addLog('info', finalStatus)
+
+    setTranslateAllProgress({
+      status: finalStatus,
+      totalTranslated,
+      totalFailed,
+      totalSkipped,
+      languageResults: results,
+    })
+
+    loadStats()
+    loadEnglishStrings()
+    if (selectedLanguage !== 'en') {
+      loadTranslations(selectedLanguage)
+    }
+
+    abortControllerRef.current = null
+    setTranslatingAll(false)
   }
 
   async function loadTranslations(languageCode: string) {
@@ -166,6 +393,63 @@ export default function LocalizationPage() {
       alert('Failed to save translation')
     } finally {
       setSaving(false)
+    }
+  }
+
+  async function saveAndRetranslate(id: string, stringKey: string, value: string, context?: string) {
+    try {
+      setRetranslating(stringKey)
+
+      // 1. Save the updated English string
+      const saveResponse = await fetch('/api/localization', {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ id, value, verified: true, source: 'human' }),
+      })
+      if (!saveResponse.ok) {
+        throw new Error('Failed to save English string')
+      }
+
+      // Update local state
+      setTranslations(prev =>
+        prev.map(t => (t.id === id ? { ...t, value, verified: true, source: 'human' } : t))
+      )
+      setEditingId(null)
+
+      // 2. Re-translate to all non-English languages
+      const nonEnglishLangs = SUPPORTED_LANGUAGES.filter(l => l.code !== 'en')
+      let translated = 0
+      let failed = 0
+
+      for (const lang of nonEnglishLangs) {
+        try {
+          const response = await fetch('/api/localization/translate', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+              strings: [{ string_key: stringKey, value, context }],
+              targetLanguage: lang.code,
+              retranslateAll: true, // Force overwrite existing translation
+            }),
+          })
+          if (response.ok) {
+            translated++
+          } else {
+            failed++
+          }
+        } catch {
+          failed++
+        }
+      }
+
+      loadStats()
+      loadEnglishStrings()
+      alert(`Re-translated "${stringKey}" to ${translated} languages${failed > 0 ? ` (${failed} failed)` : ''}`)
+    } catch (error) {
+      console.error('Failed to save and re-translate:', error)
+      alert('Failed to save and re-translate')
+    } finally {
+      setRetranslating(null)
     }
   }
 
@@ -302,12 +586,29 @@ export default function LocalizationPage() {
     }
   }
 
-  const filteredTranslations = translations.filter(
-    t =>
-      t.string_key.toLowerCase().includes(filter.toLowerCase()) ||
-      t.value.toLowerCase().includes(filter.toLowerCase()) ||
-      (t.context && t.context.toLowerCase().includes(filter.toLowerCase()))
-  )
+  // Character limits for App Store Connect fields
+  const ASC_CHAR_LIMITS: Record<string, number> = {
+    asc_subtitle: 30,
+    asc_promotional_text: 170,
+    asc_description: 4000,
+    asc_whats_new: 4000,
+    asc_keywords: 100,
+  }
+
+  const filteredTranslations = translations.filter(t => {
+    // Category filter
+    if (categoryFilter === 'app' && t.string_key.startsWith('asc_')) return false
+    if (categoryFilter === 'appstore' && !t.string_key.startsWith('asc_')) return false
+
+    // Text search filter
+    const q = filter.toLowerCase()
+    if (!q) return true
+    return (
+      t.string_key.toLowerCase().includes(q) ||
+      t.value.toLowerCase().includes(q) ||
+      (t.context && t.context.toLowerCase().includes(q))
+    )
+  })
 
   // Calculate language completion percentages
   const languageCompletion = SUPPORTED_LANGUAGES.map(lang => {
@@ -332,6 +633,13 @@ export default function LocalizationPage() {
           </p>
         </div>
         <div className="flex gap-2">
+          <button
+            onClick={() => syncFromXcstrings().then(() => { loadStats(); loadEnglishStrings() })}
+            disabled={syncing}
+            className="bg-gray-600 text-white px-4 py-2 rounded hover:bg-gray-700 disabled:bg-gray-400"
+          >
+            {syncing ? 'Syncing...' : 'Sync from Repo'}
+          </button>
           <button
             onClick={() => setShowImportModal(true)}
             className="bg-green-600 text-white px-4 py-2 rounded hover:bg-green-700"
@@ -368,15 +676,39 @@ export default function LocalizationPage() {
         </div>
       )}
 
+      {/* Sync Status */}
+      {syncResult && (
+        <div className="bg-blue-50 border border-blue-200 rounded-lg p-3 flex items-center justify-between">
+          <div className="text-sm text-blue-800">
+            <strong>Auto-synced from repo:</strong> {syncResult.xcstringsTotal} keys in xcstrings, {syncResult.totalInDb} source strings in database
+          </div>
+          {syncResult.xcstringsTotal !== syncResult.totalInDb && (
+            <span className="text-xs text-orange-600 font-medium">
+              {Math.abs(syncResult.xcstringsTotal - syncResult.totalInDb)} difference — check for stale DB entries
+            </span>
+          )}
+        </div>
+      )}
+
       {/* Language Grid */}
       <div className="bg-gray-50 rounded-lg p-4">
         <div className="flex justify-between items-center mb-3">
           <h3 className="text-lg font-semibold">Translation Coverage</h3>
-          {englishStrings.length > 0 && (
-            <span className="text-sm text-gray-500">
-              Click a language card to view, or click Translate to generate translations
-            </span>
-          )}
+          <div className="flex items-center gap-3">
+            {englishStrings.length > 0 && (
+              <button
+                onClick={() => setShowTranslateAllModal(true)}
+                className="bg-purple-600 text-white px-4 py-2 rounded-lg hover:bg-purple-700 font-medium text-sm"
+              >
+                Fill in Empty Translations
+              </button>
+            )}
+            {englishStrings.length > 0 && (
+              <span className="text-sm text-gray-500">
+                or click Translate on a single language
+              </span>
+            )}
+          </div>
         </div>
         <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-7 gap-2">
           {languageCompletion.map(lang => (
@@ -458,6 +790,30 @@ export default function LocalizationPage() {
         </div>
       </div>
 
+      {/* Category Filter Tabs */}
+      <div className="flex gap-1 bg-gray-100 rounded-lg p-1 w-fit">
+        {([
+          { key: 'all' as const, label: 'All Strings' },
+          { key: 'app' as const, label: 'App Strings' },
+          { key: 'appstore' as const, label: 'App Store Metadata' },
+        ]).map(tab => (
+          <button
+            key={tab.key}
+            onClick={() => setCategoryFilter(tab.key)}
+            className={`px-3 py-1.5 rounded-md text-sm font-medium transition-colors ${
+              categoryFilter === tab.key
+                ? 'bg-white text-gray-900 shadow-sm'
+                : 'text-gray-600 hover:text-gray-900'
+            }`}
+          >
+            {tab.label}
+            {tab.key === 'appstore' && (
+              <span className="ml-1.5 bg-orange-100 text-orange-700 text-xs px-1.5 py-0.5 rounded">ASC</span>
+            )}
+          </button>
+        ))}
+      </div>
+
       {/* Filters */}
       <div className="flex gap-4 items-center">
         <input
@@ -509,15 +865,41 @@ export default function LocalizationPage() {
                   </td>
                   <td className="px-4 py-3">
                     {editingId === t.id ? (
-                      <textarea
-                        value={editValue}
-                        onChange={(e) => setEditValue(e.target.value)}
-                        rows={2}
-                        className="w-full border rounded px-2 py-1 text-sm"
-                        autoFocus
-                      />
+                      <div>
+                        <textarea
+                          value={editValue}
+                          onChange={(e) => setEditValue(e.target.value)}
+                          rows={t.string_key.startsWith('asc_') ? 4 : 2}
+                          className="w-full border rounded px-2 py-1 text-sm"
+                          autoFocus
+                        />
+                        {ASC_CHAR_LIMITS[t.string_key] && (
+                          <div className={`text-xs mt-1 ${
+                            editValue.length > ASC_CHAR_LIMITS[t.string_key]
+                              ? 'text-red-600 font-semibold'
+                              : editValue.length > ASC_CHAR_LIMITS[t.string_key] * 0.9
+                              ? 'text-orange-600'
+                              : 'text-gray-500'
+                          }`}>
+                            {editValue.length} / {ASC_CHAR_LIMITS[t.string_key]} chars
+                            {editValue.length > ASC_CHAR_LIMITS[t.string_key] && ' — over limit!'}
+                          </div>
+                        )}
+                      </div>
                     ) : (
-                      <div className="text-sm">{t.value}</div>
+                      <div>
+                        <div className="text-sm">{t.value}</div>
+                        {ASC_CHAR_LIMITS[t.string_key] && (
+                          <div className={`text-xs mt-1 ${
+                            t.value.length > ASC_CHAR_LIMITS[t.string_key]
+                              ? 'text-red-600 font-semibold'
+                              : 'text-gray-400'
+                          }`}>
+                            {t.value.length} / {ASC_CHAR_LIMITS[t.string_key]} chars
+                            {t.value.length > ASC_CHAR_LIMITS[t.string_key] && ' — over limit!'}
+                          </div>
+                        )}
+                      </div>
                     )}
                   </td>
                   <td className="px-4 py-3">
@@ -540,33 +922,55 @@ export default function LocalizationPage() {
                     </button>
                   </td>
                   <td className="px-4 py-3">
-                    {editingId === t.id ? (
-                      <div className="flex gap-1">
+                    <div className="flex flex-col gap-1.5">
+                      {editingId === t.id ? (
+                        <div className="flex gap-1">
+                          <button
+                            onClick={() => saveTranslation(t.id, editValue, t.verified)}
+                            disabled={saving}
+                            className="text-sm bg-green-100 text-green-700 px-2 py-1 rounded hover:bg-green-200"
+                          >
+                            {saving ? '...' : 'Save'}
+                          </button>
+                          <button
+                            onClick={() => setEditingId(null)}
+                            className="text-sm bg-gray-100 text-gray-700 px-2 py-1 rounded hover:bg-gray-200"
+                          >
+                            Cancel
+                          </button>
+                        </div>
+                      ) : (
                         <button
-                          onClick={() => saveTranslation(t.id, editValue, t.verified)}
-                          disabled={saving}
-                          className="text-sm bg-green-100 text-green-700 px-2 py-1 rounded hover:bg-green-200"
+                          onClick={() => {
+                            setEditingId(t.id)
+                            setEditValue(t.value)
+                          }}
+                          className="text-sm bg-blue-100 text-blue-700 px-2 py-1 rounded hover:bg-blue-200"
                         >
-                          {saving ? '...' : 'Save'}
+                          Edit
                         </button>
-                        <button
-                          onClick={() => setEditingId(null)}
-                          className="text-sm bg-gray-100 text-gray-700 px-2 py-1 rounded hover:bg-gray-200"
-                        >
-                          Cancel
-                        </button>
-                      </div>
-                    ) : (
-                      <button
-                        onClick={() => {
-                          setEditingId(t.id)
-                          setEditValue(t.value)
-                        }}
-                        className="text-sm bg-blue-100 text-blue-700 px-2 py-1 rounded hover:bg-blue-200"
-                      >
-                        Edit
-                      </button>
-                    )}
+                      )}
+                      {selectedLanguage === 'en' && retranslating !== t.string_key && (
+                        <label className="flex items-center gap-1 cursor-pointer">
+                          <input
+                            type="checkbox"
+                            checked={false}
+                            onChange={() => {
+                              if (confirm(`Re-translate "${t.string_key}" to all 21 languages?`)) {
+                                saveAndRetranslate(t.id, t.string_key, t.value, t.context)
+                              }
+                            }}
+                            className="rounded border-gray-300"
+                          />
+                          <span className="text-xs text-gray-500">Re-translate</span>
+                        </label>
+                      )}
+                      {retranslating === t.string_key && (
+                        <span className="text-xs text-purple-600 font-medium animate-pulse">
+                          Re-translating...
+                        </span>
+                      )}
+                    </div>
                   </td>
                 </tr>
               ))}
@@ -733,6 +1137,148 @@ export default function LocalizationPage() {
               >
                 {saving ? 'Importing...' : 'Import JSON'}
               </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Translate All Modal */}
+      {showTranslateAllModal && (
+        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
+          <div className="bg-white rounded-lg shadow-xl p-6 w-full max-w-4xl max-h-[90vh] flex flex-col">
+            <div className="flex justify-between items-center mb-4">
+              <h3 className="text-xl font-bold">Fill in Empty Translations</h3>
+              {translateAllProgress && (
+                <div className="flex items-center gap-4 text-sm">
+                  {translateAllProgress.totalTranslated !== undefined && (
+                    <span className="text-green-700 font-medium">{translateAllProgress.totalTranslated} translated</span>
+                  )}
+                  {translateAllProgress.totalFailed !== undefined && translateAllProgress.totalFailed > 0 && (
+                    <span className="text-red-600 font-medium">{translateAllProgress.totalFailed} failed</span>
+                  )}
+                  {translateAllProgress.totalSkipped !== undefined && (
+                    <span className="text-gray-500">{translateAllProgress.totalSkipped} skipped</span>
+                  )}
+                </div>
+              )}
+            </div>
+
+            {/* Status bar */}
+            {translateAllProgress && (
+              <div className="mb-3">
+                <div className="flex justify-between items-center mb-1">
+                  <span className={`text-sm font-medium ${
+                    translateAllProgress.status.includes('Complete') ? 'text-green-700' :
+                    translateAllProgress.status.includes('Cancel') ? 'text-orange-600' :
+                    'text-blue-700'
+                  }`}>
+                    {translateAllProgress.status}
+                  </span>
+                  {translateAllProgress.currentProgress !== undefined && translatingAll && (
+                    <span className="text-xs text-gray-500">{translateAllProgress.currentProgress}%</span>
+                  )}
+                </div>
+                {translatingAll && translateAllProgress.currentProgress !== undefined && (
+                  <div className="w-full bg-gray-200 rounded-full h-2">
+                    <div className="bg-purple-600 h-2 rounded-full transition-all duration-300" style={{ width: `${translateAllProgress.currentProgress}%` }} />
+                  </div>
+                )}
+              </div>
+            )}
+
+            {/* Pre-run info */}
+            {!translateAllProgress && !translatingAll && (
+              <div className="bg-purple-50 border border-purple-200 rounded p-3 mb-3">
+                <div className="text-sm space-y-1">
+                  <div><strong>{englishStrings.length}</strong> English source strings</div>
+                  <div><strong>{SUPPORTED_LANGUAGES.filter(l => l.code !== 'en').length}</strong> target languages</div>
+                  <div className="text-gray-600 mt-2">
+                    This will translate all missing strings across every language using AI.
+                    Existing translations are kept. You will see real-time progress below.
+                  </div>
+                </div>
+              </div>
+            )}
+
+            {/* Per-language summary (compact row) */}
+            {translateAllProgress?.languageResults && translateAllProgress.languageResults.length > 0 && (
+              <div className="flex flex-wrap gap-1 mb-3">
+                {translateAllProgress.languageResults.map(lr => (
+                  <span key={lr.language} className={`text-xs px-2 py-0.5 rounded font-medium ${
+                    lr.failed > 0 ? 'bg-red-100 text-red-700' :
+                    lr.translated > 0 ? 'bg-green-100 text-green-700' :
+                    'bg-gray-100 text-gray-500'
+                  }`}>
+                    {lr.languageName}: {lr.translated > 0 ? `+${lr.translated}` : lr.missing === 0 ? 'up to date' : '0'}
+                    {lr.failed > 0 && ` (${lr.failed} err)`}
+                  </span>
+                ))}
+              </div>
+            )}
+
+            {/* Verbose log panel */}
+            <div className="flex-1 min-h-0 bg-gray-900 rounded-lg overflow-hidden flex flex-col" style={{ minHeight: '300px' }}>
+              <div className="flex items-center justify-between px-3 py-1.5 bg-gray-800 text-gray-400 text-xs">
+                <span>Translation Log</span>
+                <span>{logLines.length} events</span>
+              </div>
+              <div className="flex-1 overflow-y-auto p-3 font-mono text-xs leading-relaxed" style={{ maxHeight: '400px' }}>
+                {logLines.length === 0 ? (
+                  <div className="text-gray-500">Log output will appear here when translation starts...</div>
+                ) : (
+                  logLines.map((line, i) => (
+                    <div key={i} className={`${
+                      line.type === 'error' ? 'text-red-400' :
+                      line.type === 'warn' ? 'text-yellow-400' :
+                      line.message?.startsWith('---') ? 'text-purple-400 font-bold mt-1' :
+                      line.message?.startsWith('Batch') ? 'text-blue-400' :
+                      line.message?.includes('Complete') || line.message?.includes('done') ? 'text-green-400' :
+                      'text-gray-300'
+                    }`}>
+                      <span className="text-gray-600 mr-2">{line.time}</span>
+                      {line.type === 'error' && <span className="text-red-500 mr-1">[ERR]</span>}
+                      {line.type === 'warn' && <span className="text-yellow-500 mr-1">[WARN]</span>}
+                      {line.message || ''}
+                    </div>
+                  ))
+                )}
+                <div ref={logEndRef} />
+              </div>
+            </div>
+
+            {/* Action buttons */}
+            <div className="flex justify-between items-center mt-4">
+              <div>
+                {translatingAll && (
+                  <button
+                    onClick={cancelTranslation}
+                    className="px-4 py-2 bg-red-600 text-white rounded hover:bg-red-700 font-medium text-sm"
+                  >
+                    Cancel Translation
+                  </button>
+                )}
+              </div>
+              <div className="flex gap-2">
+                <button
+                  onClick={() => {
+                    setShowTranslateAllModal(false)
+                    setTranslateAllProgress(null)
+                    setLogLines([])
+                  }}
+                  disabled={translatingAll}
+                  className="px-4 py-2 bg-gray-100 text-gray-700 rounded hover:bg-gray-200 disabled:opacity-50"
+                >
+                  {translateAllProgress?.status.includes('Complete') || translateAllProgress?.status.includes('Cancel') ? 'Done' : 'Close'}
+                </button>
+                {(!translateAllProgress || translateAllProgress.status.includes('Cancel')) && !translatingAll && (
+                  <button
+                    onClick={runTranslateAll}
+                    className="px-4 py-2 bg-purple-600 text-white rounded hover:bg-purple-700 font-medium"
+                  >
+                    {translateAllProgress?.status.includes('Cancel') ? 'Resume Translations' : 'Fill in Empty Translations'}
+                  </button>
+                )}
+              </div>
             </div>
           </div>
         </div>
