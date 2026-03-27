@@ -1,6 +1,6 @@
 # Terms of Service
 
-**Last Updated: January 3, 2026**
+**Last Updated: March 27, 2026**
 
 Welcome to Language Match! These Terms of Service ("Terms") govern your use of the Language Match mobile application and related services (collectively, the "Service") operated by PainKiller Labs ("Company," "we," "us," or "our").
 

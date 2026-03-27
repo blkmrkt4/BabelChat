@@ -1,6 +1,6 @@
 # End User License Agreement (EULA)
 
-**Last Updated: January 3, 2026**
+**Last Updated: March 27, 2026**
 
 This End User License Agreement ("Agreement") is a legal agreement between you ("User" or "you") and PainKiller Labs ("Company," "we," "us," or "our") for the use of the Language Match mobile application ("App").
 
