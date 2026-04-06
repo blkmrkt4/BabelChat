@@ -23,6 +23,7 @@ class DatingPreferencesViewController: BaseOnboardingViewController {
     // MARK: - Properties
     private var selectedGender: Gender?
     private var selectedPreference: GenderPreference = .all
+    private var userDidSelect: Bool = false
 
     // MARK: - Lifecycle
     override func configure() {
@@ -33,6 +34,10 @@ class DatingPreferencesViewController: BaseOnboardingViewController {
         // Default to "Everyone" for preference
         selectedPreference = .all
         updatePreferenceButtonAppearance(selectedTag: 0)
+
+        // Allow skipping
+        updateContinueButton(enabled: true)
+        continueButton.setTitle("common_skip_for_now".localized, for: .normal)
     }
 
     // MARK: - Setup
@@ -239,6 +244,8 @@ class DatingPreferencesViewController: BaseOnboardingViewController {
     @objc private func genderButtonTapped(_ sender: UIButton) {
         let genders: [Gender] = [.male, .female, .nonBinary, .preferNotToSay]
         selectedGender = genders[sender.tag]
+        userDidSelect = true
+        continueButton.setTitle("common_continue".localized, for: .normal)
 
         // Update button appearances
         for (index, button) in genderButtons.enumerated() {
@@ -286,7 +293,11 @@ class DatingPreferencesViewController: BaseOnboardingViewController {
     }
 
     override func continueButtonTapped() {
-        guard let gender = selectedGender else { return }
+        guard userDidSelect, let gender = selectedGender else {
+            // User skipped
+            delegate?.didCompleteStep(withData: nil)
+            return
+        }
 
         // Return both values as a tuple
         let data: (Gender, GenderPreference) = (gender, selectedPreference)

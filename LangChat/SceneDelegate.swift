@@ -349,6 +349,10 @@ class SceneDelegate: UIResponder, UIWindowSceneDelegate {
             print("🔍 Session check - Authenticated: \(hasActiveSession)")
 
             if hasActiveSession {
+                // Register user in RevenueCat so they appear in the dashboard
+                if let userId = SupabaseService.shared.currentUserId?.uuidString {
+                    SubscriptionService.shared.logIn(userId: userId)
+                }
                 // User has active session - check if they have completed profile in Supabase
                 do {
                     let hasCompletedProfile = try await SupabaseService.shared.hasCompletedProfile()

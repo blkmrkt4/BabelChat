@@ -62,6 +62,8 @@ class WelcomeViewController: UIViewController {
         logoLabel.font = .systemFont(ofSize: 48, weight: .bold)
         logoLabel.textColor = .white
         logoLabel.textAlignment = .center
+        logoLabel.adjustsFontSizeToFitWidth = true
+        logoLabel.minimumScaleFactor = 0.6
         contentStackView.addArrangedSubview(logoLabel)
 
         // Headline

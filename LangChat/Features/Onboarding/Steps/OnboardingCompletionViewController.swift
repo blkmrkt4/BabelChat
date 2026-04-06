@@ -6,6 +6,7 @@ class OnboardingCompletionViewController: BaseOnboardingViewController {
     private let iconLabel = UILabel()
     private let headingLabel = UILabel()
     private let messageLabel = UILabel()
+    private let checklistLabel = UILabel()
     private let getStartedButton = UIButton(type: .system)
 
     // MARK: - Lifecycle
@@ -38,12 +39,31 @@ class OnboardingCompletionViewController: BaseOnboardingViewController {
         contentView.addSubview(headingLabel)
 
         // Message
-        messageLabel.text = "Head to Settings to finish your profile for the best matches."
+        messageLabel.text = "Visit Settings to complete your profile:"
         messageLabel.font = .systemFont(ofSize: 17, weight: .regular)
         messageLabel.textColor = .secondaryLabel
         messageLabel.textAlignment = .center
         messageLabel.numberOfLines = 0
         contentView.addSubview(messageLabel)
+
+        // Checklist of profile items
+        let items = [
+            "Bio \u{2014} tell people about yourself",
+            "More photos",
+            "Age range preference",
+            "Location preference",
+            "Travel plans",
+            "Proficiency range",
+            "Privacy preferences",
+            "Notification settings"
+        ]
+        let bulletList = items.map { "\u{2022} \($0)" }.joined(separator: "\n")
+        checklistLabel.text = bulletList
+        checklistLabel.font = .systemFont(ofSize: 15, weight: .regular)
+        checklistLabel.textColor = .white.withAlphaComponent(0.7)
+        checklistLabel.textAlignment = .left
+        checklistLabel.numberOfLines = 0
+        contentView.addSubview(checklistLabel)
 
         // Get Started button
         getStartedButton.setTitle("Get Started", for: .normal)
@@ -58,13 +78,14 @@ class OnboardingCompletionViewController: BaseOnboardingViewController {
         iconLabel.translatesAutoresizingMaskIntoConstraints = false
         headingLabel.translatesAutoresizingMaskIntoConstraints = false
         messageLabel.translatesAutoresizingMaskIntoConstraints = false
+        checklistLabel.translatesAutoresizingMaskIntoConstraints = false
         getStartedButton.translatesAutoresizingMaskIntoConstraints = false
 
         NSLayoutConstraint.activate([
-            iconLabel.topAnchor.constraint(equalTo: contentView.topAnchor, constant: 60),
+            iconLabel.topAnchor.constraint(equalTo: contentView.topAnchor, constant: 40),
             iconLabel.centerXAnchor.constraint(equalTo: contentView.centerXAnchor),
 
-            headingLabel.topAnchor.constraint(equalTo: iconLabel.bottomAnchor, constant: 24),
+            headingLabel.topAnchor.constraint(equalTo: iconLabel.bottomAnchor, constant: 20),
             headingLabel.leadingAnchor.constraint(equalTo: contentView.leadingAnchor, constant: 32),
             headingLabel.trailingAnchor.constraint(equalTo: contentView.trailingAnchor, constant: -32),
 
@@ -72,7 +93,11 @@ class OnboardingCompletionViewController: BaseOnboardingViewController {
             messageLabel.leadingAnchor.constraint(equalTo: contentView.leadingAnchor, constant: 32),
             messageLabel.trailingAnchor.constraint(equalTo: contentView.trailingAnchor, constant: -32),
 
-            getStartedButton.topAnchor.constraint(equalTo: messageLabel.bottomAnchor, constant: 40),
+            checklistLabel.topAnchor.constraint(equalTo: messageLabel.bottomAnchor, constant: 12),
+            checklistLabel.leadingAnchor.constraint(equalTo: contentView.leadingAnchor, constant: 40),
+            checklistLabel.trailingAnchor.constraint(equalTo: contentView.trailingAnchor, constant: -32),
+
+            getStartedButton.topAnchor.constraint(equalTo: checklistLabel.bottomAnchor, constant: 32),
             getStartedButton.leadingAnchor.constraint(equalTo: contentView.leadingAnchor, constant: 24),
             getStartedButton.trailingAnchor.constraint(equalTo: contentView.trailingAnchor, constant: -24),
             getStartedButton.heightAnchor.constraint(equalToConstant: 50),

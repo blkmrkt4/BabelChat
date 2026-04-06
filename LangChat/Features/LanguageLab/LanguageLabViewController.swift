@@ -105,26 +105,33 @@ class LanguageLabViewController: UIViewController {
         stack.translatesAutoresizingMaskIntoConstraints = false
 
         let iconLabel = UILabel()
-        iconLabel.text = "⚠️"
+        iconLabel.text = "🚀"
         iconLabel.font = .systemFont(ofSize: 48)
         stack.addArrangedSubview(iconLabel)
 
+        let titleLabel = UILabel()
+        titleLabel.text = "Your journey starts here!"
+        titleLabel.font = .systemFont(ofSize: 20, weight: .bold)
+        titleLabel.textColor = .white
+        titleLabel.textAlignment = .center
+        stack.addArrangedSubview(titleLabel)
+
         let messageLabel = UILabel()
-        messageLabel.text = "lab_error_loading".localized
+        messageLabel.text = "Start chatting with matches or Muses to build your streaks, track your progress, and watch your fluency grow."
         messageLabel.font = .systemFont(ofSize: 16)
         messageLabel.textColor = UIColor.white.withAlphaComponent(0.7)
         messageLabel.textAlignment = .center
         messageLabel.numberOfLines = 0
         stack.addArrangedSubview(messageLabel)
 
-        let retryButton = UIButton(type: .system)
-        retryButton.setTitle("common_retry".localized, for: .normal)
-        retryButton.setTitleColor(.white, for: .normal)
-        retryButton.titleLabel?.font = .systemFont(ofSize: 16, weight: .semibold)
-        retryButton.backgroundColor = BrandColors.primary
-        retryButton.layer.cornerRadius = 12
-        retryButton.addTarget(self, action: #selector(retryLoadData), for: .touchUpInside)
-        stack.addArrangedSubview(retryButton)
+        let refreshButton = UIButton(type: .system)
+        refreshButton.setTitle("Refresh", for: .normal)
+        refreshButton.setTitleColor(.white, for: .normal)
+        refreshButton.titleLabel?.font = .systemFont(ofSize: 16, weight: .semibold)
+        refreshButton.backgroundColor = BrandColors.secondary
+        refreshButton.layer.cornerRadius = 12
+        refreshButton.addTarget(self, action: #selector(retryLoadData), for: .touchUpInside)
+        stack.addArrangedSubview(refreshButton)
 
         NSLayoutConstraint.activate([
             errorView.topAnchor.constraint(equalTo: containerView.topAnchor),
@@ -134,8 +141,9 @@ class LanguageLabViewController: UIViewController {
             stack.centerXAnchor.constraint(equalTo: errorView.centerXAnchor),
             stack.centerYAnchor.constraint(equalTo: errorView.centerYAnchor),
             stack.leadingAnchor.constraint(greaterThanOrEqualTo: errorView.leadingAnchor, constant: 32),
-            retryButton.widthAnchor.constraint(equalToConstant: 160),
-            retryButton.heightAnchor.constraint(equalToConstant: 44)
+            stack.trailingAnchor.constraint(lessThanOrEqualTo: errorView.trailingAnchor, constant: -32),
+            refreshButton.widthAnchor.constraint(equalToConstant: 160),
+            refreshButton.heightAnchor.constraint(equalToConstant: 44)
         ])
     }
 

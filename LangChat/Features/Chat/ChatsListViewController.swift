@@ -389,60 +389,80 @@ class ChatsListViewController: UIViewController {
         loadChats()
     }
 
+    private func messagesDirectoryURL() -> URL {
+        let documentsDirectory = FileManager.default.urls(for: .documentDirectory, in: .userDomainMask).first!
+        return documentsDirectory.appendingPathComponent("Messages", isDirectory: true)
+    }
+
     private func loadChats() {
         var loadedChats: [Match] = []
+        var seenUserIds: Set<String> = []
 
-        // Scan UserDefaults for all conversation keys
-        let defaults = UserDefaults.standard
-        let allKeys = defaults.dictionaryRepresentation().keys
+        // Primary: Scan Documents/Messages/ directory for conversation files
+        let messagesDir = messagesDirectoryURL()
+        if let files = try? FileManager.default.contentsOfDirectory(
+            at: messagesDir,
+            includingPropertiesForKeys: nil,
+            options: [.skipsHiddenFiles]
+        ) {
+            for fileURL in files {
+                guard fileURL.pathExtension == "json" else { continue }
 
-        #if DEBUG
-        let conversationKeys = allKeys.filter { $0.hasPrefix("conversation_") }
-        print("📱 ChatsListVC: Found \(conversationKeys.count) conversation keys in UserDefaults")
-        #endif
+                let userId = fileURL.deletingPathExtension().lastPathComponent
+                guard !seenUserIds.contains(userId) else { continue }
 
-        for key in allKeys {
-            guard key.hasPrefix("conversation_") else { continue }
+                guard let data = try? Data(contentsOf: fileURL),
+                      let messages = try? JSONDecoder().decode([Message].self, from: data),
+                      !messages.isEmpty,
+                      let lastMessage = messages.last else {
+                    continue
+                }
 
-            // Extract user ID from key
-            let userId = String(key.dropFirst("conversation_".count))
+                guard let savedUser = loadSavedUser(userId: userId) else { continue }
 
-            // Load messages for this conversation
-            guard let data = defaults.data(forKey: key),
-                  let messages = try? JSONDecoder().decode([Message].self, from: data),
-                  !messages.isEmpty else {
-                #if DEBUG
-                print("  ⚠️ Skipping \(key): no data or empty messages")
-                #endif
-                continue
-            }
-
-            // Get last message (safe - we already checked !messages.isEmpty above)
-            guard let lastMessage = messages.last else { continue }
-
-            // Try to load saved user data for this conversation
-            if let savedUser = loadSavedUser(userId: userId) {
-                // Use a local match ID format for conversations without a match record
                 let match = Match(
-                    id: "local_match_\(userId)",  // Local-only match ID
+                    id: "local_match_\(userId)",
                     user: savedUser,
                     matchedAt: messages.first?.timestamp ?? Date(),
-                    hasNewMessage: false, // Could be enhanced to track unread
+                    hasNewMessage: false,
                     lastMessage: lastMessage.text,
                     lastMessageTime: lastMessage.timestamp
                 )
                 loadedChats.append(match)
-                #if DEBUG
-                print("  ✅ Loaded chat with \(savedUser.firstName) (\(messages.count) messages)")
-                #endif
-            } else {
-                #if DEBUG
-                print("  ⚠️ Skipping \(key): no user data found for userId \(userId)")
-                #endif
+                seenUserIds.insert(userId)
             }
         }
 
-        // Sort by last message time (most recent first), Muses without messages stay at end
+        // Fallback: Scan UserDefaults for un-migrated conversations
+        let defaults = UserDefaults.standard
+        for key in defaults.dictionaryRepresentation().keys {
+            guard key.hasPrefix("conversation_") else { continue }
+
+            let userId = String(key.dropFirst("conversation_".count))
+            guard !seenUserIds.contains(userId) else { continue }
+
+            guard let data = defaults.data(forKey: key),
+                  let messages = try? JSONDecoder().decode([Message].self, from: data),
+                  !messages.isEmpty,
+                  let lastMessage = messages.last else {
+                continue
+            }
+
+            guard let savedUser = loadSavedUser(userId: userId) else { continue }
+
+            let match = Match(
+                id: "local_match_\(userId)",
+                user: savedUser,
+                matchedAt: messages.first?.timestamp ?? Date(),
+                hasNewMessage: false,
+                lastMessage: lastMessage.text,
+                lastMessageTime: lastMessage.timestamp
+            )
+            loadedChats.append(match)
+            seenUserIds.insert(userId)
+        }
+
+        // Sort by last message time (most recent first)
         loadedChats.sort { (match1, match2) -> Bool in
             let time1 = match1.lastMessageTime ?? Date.distantPast
             let time2 = match2.lastMessageTime ?? Date.distantPast
@@ -460,10 +480,6 @@ class ChatsListViewController: UIViewController {
             object: nil,
             userInfo: ["count": unreadCount]
         )
-
-        #if DEBUG
-        print("📱 ChatsListVC: Displaying \(chats.count) chats")
-        #endif
     }
 
     private func loadSavedUser(userId: String) -> User? {

@@ -185,6 +185,31 @@ class SubscriptionService: NSObject {
         debugLog("✅ [RevenueCat] Configuration complete")
     }
 
+    // MARK: - User Identity
+    /// Log in a user to RevenueCat so they appear in the dashboard.
+    /// Call this after every successful authentication or session restore.
+    func logIn(userId: String) {
+        if isDevelopmentMode {
+            debugLog("⚠️ Development Mode: Skipping RevenueCat logIn")
+            return
+        }
+
+        guard isConfigured else {
+            debugLog("⚠️ [RevenueCat] Not configured - cannot logIn user")
+            return
+        }
+
+        debugLog("🔑 [RevenueCat] Logging in user: \(userId.prefix(8))...")
+        Purchases.shared.logIn(userId) { [weak self] customerInfo, created, error in
+            if let error = error {
+                print("❌ [RevenueCat] logIn failed: \(error.localizedDescription)")
+                return
+            }
+            debugLog("✅ [RevenueCat] logIn success (created: \(created))")
+            self?.updateStatus(from: customerInfo)
+        }
+    }
+
     // MARK: - Fetch Offerings
     /// Fetch available subscription offerings from RevenueCat
     func fetchOfferings(completion: @escaping (Result<[SubscriptionOffering], Error>) -> Void) {

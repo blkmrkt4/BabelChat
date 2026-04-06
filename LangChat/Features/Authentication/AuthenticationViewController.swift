@@ -334,6 +334,11 @@ class AuthenticationViewController: UIViewController {
                 try await SupabaseService.shared.signInWithApple(from: self)
                 print("✅ Apple Sign In with Supabase successful!")
 
+                // Register user in RevenueCat so they appear in the dashboard
+                if let userId = SupabaseService.shared.currentUserId?.uuidString {
+                    SubscriptionService.shared.logIn(userId: userId)
+                }
+
                 // Track successful login
                 AnalyticsService.shared.track(.loginCompleted, properties: ["method": "apple"])
 
@@ -484,6 +489,11 @@ class AuthenticationViewController: UIViewController {
                 try await SupabaseService.shared.signIn(email: email, password: password)
                 print("✅ Email sign in successful!")
 
+                // Register user in RevenueCat so they appear in the dashboard
+                if let userId = SupabaseService.shared.currentUserId?.uuidString {
+                    SubscriptionService.shared.logIn(userId: userId)
+                }
+
                 // Track successful login
                 AnalyticsService.shared.track(.loginCompleted, properties: ["method": "email"])
 
@@ -530,6 +540,11 @@ class AuthenticationViewController: UIViewController {
             do {
                 try await SupabaseService.shared.signUp(email: email, password: password)
                 print("✅ Email sign up successful!")
+
+                // Register user in RevenueCat so they appear in the dashboard
+                if let userId = SupabaseService.shared.currentUserId?.uuidString {
+                    SubscriptionService.shared.logIn(userId: userId)
+                }
 
                 // Track successful signup
                 AnalyticsService.shared.track(.signUpCompleted, properties: ["method": "email"])

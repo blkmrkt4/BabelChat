@@ -80,7 +80,7 @@ class BaseOnboardingViewController: UIViewController {
         // Title (compact: inline with back button)
         titleLabel.font = useCompactTitle ? .systemFont(ofSize: 20, weight: .semibold) : .systemFont(ofSize: 28, weight: .bold)
         titleLabel.textColor = .white
-        titleLabel.numberOfLines = 1
+        titleLabel.numberOfLines = 0
         headerView.addSubview(titleLabel)
 
         // Subtitle (hidden in compact mode)
@@ -153,7 +153,7 @@ class BaseOnboardingViewController: UIViewController {
             headerView.topAnchor.constraint(equalTo: progressView.bottomAnchor, constant: 8),
             headerView.leadingAnchor.constraint(equalTo: view.leadingAnchor, constant: 16),
             headerView.trailingAnchor.constraint(equalTo: view.trailingAnchor, constant: -16),
-            headerView.heightAnchor.constraint(equalToConstant: 44),
+            headerView.heightAnchor.constraint(greaterThanOrEqualToConstant: 44),
 
             // Back button (left side of header)
             backButton.leadingAnchor.constraint(equalTo: headerView.leadingAnchor),
@@ -161,10 +161,11 @@ class BaseOnboardingViewController: UIViewController {
             backButton.widthAnchor.constraint(equalToConstant: 32),
             backButton.heightAnchor.constraint(equalToConstant: 44),
 
-            // Title (inline with back button)
+            // Title (inline with back button, can wrap to multiple lines)
             titleLabel.leadingAnchor.constraint(equalTo: backButton.trailingAnchor, constant: 4),
             titleLabel.trailingAnchor.constraint(equalTo: headerView.trailingAnchor, constant: -48),  // Space for reset button
-            titleLabel.centerYAnchor.constraint(equalTo: headerView.centerYAnchor),
+            titleLabel.topAnchor.constraint(equalTo: headerView.topAnchor, constant: 8),
+            titleLabel.bottomAnchor.constraint(equalTo: headerView.bottomAnchor, constant: -8),
 
             // Subtitle (below header, if visible)
             subtitleLabel.topAnchor.constraint(equalTo: headerView.bottomAnchor, constant: 4),

@@ -166,11 +166,6 @@ If you have any questions about this Agreement, please contact us at:
 
 **Email:** Support-LM@byzyb.ai
 
-**Mailing Address:**
-PainKiller Labs
-8 Parkwood Avenue
-Toronto, Ontario, Canada M4V 2W8
-
 **Website:** https://language-match.com
 
 ---

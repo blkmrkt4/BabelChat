@@ -17,6 +17,7 @@ class RelationshipIntentViewController: BaseOnboardingViewController {
     // Privacy state
     private var isStrictlyPlatonic: Bool = false
     private var blurPhotosUntilMatch: Bool = false
+    private var userDidSelect: Bool = false
 
     // MARK: - Lifecycle
     override func configure() {
@@ -25,6 +26,7 @@ class RelationshipIntentViewController: BaseOnboardingViewController {
         setupIntentButtons()
         setupPrivacyOptions()
         updateContinueButton(enabled: true)
+        continueButton.setTitle("common_skip_for_now".localized, for: .normal)
 
         // Show privacy options initially since languagePracticeOnly is default
         updatePrivacyVisibility(animated: false)
@@ -256,10 +258,12 @@ class RelationshipIntentViewController: BaseOnboardingViewController {
 
         // Single selection only (radio button behavior)
         selectedIntent = intent
+        userDidSelect = true
 
         updateButtonAppearance()
         updatePrivacyVisibility(animated: true)
         updateContinueButton(enabled: true)
+        continueButton.setTitle("common_continue".localized, for: .normal)
 
         // Add haptic feedback
         let generator = UIImpactFeedbackGenerator(style: .light)
@@ -302,6 +306,12 @@ class RelationshipIntentViewController: BaseOnboardingViewController {
     }
 
     override func continueButtonTapped() {
+        guard userDidSelect else {
+            // User skipped — use defaults, dating preferences will be auto-skipped
+            delegate?.didCompleteStep(withData: nil)
+            return
+        }
+
         // Include privacy settings with the relationship intent
         let data: [String: Any] = [
             "intent": selectedIntent,

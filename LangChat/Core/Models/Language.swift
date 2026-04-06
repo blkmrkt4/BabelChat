@@ -78,6 +78,7 @@ enum Language: String, CaseIterable, Codable, Equatable {
     case finnish = "FI"
     case norwegian = "NO"
     case arabic = "AR"
+    case afrikaans = "AF"
 
     var code: String {
         return rawValue
@@ -106,6 +107,7 @@ enum Language: String, CaseIterable, Codable, Equatable {
         case .finnish: return "Finnish"
         case .norwegian: return "Norwegian"
         case .arabic: return "Arabic"
+        case .afrikaans: return "Afrikaans"
         }
     }
 
@@ -132,6 +134,7 @@ enum Language: String, CaseIterable, Codable, Equatable {
         case .finnish: return "Suomi"
         case .norwegian: return "Norsk"
         case .arabic: return "العربية"
+        case .afrikaans: return "Afrikaans"
         }
     }
 
@@ -158,6 +161,7 @@ enum Language: String, CaseIterable, Codable, Equatable {
         case .finnish: return "🇫🇮"
         case .norwegian: return "🇳🇴"
         case .arabic: return "🇸🇦"
+        case .afrikaans: return "🇿🇦"
         }
     }
 
@@ -184,6 +188,7 @@ enum Language: String, CaseIterable, Codable, Equatable {
         case .finnish: return ["Finland"]
         case .norwegian: return ["Norway"]
         case .arabic: return ["Saudi Arabia", "Egypt", "Morocco", "UAE"]
+        case .afrikaans: return ["South Africa", "Namibia"]
         }
     }
 
@@ -193,7 +198,8 @@ enum Language: String, CaseIterable, Codable, Equatable {
             .english, .spanish, .french, .german, .portuguese, .portuguesePortugal, .italian,
             .japanese, .korean, .dutch, .chinese, .russian,
             .polish, .hindi, .indonesian, .filipino,
-            .swedish, .danish, .finnish, .norwegian, .arabic
+            .swedish, .danish, .finnish, .norwegian, .arabic,
+            .afrikaans
         ]
     }
 
@@ -239,6 +245,7 @@ enum Language: String, CaseIterable, Codable, Equatable {
         case "fi": return .finnish
         case "no", "nb", "nn": return .norwegian
         case "ar": return .arabic
+        case "af": return .afrikaans
         default: return nil
         }
     }
@@ -269,6 +276,7 @@ enum Language: String, CaseIterable, Codable, Equatable {
         case "finnish": return .finnish
         case "norwegian": return .norwegian
         case "arabic": return .arabic
+        case "afrikaans": return .afrikaans
         default: return nil
         }
     }

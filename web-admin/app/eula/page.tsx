@@ -275,7 +275,6 @@ export default function EulaPage() {
             <p>If you have any questions about this Agreement, please contact us at:</p>
             <p className="mt-4">
               <strong>Email:</strong> Support-LM@byzyb.ai<br />
-              <strong>Address:</strong> PainKiller Labs, 8 Parkwood Avenue, Toronto, Ontario, Canada M4V 2W8<br />
               <strong>Website:</strong> https://language-match.com
             </p>
 

@@ -5,12 +5,11 @@ class ProfilePhotoViewController: BaseOnboardingViewController {
 
     // MARK: - UI Components
     private let photoGridView = UIView()
-    private let photoSlots: [PhotoSlotView] = (0..<6).map { _ in PhotoSlotView() }
+    private let photoSlot = PhotoSlotView()
     private let tipsLabel = UILabel()
 
     // MARK: - Properties
-    private var selectedImages: [UIImage?] = Array(repeating: nil, count: 6)
-    private var photoCount = 0
+    private var selectedImage: UIImage?
 
     // MARK: - Lifecycle
     override func configure() {
@@ -21,39 +20,13 @@ class ProfilePhotoViewController: BaseOnboardingViewController {
 
     // MARK: - Setup
     private func setupViews() {
-        // Photo grid container
+        // Single centered photo slot
         contentView.addSubview(photoGridView)
 
-        // Create 2x3 grid
-        let stackView = UIStackView()
-        stackView.axis = .vertical
-        stackView.spacing = 12
-        stackView.distribution = .fillEqually
-
-        for row in 0..<3 {
-            let rowStack = UIStackView()
-            rowStack.axis = .horizontal
-            rowStack.spacing = 12
-            rowStack.distribution = .fillEqually
-
-            for col in 0..<2 {
-                let index = row * 2 + col
-                let photoSlot = photoSlots[index]
-                photoSlot.tag = index
-                photoSlot.addTarget(self, action: #selector(photoSlotTapped), for: .touchUpInside)
-
-                // Make first slot primary
-                if index == 0 {
-                    photoSlot.setPrimary(true)
-                }
-
-                rowStack.addArrangedSubview(photoSlot)
-            }
-
-            stackView.addArrangedSubview(rowStack)
-        }
-
-        photoGridView.addSubview(stackView)
+        photoSlot.tag = 0
+        photoSlot.setPrimary(true)
+        photoSlot.addTarget(self, action: #selector(photoSlotTapped), for: .touchUpInside)
+        photoGridView.addSubview(photoSlot)
 
         // Tips label
         tipsLabel.text = "onboarding_photos_tips".localized
@@ -65,19 +38,19 @@ class ProfilePhotoViewController: BaseOnboardingViewController {
 
         // Layout
         photoGridView.translatesAutoresizingMaskIntoConstraints = false
-        stackView.translatesAutoresizingMaskIntoConstraints = false
+        photoSlot.translatesAutoresizingMaskIntoConstraints = false
         tipsLabel.translatesAutoresizingMaskIntoConstraints = false
 
         NSLayoutConstraint.activate([
-            photoGridView.topAnchor.constraint(equalTo: contentView.topAnchor, constant: 20),
-            photoGridView.leadingAnchor.constraint(equalTo: contentView.leadingAnchor),
-            photoGridView.trailingAnchor.constraint(equalTo: contentView.trailingAnchor),
-            photoGridView.heightAnchor.constraint(equalTo: photoGridView.widthAnchor, multiplier: 1.5),
+            photoGridView.topAnchor.constraint(equalTo: contentView.topAnchor, constant: 40),
+            photoGridView.centerXAnchor.constraint(equalTo: contentView.centerXAnchor),
+            photoGridView.widthAnchor.constraint(equalToConstant: 200),
+            photoGridView.heightAnchor.constraint(equalToConstant: 200),
 
-            stackView.topAnchor.constraint(equalTo: photoGridView.topAnchor),
-            stackView.leadingAnchor.constraint(equalTo: photoGridView.leadingAnchor),
-            stackView.trailingAnchor.constraint(equalTo: photoGridView.trailingAnchor),
-            stackView.bottomAnchor.constraint(equalTo: photoGridView.bottomAnchor),
+            photoSlot.topAnchor.constraint(equalTo: photoGridView.topAnchor),
+            photoSlot.leadingAnchor.constraint(equalTo: photoGridView.leadingAnchor),
+            photoSlot.trailingAnchor.constraint(equalTo: photoGridView.trailingAnchor),
+            photoSlot.bottomAnchor.constraint(equalTo: photoGridView.bottomAnchor),
 
             tipsLabel.topAnchor.constraint(equalTo: photoGridView.bottomAnchor, constant: 24),
             tipsLabel.leadingAnchor.constraint(equalTo: contentView.leadingAnchor),
@@ -92,71 +65,57 @@ class ProfilePhotoViewController: BaseOnboardingViewController {
 
     // MARK: - Actions
     @objc private func photoSlotTapped(_ sender: PhotoSlotView) {
-        let index = sender.tag
-
-        if selectedImages[index] != nil {
-            // Show options to replace or remove
-            showPhotoOptions(for: index)
+        if selectedImage != nil {
+            showPhotoOptions()
         } else {
-            // Show picker
-            showPhotoPicker(for: index)
+            showPhotoPicker()
         }
     }
 
-    private func showPhotoOptions(for index: Int) {
+    private func showPhotoOptions() {
         let alert = UIAlertController(title: nil, message: nil, preferredStyle: .actionSheet)
 
         alert.addAction(UIAlertAction(title: "onboarding_photos_replace".localized, style: .default) { [weak self] _ in
-            self?.showPhotoPicker(for: index)
+            self?.showPhotoPicker()
         })
 
         alert.addAction(UIAlertAction(title: "onboarding_photos_remove".localized, style: .destructive) { [weak self] _ in
-            self?.removePhoto(at: index)
+            self?.selectedImage = nil
+            self?.photoSlot.setImage(nil)
+            self?.updateButtonState()
         })
 
         alert.addAction(UIAlertAction(title: "common_cancel".localized, style: .cancel))
 
         if let popover = alert.popoverPresentationController {
-            popover.sourceView = photoSlots[index]
-            popover.sourceRect = photoSlots[index].bounds
+            popover.sourceView = photoSlot
+            popover.sourceRect = photoSlot.bounds
         }
 
         present(alert, animated: true)
     }
 
-    private func showPhotoPicker(for index: Int) {
+    private func showPhotoPicker() {
         var config = PHPickerConfiguration()
         config.selectionLimit = 1
         config.filter = .images
 
         let picker = PHPickerViewController(configuration: config)
         picker.delegate = self
-        picker.view.tag = index // Store index in tag
 
         present(picker, animated: true)
     }
 
-    private func removePhoto(at index: Int) {
-        selectedImages[index] = nil
-        photoSlots[index].setImage(nil)
-        updatePhotoCount()
-    }
-
-    private func updatePhotoCount() {
-        photoCount = selectedImages.compactMap { $0 }.count
-
-        // Update button text based on photo count
-        if photoCount == 0 {
+    private func updateButtonState() {
+        if selectedImage == nil {
             continueButton.setTitle("common_skip_for_now".localized, for: .normal)
-            subtitleLabel.text = "onboarding_photos_optional".localized
         } else {
             continueButton.setTitle("common_continue".localized, for: .normal)
-            subtitleLabel.text = "onboarding_photos_looking_good".localized
         }
     }
 
     override func continueButtonTapped() {
-        let photos = selectedImages.compactMap { $0 }
+        let photos = [selectedImage].compactMap { $0 }
         delegate?.didCompleteStep(withData: photos)
     }
 }
@@ -164,19 +123,15 @@ class ProfilePhotoViewController: BaseOnboardingViewController {
 // MARK: - PHPickerViewControllerDelegate
 extension ProfilePhotoViewController: PHPickerViewControllerDelegate {
     func picker(_ picker: PHPickerViewController, didFinishPicking results: [PHPickerResult]) {
-        let index = picker.view.tag
-
         if let result = results.first {
             result.itemProvider.loadObject(ofClass: UIImage.self) { [weak self] object, error in
                 if let originalImage = object as? UIImage {
-                    // Resize image to max 1200px to reduce memory usage
-                    // This prevents crashes on devices with high-resolution camera photos
                     let resizedImage = self?.resizeImage(originalImage, maxDimension: 1200) ?? originalImage
 
                     DispatchQueue.main.async {
-                        self?.selectedImages[index] = resizedImage
-                        self?.photoSlots[index].setImage(resizedImage)
-                        self?.updatePhotoCount()
+                        self?.selectedImage = resizedImage
+                        self?.photoSlot.setImage(resizedImage)
+                        self?.updateButtonState()
                     }
                 }
             }

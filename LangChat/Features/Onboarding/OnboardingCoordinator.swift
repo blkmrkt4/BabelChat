@@ -53,6 +53,7 @@ enum OnboardingStep: Int, CaseIterable {
     static let requiredSteps: [OnboardingStep] = [
         .interfaceLanguage, .termsAcceptance, .name, .birthYear, .hometown,
         .nativeLanguage, .learningLanguages, .museLanguages, .learningGoals,
+        .relationshipIntent, .datingPreferences,
         .profilePhoto, .completion
     ]
 
@@ -241,6 +242,13 @@ class OnboardingCoordinator {
             }
         }
 
+        // Skip datingPreferences if user didn't select "Open to dating"
+        if nextIndex < required.count && required[nextIndex] == .datingPreferences {
+            if userData.relationshipIntent != .openToDating {
+                nextIndex += 1
+            }
+        }
+
         // All required steps done — auto-derive muse languages and complete
         guard nextIndex < required.count else {
             print("📍 OnboardingCoordinator: All required steps done, completing onboarding")
@@ -289,6 +297,12 @@ class OnboardingCoordinator {
                 guard prevIndex > 0 else { return }
                 prevIndex -= 1
             }
+        }
+
+        // Skip datingPreferences going back if not relevant
+        if required[prevIndex] == .datingPreferences && userData.relationshipIntent != .openToDating {
+            guard prevIndex > 0 else { return }
+            prevIndex -= 1
         }
 
         navigationController?.popViewController(animated: true)

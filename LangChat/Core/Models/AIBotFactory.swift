@@ -86,7 +86,8 @@ class AIBotFactory {
             createDanishMuse(gender: preferredGender),
             createFinnishMuse(gender: preferredGender),
             createNorwegianMuse(gender: preferredGender),
-            createArabicMuse(gender: preferredGender)
+            createArabicMuse(gender: preferredGender),
+            createAfrikaansMuse(gender: preferredGender)
         ]
     }
 
@@ -632,6 +633,31 @@ class AIBotFactory {
             learningLanguages: [UserLanguage(language: .english, proficiency: .intermediate, isNative: false)],
             openToLanguages: [.arabic, .english],
             practiceLanguages: [UserLanguage(language: .arabic, proficiency: .native, isNative: true)],
+            location: "Your Imagination",
+            showCityInProfile: true,
+            matchedDate: Date(),
+            isOnline: true,
+            isAI: true,
+            gender: gender.rawValue
+        )
+    }
+
+    // MARK: - Afrikaans Muse
+
+    private static func createAfrikaansMuse(gender: MuseGenderPreference = .female) -> User {
+        let name = getMuseName(languageCode: "af", gender: gender, defaultMale: "Pieter", defaultFemale: "Marley")
+        return User(
+            id: "ai_bot_afrikaans_\(gender.rawValue)",
+            username: "\(name.lowercased())_muse",
+            firstName: name,
+            lastName: "Muse",
+            bio: "Hallo! I'm your Afrikaans Muse, here to help you discover Afrikaans. Kom ons begin!",
+            profileImageURL: nil,
+            photoURLs: [],
+            nativeLanguage: UserLanguage(language: .afrikaans, proficiency: .native, isNative: true),
+            learningLanguages: [UserLanguage(language: .english, proficiency: .advanced, isNative: false)],
+            openToLanguages: [.afrikaans, .english],
+            practiceLanguages: [UserLanguage(language: .afrikaans, proficiency: .native, isNative: true)],
             location: "Your Imagination",
             showCityInProfile: true,
             matchedDate: Date(),
